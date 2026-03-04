@@ -667,10 +667,6 @@ function navigate(page){
   const mobSub=document.getElementById('mob-page-sub');
   if(mobTitle) mobTitle.textContent=t;
   if(mobSub) mobSub.textContent=s;
-  const mobTitle=document.getElementById('mob-page-title');
-  const mobSub=document.getElementById('mob-page-sub');
-  if(mobTitle) mobTitle.textContent=t;
-  if(mobSub) mobSub.textContent=s;
   if(page==='dentistas'&&state.connected) renderDentistas();
   if(page==='proteticos'&&state.connected) renderProteticos();
   if(page==='tipopeca'&&state.connected) renderTipoPeca();
