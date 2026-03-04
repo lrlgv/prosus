@@ -369,9 +369,17 @@ const pageMeta={
 window.onload=()=>{
   const theme=localStorage.getItem('prosus_theme')||'dark';
   if(theme==='light'){document.body.classList.add('light');document.getElementById('theme-icon').textContent='🌙';document.getElementById('theme-label').textContent='Tema escuro';}
-  // Init Google Identity
-  google.accounts.oauth2.initTokenClient&&initOAuth();
 };
+
+// Aguarda a lib GSI carregar e inicializa OAuth
+function waitForGSI(){
+  if(window.google?.accounts?.oauth2){
+    initOAuth();
+  } else {
+    setTimeout(waitForGSI, 100);
+  }
+}
+waitForGSI();
 
 let tokenClient=null;
 function initOAuth(){
@@ -385,23 +393,12 @@ function initOAuth(){
       fetchUserInfo();
     }
   });
+  // Tenta login silencioso se houver sessão anterior
+  const hint=localStorage.getItem('prosus_user_email');
+  if(hint){
+    tokenClient.requestAccessToken({prompt:'none',login_hint:hint});
+  }
 }
-
-// Called by Google Identity after lib loads
-window.addEventListener('load',()=>{
-  // Wait for GSI lib to be ready
-  const wait=setInterval(()=>{
-    if(window.google?.accounts?.oauth2){
-      clearInterval(wait);
-      initOAuth();
-      // Try silent token refresh if we have a cached session hint
-      const hint=localStorage.getItem('prosus_user_email');
-      if(hint){
-        tokenClient.requestAccessToken({prompt:'none',login_hint:hint});
-      }
-    }
-  },100);
-});
 
 function signIn(){
   if(!tokenClient){toast('Aguarde a inicialização do Google...','info');return;}
