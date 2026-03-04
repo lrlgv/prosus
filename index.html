@@ -298,6 +298,7 @@
     .topbar{display:none;}
     .main{padding-bottom:0;}
   }
+</style>
 </head>
 <body>
 <!-- LOGIN SCREEN -->
@@ -662,6 +663,10 @@ function navigate(page){
   const[t,s]=pageMeta[page];
   document.getElementById('page-title').textContent=t;
   document.getElementById('page-subtitle').textContent=s;
+  const mobTitle=document.getElementById('mob-page-title');
+  const mobSub=document.getElementById('mob-page-sub');
+  if(mobTitle) mobTitle.textContent=t;
+  if(mobSub) mobSub.textContent=s;
   const mobTitle=document.getElementById('mob-page-title');
   const mobSub=document.getElementById('mob-page-sub');
   if(mobTitle) mobTitle.textContent=t;
