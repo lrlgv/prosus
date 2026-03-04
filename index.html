@@ -1,8 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<!-- ProSUS v3.0 - PWA + Mobile -->
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ProSUS">
+<meta name="theme-color" content="#0f1117">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234af0a0'/><text y='.9em' font-size='80' x='10'>🦷</text></svg>">
 <title>ProSUS — Controle de Próteses</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -190,8 +200,104 @@
   .total-card h4{font-size:12px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
   .total-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
   .total-row:last-child{border-bottom:none;font-weight:700;color:var(--accent);}
-  .total-row .tval{font-weight:700;}
-</style>
+  /* ── MOBILE BOTTOM NAV ── */
+  .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:200;padding-bottom:env(safe-area-inset-bottom);}
+  .mobile-nav-inner{display:flex;align-items:stretch;}
+  .mob-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px;border:none;background:transparent;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:9px;font-weight:600;cursor:pointer;transition:color .15s;min-height:54px;}
+  .mob-nav-btn .mob-icon{font-size:20px;line-height:1;}
+  .mob-nav-btn.active{color:var(--accent);}
+  .mob-nav-btn span:last-child{font-size:9px;}
+  /* Mobile more menu */
+  .mob-more-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;}
+  .mob-more-overlay.open{display:block;}
+  .mob-more-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;padding:12px 16px calc(16px + env(safe-area-inset-bottom));z-index:301;transform:translateY(100%);transition:transform .3s ease;border-top:1px solid var(--border);}
+  .mob-more-sheet.open{transform:translateY(0);}
+  .mob-more-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+  .mob-more-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .mob-more-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:border-color .15s;}
+  .mob-more-item:active{border-color:var(--accent);}
+  .mob-more-item .icon{font-size:22px;}
+  .mob-more-item span{font-size:10px;color:var(--text2);text-align:center;font-weight:600;}
+
+  /* ── RESPONSIVE MEDIA QUERIES ── */
+  @media(max-width:768px){
+    /* Hide desktop sidebar, show mobile nav */
+    .sidebar{display:none;}
+    .main{margin-left:0;padding-bottom:70px;}
+    .mobile-nav{display:flex;flex-direction:column;}
+    /* Topbar mobile */
+    .topbar{padding:12px 16px;}
+    .topbar h2{font-size:16px;}
+    .topbar p{display:none;}
+    #connection-status .badge{font-size:10px;padding:2px 7px;}
+    /* Page content */
+    .page-content{padding:14px 14px;}
+    /* Dashboard cards 2x2 */
+    .cards-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;}
+    .stat-card{padding:14px;}
+    .stat-card .value{font-size:24px;}
+    /* Charts stacked */
+    .charts-grid{grid-template-columns:1fr;gap:10px;}
+    .chart-container{height:160px;}
+    /* Table → mobile cards */
+    .table-card{border-radius:var(--radius);overflow:visible;}
+    table,thead,tbody,th,td,tr{display:block;}
+    thead{display:none;}
+    tr.group-header,tr.group-child{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;padding:12px;display:flex;flex-direction:column;gap:6px;}
+    tr.group-child{border-left:3px solid var(--accent2);margin-left:12px;margin-top:-4px;border-radius:0 10px 10px 0;}
+    td{padding:0!important;border:none!important;font-size:13px;}
+    td::before{content:attr(data-label);font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;}
+    td:empty{display:none;}
+    .td-code{font-size:11px;}
+    /* Pipeline horizontal scroll */
+    .pipeline-grid{grid-template-columns:repeat(4,80vw);overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding-bottom:8px;}
+    .pipeline-col{scroll-snap-align:start;min-width:80vw;}
+    .pipeline-cards{max-height:60vh;}
+    /* Filters bar */
+    .filters-bar{gap:8px;}
+    .search-bar{flex:1;min-width:0;}
+    .search-bar input{width:100%;}
+    .filter-select{font-size:12px;padding:6px 8px;}
+    /* Modals full screen on mobile */
+    .modal-overlay{padding:0;align-items:flex-end;}
+    .modal,.modal.modal-lg{width:100%;max-width:100%;border-radius:20px 20px 0 0;max-height:92vh;padding:20px 18px calc(20px + env(safe-area-inset-bottom));}
+    /* Forms */
+    .form-row{grid-template-columns:1fr;}
+    .form-card{padding:16px;max-width:100%;}
+    /* Fechamento */
+    .fechamento-totais{grid-template-columns:1fr;}
+    /* Toast bottom adjusted */
+    .toast-container{bottom:80px;right:12px;left:12px;}
+    .toast{min-width:0;}
+    /* Pipeline debug bar */
+    .pipeline-debug{flex-wrap:wrap;gap:6px;}
+    /* Login */
+    .login-card{padding:36px 24px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;position:fixed;bottom:0;left:0;right:0;width:100%;max-width:100%;}
+    .login-screen{align-items:flex-end;}
+    /* User chip */
+    .user-chip-info .user-chip-name{font-size:10px;}
+    /* Buttons full width on small */
+    .modal-actions{flex-wrap:wrap;}
+    .modal-actions .btn{flex:1;}
+    /* Etapa blocks */
+    .etapa-block{padding:10px;}
+  }
+  /* Mobile topbar */
+  .mob-topbar{display:none;align-items:center;justify-content:space-between;
+    padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));
+    background:var(--surface);border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:50;}
+  .mob-topbar-left{display:flex;align-items:center;gap:10px;}
+  .mob-topbar-logo{width:32px;height:32px;background:var(--accent);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .mob-topbar-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;line-height:1.2;}
+  .mob-topbar-sub{font-size:10px;color:var(--text2);}
+  .mob-topbar-right{display:flex;align-items:center;gap:8px;}
+  @media(max-width:768px){
+    .mob-topbar{display:flex;}
+    .topbar{display:none;}
+    .main{padding-bottom:0;}
+  }
 </head>
 <body>
 <!-- LOGIN SCREEN -->
@@ -239,7 +345,57 @@
     </div>
   </nav>
 
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-nav" id="mobile-nav">
+    <div class="mobile-nav-inner">
+      <button class="mob-nav-btn active" onclick="navigate('dashboard')" id="mob-btn-dashboard">
+        <span class="mob-icon">📊</span><span>Início</span>
+      </button>
+      <button class="mob-nav-btn" onclick="navigate('pacientes')" id="mob-btn-pacientes">
+        <span class="mob-icon">🔍</span><span>Consultar</span>
+      </button>
+      <button class="mob-nav-btn" onclick="navigate('pipeline')" id="mob-btn-pipeline">
+        <span class="mob-icon">⚡</span><span>Etapas</span>
+      </button>
+      <button class="mob-nav-btn" onclick="navigate('cadastro')" id="mob-btn-cadastro">
+        <span class="mob-icon">➕</span><span>Novo</span>
+      </button>
+      <button class="mob-nav-btn" onclick="openMobMore()" id="mob-btn-more">
+        <span class="mob-icon">☰</span><span>Mais</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MOBILE MORE SHEET -->
+  <div class="mob-more-overlay" id="mob-more-overlay" onclick="closeMobMore()"></div>
+  <div class="mob-more-sheet" id="mob-more-sheet">
+    <div class="mob-more-handle"></div>
+    <div class="mob-more-grid">
+      <div class="mob-more-item" onclick="closeMobMore();navigate('fechamento')"><span class="icon">📅</span><span>Fechamento</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('dentistas')"><span class="icon">👨‍⚕️</span><span>Dentistas</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('proteticos')"><span class="icon">🧑‍🔧</span><span>Protéticos</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('tipopeca')"><span class="icon">🦷</span><span>Tipos de Peça</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();recarregarDados()"><span class="icon">🔄</span><span>Atualizar</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();openConfig()"><span class="icon">⚙️</span><span>Configurações</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();toggleTheme()"><span class="icon" id="mob-theme-icon">☀️</span><span>Tema</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();signOut()"><span class="icon">🚪</span><span>Sair</span></div>
+    </div>
+  </div>
+
   <div class="main">
+    <!-- MOBILE TOP BAR (only visible on mobile) -->
+    <div class="mob-topbar" id="mob-topbar">
+      <div class="mob-topbar-left">
+        <div class="mob-topbar-logo">🦷</div>
+        <div>
+          <div class="mob-topbar-title" id="mob-page-title">Dashboard</div>
+          <div class="mob-topbar-sub" id="mob-page-sub">Visão geral</div>
+        </div>
+      </div>
+      <div class="mob-topbar-right">
+        <div id="mob-user-status"></div>
+      </div>
+    </div>
     <div class="topbar">
       <div><h2 id="page-title">Dashboard</h2><p id="page-subtitle">Visão geral do controle de próteses</p></div>
       <div id="connection-status"></div>
@@ -427,15 +583,17 @@ async function fetchUserInfo(){
     // Show app
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='flex';
-    // Render user chip in topbar
-    document.getElementById('user-status').innerHTML=`
+    const userChipHtml=`
       <div class="user-chip" onclick="signOut()" title="Clique para sair">
-        <img src="${u.picture}" alt="${u.name}" onerror="this.src=''">
+        <img src="${u.picture}" alt="${u.name}" onerror="this.style.display='none'">
         <div class="user-chip-info">
           <span class="user-chip-name">${u.name.split(' ')[0]}</span>
           <span class="user-chip-out">Sair</span>
         </div>
       </div>`;
+    document.getElementById('user-status').innerHTML=userChipHtml;
+    const mobUs=document.getElementById('mob-user-status');
+    if(mobUs) mobUs.innerHTML=userChipHtml;
     loadAll();
   }catch(e){showLoginError('Erro ao obter dados do usuário.');}
 }
@@ -484,20 +642,45 @@ function toggleTheme(){
   const isLight=document.body.classList.toggle('light');
   document.getElementById('theme-icon').textContent=isLight?'🌙':'☀️';
   document.getElementById('theme-label').textContent=isLight?'Tema escuro':'Tema claro';
+  const mobIcon=document.getElementById('mob-theme-icon');
+  if(mobIcon) mobIcon.textContent=isLight?'🌙':'☀️';
   localStorage.setItem('prosus_theme',isLight?'light':'dark');
 }
 
 function navigate(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',pages[i]===page));
+  // Sync mobile nav
+  ['dashboard','pacientes','pipeline','cadastro'].forEach(p=>{
+    const btn=document.getElementById('mob-btn-'+p);
+    if(btn) btn.classList.toggle('active',p===page);
+  });
+  const morePages=['fechamento','dentistas','proteticos','tipopeca'];
+  const mobMore=document.getElementById('mob-btn-more');
+  if(mobMore) mobMore.classList.toggle('active',morePages.includes(page));
   document.getElementById('page-'+page).classList.add('active');
   const[t,s]=pageMeta[page];
   document.getElementById('page-title').textContent=t;
   document.getElementById('page-subtitle').textContent=s;
+  const mobTitle=document.getElementById('mob-page-title');
+  const mobSub=document.getElementById('mob-page-sub');
+  if(mobTitle) mobTitle.textContent=t;
+  if(mobSub) mobSub.textContent=s;
   if(page==='dentistas'&&state.connected) renderDentistas();
   if(page==='proteticos'&&state.connected) renderProteticos();
   if(page==='tipopeca'&&state.connected) renderTipoPeca();
   if(page==='fechamento'&&state.connected) renderFechamento();
+  // Scroll to top on mobile
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function openMobMore(){
+  document.getElementById('mob-more-overlay').classList.add('open');
+  document.getElementById('mob-more-sheet').classList.add('open');
+}
+function closeMobMore(){
+  document.getElementById('mob-more-overlay').classList.remove('open');
+  document.getElementById('mob-more-sheet').classList.remove('open');
 }
 
 /* ── FETCH / POST ── */
@@ -718,12 +901,14 @@ function renderTablePage(){
       :'';
 
     h+=`<tr class="group-header${isNew?' highlight-new':''}">
-      <td class="td-code">#${primary.codigo}</td>
-      <td class="td-name">${primary.nome}${multiBadge}</td>
-      <td>${cap(primary.dentista)}</td><td>${primary.tipo}</td><td>${primary.data}</td>
-      <td>${distDisplay}</td>
-      <td>${entregaCell(primary.codigo)}</td>
-      <td><span class="badge ${bc}">${sit}</span></td>
+      <td class="td-code" data-label="Código">#${primary.codigo}</td>
+      <td class="td-name" data-label="Nome">${primary.nome}${multiBadge}</td>
+      <td data-label="Dentista">${cap(primary.dentista)}</td>
+      <td data-label="Tipo">${primary.tipo}</td>
+      <td data-label="Moldagem">${primary.data}</td>
+      <td data-label="Dist.">${distDisplay}</td>
+      <td data-label="Entrega">${entregaCell(primary.codigo)}</td>
+      <td data-label="Situação"><span class="badge ${bc}">${sit}</span></td>
       <td><button class="icon-btn" onclick="showDetail('${primary.codigo}')">🔎</button></td>
     </tr>`;
 
@@ -736,12 +921,14 @@ function renderTablePage(){
         const cDist=state.distVisible?(cprot?`${child.dist} — ${cprot.nome}`:child.dist):child.dist;
         const cNew=String(child.codigo)===String(state.lastSavedCodigo);
         h+=`<tr class="group-child${cNew?' highlight-new':''}">
-          <td class="td-code">#${child.codigo}</td>
-          <td class="td-name" style="color:var(--text2)">${child.nome}</td>
-          <td>${cap(child.dentista)}</td><td>${child.tipo}</td><td>${child.data}</td>
-          <td>${cDist}</td>
-          <td>${entregaCell(child.codigo)}</td>
-          <td><span class="badge ${cbc}">${csit}</span></td>
+          <td class="td-code" data-label="Código">#${child.codigo}</td>
+          <td class="td-name" data-label="Nome" style="color:var(--text2)">${child.nome}</td>
+          <td data-label="Dentista">${cap(child.dentista)}</td>
+          <td data-label="Tipo">${child.tipo}</td>
+          <td data-label="Moldagem">${child.data}</td>
+          <td data-label="Dist.">${cDist}</td>
+          <td data-label="Entrega">${entregaCell(child.codigo)}</td>
+          <td data-label="Situação"><span class="badge ${cbc}">${csit}</span></td>
           <td><button class="icon-btn" onclick="showDetail('${child.codigo}')">🔎</button></td>
         </tr>`;
       });
@@ -1512,6 +1699,27 @@ async function submitNovoTipo(){
 document.getElementById('config-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeConfig();});
 document.getElementById('detail-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDetail();});
 document.getElementById('protetico-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeProtModal();});
+
+// ── PWA MANIFEST (inline, no extra file needed) ──
+const manifest={
+  name:'ProSUS — Controle de Próteses',
+  short_name:'ProSUS',
+  description:'Sistema de Controle de Próteses Dentárias do SUS',
+  start_url:'./',
+  display:'standalone',
+  background_color:'#0f1117',
+  theme_color:'#0f1117',
+  orientation:'portrait-primary',
+  icons:[
+    {src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='38' fill='%234af0a0'/><text y='145' font-size='130' x='28'>🦷</text></svg>",sizes:'192x192',type:'image/svg+xml'},
+    {src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%234af0a0'/><text y='390' font-size='350' x='70'>🦷</text></svg>",sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}
+  ]
+};
+const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+const manifestUrl=URL.createObjectURL(blob);
+const manifestLink=document.createElement('link');
+manifestLink.rel='manifest';manifestLink.href=manifestUrl;
+document.head.appendChild(manifestLink);
 </script>
 </body>
 </html>

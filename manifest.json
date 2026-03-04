@@ -1,0 +1,43 @@
+{
+  "name": "ProSUS — Controle de Próteses",
+  "short_name": "ProSUS",
+  "description": "Sistema de controle de próteses dentárias do SUS",
+  "start_url": "/prosus/",
+  "scope": "/prosus/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["medical", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Nova Moldagem",
+      "short_name": "Novo",
+      "description": "Cadastrar nova moldagem",
+      "url": "/prosus/#cadastro",
+      "icons": [{"src": "icon-192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Consultar",
+      "short_name": "Buscar",
+      "description": "Consultar pacientes",
+      "url": "/prosus/#pacientes",
+      "icons": [{"src": "icon-192.png", "sizes": "192x192"}]
+    }
+  ]
+}
