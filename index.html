@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProSUS — Controle de Próteses</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{--bg:#0f1117;--surface:#181c27;--surface2:#1e2333;--border:#2a3048;--accent:#4af0a0;--accent2:#3b82f6;--accent3:#f59e0b;--accent4:#f43f5e;--text:#e8eaf2;--text2:#7c85a2;--text3:#4a5168;--shadow:0 4px 24px rgba(0,0,0,.4);--radius:12px;--radius-lg:20px;}
+  body.light{--bg:#f0f2f8;--surface:#fff;--surface2:#f5f7fc;--border:#dde2f0;--accent:#059669;--accent2:#2563eb;--accent3:#d97706;--accent4:#e11d48;--text:#111827;--text2:#6b7280;--text3:#9ca3af;--shadow:0 4px 24px rgba(0,0,0,.08);}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s;}
+  h1,h2,h3,h4{font-family:'Syne',sans-serif;}
+  .app{display:flex;min-height:100vh;}
+  .sidebar{width:224px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:background .3s,border-color .3s;}
+  .sidebar-logo{padding:24px 20px 18px;border-bottom:1px solid var(--border);}
+  .sidebar-logo .logo-icon{width:38px;height:38px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:10px;}
+  .sidebar-logo h1{font-size:17px;color:var(--text);letter-spacing:-.5px;}
+  .sidebar-logo p{font-size:11px;color:var(--text2);margin-top:2px;}
+  .sidebar-nav{flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;}
+  .nav-section{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:10px 10px 4px;}
+  .nav-btn{display:flex;align-items:center;gap:10px;padding:9px 12px;border:none;background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;border-radius:8px;cursor:pointer;transition:all .15s;text-align:left;width:100%;}
+  .nav-btn:hover{background:var(--surface2);color:var(--text);}
+  .nav-btn.active{background:rgba(74,240,160,.12);color:var(--accent);}
+  body.light .nav-btn.active{background:rgba(5,150,105,.1);}
+  .nav-btn .nav-icon{font-size:15px;width:20px;text-align:center;}
+  .sidebar-footer{padding:12px 10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;}
+  .config-btn,.theme-btn{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:12px;border-radius:8px;cursor:pointer;width:100%;transition:all .15s;}
+  .config-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .theme-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+  .main{margin-left:224px;flex:1;min-height:100vh;}
+  .topbar{padding:18px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg);position:sticky;top:0;z-index:50;transition:background .3s,border-color .3s;}
+  .topbar h2{font-size:20px;font-weight:700;}
+  .topbar p{font-size:13px;color:var(--text2);margin-top:2px;}
+  .page-content{padding:26px 32px;}
+  .page{display:none;}.page.active{display:block;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;width:560px;max-width:100%;max-height:90vh;overflow-y:auto;animation:modalIn .2s ease;box-shadow:var(--shadow);}
+  .modal.modal-lg{width:720px;}
+  @keyframes modalIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .modal-header h3{font-size:17px;}
+  .modal-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:6px;transition:color .15s;}
+  .modal-close:hover{color:var(--text);}
+  .modal-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--surface2);border-radius:10px;padding:4px;}
+  .modal-tab{flex:1;padding:8px;border:none;background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;border-radius:7px;cursor:pointer;transition:all .15s;}
+  .modal-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.15);}
+  .form-group{margin-bottom:14px;}
+  .form-group label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .15s;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);}
+  .form-group input:disabled,.form-group select:disabled{opacity:.5;cursor:not-allowed;}
+  .form-group select option{background:var(--surface2);}
+  .form-group small{display:block;font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+  .btn{padding:9px 18px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+  .btn-primary{background:var(--accent);color:#000;}.btn-primary:hover{filter:brightness(.9);}
+  .btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}.btn-secondary:hover{color:var(--text);border-color:var(--text3);}
+  .btn-danger{background:var(--accent4);color:#fff;}.btn-danger:hover{filter:brightness(.9);}
+  .btn-sm{padding:5px 10px;font-size:12px;}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+  .badge::before{content:'●';font-size:7px;}
+  .badge-green{background:rgba(74,240,160,.12);color:var(--accent);}
+  .badge-blue{background:rgba(59,130,246,.12);color:var(--accent2);}
+  .badge-yellow{background:rgba(245,158,11,.12);color:var(--accent3);}
+  .badge-red{background:rgba(244,63,94,.12);color:var(--accent4);}
+  .badge-gray{background:rgba(124,133,162,.12);color:var(--text2);}
+  /* highlight row */
+  tr.highlight-new td{background:rgba(74,240,160,.08)!important;transition:background 2s;}
+  /* grouped patients */
+  .patient-group{}
+  tr.group-header td{background:var(--surface2);border-top:2px solid var(--border);}
+  tr.group-header:first-child td{border-top:1px solid var(--border);}
+  tr.group-child td{background:rgba(59,130,246,.03);border-left:3px solid var(--accent2);}
+  tr.group-child td:first-child{padding-left:22px;}
+  .multi-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(59,130,246,.15);color:var(--accent2);margin-left:6px;cursor:pointer;}
+  .group-toggle{background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:2px 4px;border-radius:4px;transition:color .15s;}
+  .group-toggle:hover{color:var(--accent2);}
+  .trat-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:border-color .15s;}
+  .trat-chip:hover{border-color:var(--accent2);color:var(--accent2);}
+  .related-tratamentos{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;}
+  .cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;transition:border-color .2s;}
+  .stat-card:hover{border-color:var(--text3);}
+  .stat-card .label{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+  .stat-card .value{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1;}
+  .stat-card .sublabel{font-size:12px;color:var(--text2);margin-top:5px;}
+  .stat-card.accent{border-color:rgba(74,240,160,.3);background:rgba(74,240,160,.05);}
+  .stat-card.accent .value{color:var(--accent);}
+  .charts-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:20px;}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .chart-card h3{font-size:12px;color:var(--text2);font-weight:600;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;}
+  .chart-container{position:relative;height:190px;}
+  .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .table-header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;}
+  .table-header h3{font-size:14px;font-weight:700;}
+  table{width:100%;border-collapse:collapse;}
+  thead tr{background:var(--surface2);}
+  th{padding:9px 14px;text-align:left;font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
+  td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);}
+  tr:hover td{background:rgba(255,255,255,.02);}
+  body.light tr:hover td{background:rgba(0,0,0,.02);}
+  .td-code{font-family:monospace;color:var(--text2);font-size:12px;}
+  .td-name{font-weight:500;}
+  .icon-btn{padding:5px 8px;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;}
+  .icon-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,240,160,.08);}
+  .filters-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .search-bar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;}
+  .search-bar input{background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;width:200px;}
+  .search-bar input::placeholder{color:var(--text3);}
+  .filter-select{padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;cursor:pointer;}
+  .pagination{display:flex;align-items:center;gap:6px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap;}
+  .page-btn{padding:5px 10px;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;}
+  .page-btn:hover,.page-btn.active{background:var(--accent);color:#000;border-color:var(--accent);}
+  .page-info{font-size:12px;color:var(--text2);margin-left:auto;}
+  .pipeline-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .pipeline-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .pipeline-col-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .pipeline-col-header h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+  .pipeline-count{background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;}
+  .pipeline-cards{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:180px;max-height:520px;overflow-y:auto;}
+  .pipeline-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;cursor:pointer;transition:border-color .15s;}
+  .pipeline-card:hover{border-color:var(--text3);}
+  .pipeline-card .pc-code{font-size:10px;color:var(--text3);font-family:monospace;margin-bottom:3px;}
+  .pipeline-card .pc-name{font-size:12px;font-weight:500;margin-bottom:2px;}
+  .pipeline-card .pc-type{font-size:11px;color:var(--text2);}
+  .pipeline-card .pc-date{font-size:10px;color:var(--text3);margin-top:4px;}
+  .step1 .pipeline-col-header{border-top:3px solid var(--accent3);}
+  .step2 .pipeline-col-header{border-top:3px solid var(--accent2);}
+  .step3 .pipeline-col-header{border-top:3px solid var(--accent);}
+  .step4 .pipeline-col-header{border-top:3px solid var(--accent4);}
+  .form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px;max-width:700px;}
+  .form-card h3{font-size:15px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .section-divider{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px;padding:8px 12px;border-radius:8px;display:flex;align-items:center;gap:8px;}
+  .section-divider.bp{background:rgba(59,130,246,.12);color:var(--accent2);border-left:3px solid var(--accent2);}
+  .section-divider.pd{background:rgba(245,158,11,.12);color:var(--accent3);border-left:3px solid var(--accent3);}
+  .section-divider.ent{background:rgba(74,240,160,.12);color:var(--accent);border-left:3px solid var(--accent);}
+  .section-divider.rem{background:rgba(168,85,247,.12);color:#a855f7;border-left:3px solid #a855f7;}
+  .etapa-block{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;}
+  .etapa-block.bp{border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.04);}
+  .etapa-block.pd{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04);}
+  .etapa-block.ent{border-color:rgba(74,240,160,.3);background:rgba(74,240,160,.04);}
+  .etapa-block.rem{border-color:rgba(168,85,247,.3);background:rgba(168,85,247,.04);}
+  .not-connected{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;text-align:center;gap:14px;}
+  .not-connected .icon{font-size:52px;}
+  .not-connected h3{font-size:20px;}
+  .not-connected p{font-size:13px;color:var(--text2);max-width:380px;line-height:1.6;}
+  .loading-state,.empty-state{padding:48px;text-align:center;color:var(--text2);font-size:14px;}
+  .empty-state .empty-icon{font-size:38px;margin-bottom:10px;}
+  .loading-spinner{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:13px;display:flex;align-items:center;gap:10px;min-width:240px;animation:toastIn .25s ease;box-shadow:var(--shadow);}
+  .toast-success{border-left:3px solid var(--accent);}
+  .toast-error{border-left:3px solid var(--accent4);}
+  .toast-info{border-left:3px solid var(--accent2);}
+  @keyframes toastIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+  /* LOGIN */
+  .login-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;}
+  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:48px 40px;width:380px;max-width:95vw;text-align:center;box-shadow:var(--shadow);}
+  .login-logo{width:56px;height:56px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px;}
+  .login-card h2{font-size:24px;margin-bottom:6px;}
+  .login-card p{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.6;}
+  .google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 20px;background:#fff;border:1px solid #ddd;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:#333;cursor:pointer;transition:box-shadow .15s;}
+  .google-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.15);}
+  .google-btn svg{width:20px;height:20px;flex-shrink:0;}
+  .login-error{font-size:12px;color:var(--accent4);margin-top:12px;}
+  .user-chip{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:border-color .15s;text-decoration:none;}
+  .user-chip:hover{border-color:var(--accent4);}
+  .user-chip img{width:26px;height:26px;border-radius:50%;object-fit:cover;}
+  .user-chip-info{display:flex;flex-direction:column;line-height:1.2;}
+  .user-chip-name{font-size:11px;font-weight:600;color:var(--text);}
+  .user-chip-out{font-size:10px;color:var(--accent4);}
+  .alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .alert-info{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);color:#93c5fd;}
+  .alert-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#fcd34d;}
+  body.light .alert-info{color:#1d4ed8;}body.light .alert-warn{color:#92400e;}
+  .timeline-step{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .timeline-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .list-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:border-color .15s;}
+  .list-item:hover{border-color:var(--accent2);}
+  .list-item-info .code{font-size:11px;color:var(--text2);font-family:monospace;}
+  .list-item-info .name{font-size:13px;font-weight:500;margin-top:1px;}
+  .fechamento-totais{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+  .total-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+  .total-card h4{font-size:12px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+  .total-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .total-row:last-child{border-bottom:none;font-weight:700;color:var(--accent);}
+  .total-row .tval{font-weight:700;}
+</style>
+</head>
+<body>
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">🦷</div>
+    <h2>ProSUS</h2>
+    <p>Sistema de Controle de Próteses Dentárias.<br>Entre com sua conta Google para continuar.</p>
+    <button class="google-btn" onclick="signIn()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Entrar com Google
+    </button>
+    <p class="login-error" id="login-error"></p>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none">
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🦷</div>
+      <h1>ProSUS</h1>
+      <p>Controle de Próteses</p>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Geral</div>
+      <button class="nav-btn active" onclick="navigate('dashboard')"><span class="nav-icon">📊</span> Dashboard</button>
+      <button class="nav-btn" onclick="navigate('pacientes')"><span class="nav-icon">🔍</span> Consultar</button>
+      <button class="nav-btn" onclick="navigate('pipeline')"><span class="nav-icon">⚡</span> Etapas</button>
+      <button class="nav-btn" onclick="navigate('fechamento')"><span class="nav-icon">📅</span> Fechamento</button>
+      <div class="nav-section">Cadastros</div>
+      <button class="nav-btn" onclick="navigate('cadastro')"><span class="nav-icon">➕</span> Nova Moldagem</button>
+      <button class="nav-btn" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
+      <button class="nav-btn" onclick="navigate('proteticos')"><span class="nav-icon">🧑‍🔧</span> Protéticos</button>
+      <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
+    </div>
+    <div class="sidebar-footer">
+      <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
+      <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h2 id="page-title">Dashboard</h2><p id="page-subtitle">Visão geral do controle de próteses</p></div>
+      <div id="connection-status"></div>
+      <div id="user-status"></div>
+    </div>
+    <div class="page-content">
+
+      <div class="page active" id="page-dashboard">
+        <div id="dashboard-content"><div class="not-connected"><div class="icon">🔌</div><h3>Conecte sua planilha</h3><p>Faça login com sua conta Google para começar.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
+      </div>
+
+      <div class="page" id="page-pacientes">
+        <div class="filters-bar">
+          <div class="search-bar"><span style="color:var(--text3)">🔍</span><input type="text" id="search-input" placeholder="Nome, código ou dentista..." oninput="filterTable()"></div>
+          <select class="filter-select" id="filter-dentista" onchange="filterTable()"><option value="">Todos os dentistas</option></select>
+          <select class="filter-select" id="filter-tipo" onchange="filterTable()"><option value="">Todos os tipos</option></select>
+          <select class="filter-select" id="filter-status" onchange="filterTable()"><option value="">Todas situações</option><option>Entregue</option><option>Pendente</option></select>
+          <input type="date" class="filter-select" id="filter-data-de" onchange="filterTable()" title="Data moldagem DE">
+          <input type="date" class="filter-select" id="filter-data-ate" onchange="filterTable()" title="Data moldagem ATÉ">
+          <button class="btn btn-secondary btn-sm" onclick="clearFilters()">✕ Limpar</button>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Pacientes</h3><span id="table-count" style="font-size:12px;color:var(--text2)"></span></div>
+          <div id="table-body"></div>
+          <div class="pagination" id="pagination" style="display:none"></div>
+        </div>
+      </div>
+
+      <div class="page" id="page-pipeline">
+        <div id="pipeline-content"><div class="not-connected"><div class="icon">⚡</div><h3>Pipeline de Etapas</h3><p>Faça login para visualizar o fluxo.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
+      </div>
+
+      <div class="page" id="page-fechamento">
+        <div id="fechamento-content"><div class="not-connected"><div class="icon">📅</div><h3>Fechamento Mensal</h3><p>Faça login para acessar o fechamento.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
+      </div>
+
+      <div class="page" id="page-cadastro">
+        <div id="cadastro-content"><div class="not-connected"><div class="icon">➕</div><h3>Cadastrar Moldagem</h3><p>Faça login para habilitar o cadastro.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
+      </div>
+
+      <div class="page" id="page-dentistas">
+        <div id="dentistas-content"></div>
+      </div>
+
+      <div class="page" id="page-proteticos">
+        <div id="proteticos-content"></div>
+      </div>
+
+      <div class="page" id="page-tipopeca">
+        <div id="tipopeca-content"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- CONFIG MODAL -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal">
+    <div class="modal-header"><h3>⚙️ Configurações</h3><button class="modal-close" onclick="closeConfig()">✕</button></div>
+    <div class="form-group"><label>Senha para revelar protéticos</label><input type="password" id="cfg-distsenha" placeholder="Deixe em branco para manter a atual"><small>Senha usada para revelar nomes dos protéticos nas telas públicas.</small></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Cancelar</button><button class="btn btn-primary" onclick="saveConfig()">💾 Salvar</button></div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h3 id="detail-title">Detalhes</h3><button class="modal-close" onclick="closeDetail()">✕</button></div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchDetailTab('info')">📋 Informações</button>
+      <button class="modal-tab" onclick="switchDetailTab('etapas')">📅 Etapas</button>
+      <button class="modal-tab" onclick="switchDetailTab('editar')">✏️ Editar</button>
+    </div>
+    <div id="detail-tab-info"></div>
+    <div id="detail-tab-etapas" style="display:none"></div>
+    <div id="detail-tab-editar" style="display:none"></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeDetail()">Fechar</button></div>
+  </div>
+</div>
+
+<!-- PROTETICO MODAL (add via button) -->
+<div class="modal-overlay" id="protetico-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h3>🧑‍🔧 Novo Protético</h3><button class="modal-close" onclick="closeProtModal()">✕</button></div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">O nome ficará protegido por senha.</p>
+    <div class="form-group"><label>Código (sigla)</label><input type="text" id="prot-codigo" placeholder="Ex: E" maxlength="5" style="text-transform:uppercase"></div>
+    <div class="form-group"><label>Nome Completo</label><input type="text" id="prot-nome" placeholder="Nome do protético"></div>
+    <div class="form-group"><label>Senha para confirmar</label><input type="password" id="prot-senha" placeholder="Senha de acesso"></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeProtModal()">Cancelar</button><button class="btn btn-primary" onclick="submitNovoProtetico()">💾 Salvar</button></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const CLIENT_ID='29814188441-tk6mg6ni8r63u5jmncog34ijv719cff0.apps.googleusercontent.com';
+const SHEET_ID='1cWCh7bcDlsBJA9NkmHHPUEgweFYNnVGWO2h3HtuqiNY';
+const SCOPES='https://www.googleapis.com/auth/spreadsheets';
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbyT3XF5rauK9vOZxPMlzHy4gsGLyhkko_XzI2j2XqQIsU5FSCjnETtWf0Tb462YBvmhyw/exec';
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+const state={
+  accessToken:null,
+  tokenExpiry:null,
+  user:null,
+  connected:false,
+  moldagens:[],baseProva:[],provaDentes:[],entregas:[],remarcacoes:[],
+  proteticos:[],dentistas:[],tiposPeca:[],
+  filtered:[],currentPage:1,perPage:15,
+  distVisible:false,currentDetailCod:null,
+  lastSavedCodigo:null
+};
+
+const pages=['dashboard','pacientes','pipeline','fechamento','cadastro','dentistas','proteticos','tipopeca'];
+const pageMeta={
+  dashboard:['Dashboard','Visão geral do controle de próteses'],
+  pacientes:['Consultar Pacientes','Busque e filtre os registros'],
+  pipeline:['Etapas de Produção','Acompanhe o fluxo de cada prótese'],
+  fechamento:['Fechamento Mensal','Relatório de entregas por período'],
+  cadastro:['Nova Moldagem','Registre uma nova moldagem'],
+  dentistas:['Dentistas','Gerencie os dentistas cadastrados'],
+  proteticos:['Protéticos','Gerencie os protéticos (acesso restrito)'],
+  tipopeca:['Tipos de Peça','Gerencie os tipos de peça (BaseDados)']
+};
+
+window.onload=()=>{
+  const theme=localStorage.getItem('prosus_theme')||'dark';
+  if(theme==='light'){document.body.classList.add('light');document.getElementById('theme-icon').textContent='🌙';document.getElementById('theme-label').textContent='Tema escuro';}
+  // Init Google Identity
+  google.accounts.oauth2.initTokenClient&&initOAuth();
+};
+
+let tokenClient=null;
+function initOAuth(){
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID,
+    scope:SCOPES,
+    callback:(resp)=>{
+      if(resp.error){showLoginError('Erro ao autenticar: '+resp.error);return;}
+      state.accessToken=resp.access_token;
+      state.tokenExpiry=Date.now()+(resp.expires_in-60)*1000;
+      fetchUserInfo();
+    }
+  });
+}
+
+// Called by Google Identity after lib loads
+window.addEventListener('load',()=>{
+  // Wait for GSI lib to be ready
+  const wait=setInterval(()=>{
+    if(window.google?.accounts?.oauth2){
+      clearInterval(wait);
+      initOAuth();
+      // Try silent token refresh if we have a cached session hint
+      const hint=localStorage.getItem('prosus_user_email');
+      if(hint){
+        tokenClient.requestAccessToken({prompt:'none',login_hint:hint});
+      }
+    }
+  },100);
+});
+
+function signIn(){
+  if(!tokenClient){toast('Aguarde a inicialização do Google...','info');return;}
+  tokenClient.requestAccessToken({prompt:'consent'});
+}
+
+function signOut(){
+  if(state.accessToken){
+    google.accounts.oauth2.revoke(state.accessToken,()=>{});
+  }
+  state.accessToken=null;state.user=null;state.connected=false;
+  localStorage.removeItem('prosus_user_email');
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('user-status').innerHTML='';
+}
+
+async function fetchUserInfo(){
+  try{
+    const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{
+      headers:{Authorization:`Bearer ${state.accessToken}`}
+    });
+    const u=await r.json();
+    state.user=u;
+    localStorage.setItem('prosus_user_email',u.email);
+    // Show app
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    // Render user chip in topbar
+    document.getElementById('user-status').innerHTML=`
+      <div class="user-chip" onclick="signOut()" title="Clique para sair">
+        <img src="${u.picture}" alt="${u.name}" onerror="this.src=''">
+        <div class="user-chip-info">
+          <span class="user-chip-name">${u.name.split(' ')[0]}</span>
+          <span class="user-chip-out">Sair</span>
+        </div>
+      </div>`;
+    loadAll();
+  }catch(e){showLoginError('Erro ao obter dados do usuário.');}
+}
+
+function showLoginError(msg){
+  const el=document.getElementById('login-error');
+  if(el){el.textContent=msg;el.style.display='block';}
+}
+
+async function ensureToken(){
+  if(state.accessToken&&Date.now()<state.tokenExpiry) return;
+  // Token expired — request silently
+  return new Promise((resolve,reject)=>{
+    tokenClient.callback=(resp)=>{
+      if(resp.error){reject(new Error(resp.error));return;}
+      state.accessToken=resp.access_token;
+      state.tokenExpiry=Date.now()+(resp.expires_in-60)*1000;
+      resolve();
+    };
+    tokenClient.requestAccessToken({prompt:'none'});
+  });
+}
+
+function openConfig(){document.getElementById('cfg-distsenha').value='';document.getElementById('config-modal').classList.add('open');}
+function closeConfig(){document.getElementById('config-modal').classList.remove('open');}
+function saveConfig(){
+  const senha=document.getElementById('cfg-distsenha').value.trim();
+  if(senha) localStorage.setItem('prosus_distsenha',senha);
+  closeConfig();
+  toast('Configurações salvas!','success');
+}
+function updateStatus(){
+  const el=document.getElementById('connection-status');
+  if(!el)return;
+  el.innerHTML=state.connected?'<span class="badge badge-green">● Conectado</span>':'<span class="badge badge-yellow">● Carregando...</span>';
+}
+
+function toggleTheme(){
+  const isLight=document.body.classList.toggle('light');
+  document.getElementById('theme-icon').textContent=isLight?'🌙':'☀️';
+  document.getElementById('theme-label').textContent=isLight?'Tema escuro':'Tema claro';
+  localStorage.setItem('prosus_theme',isLight?'light':'dark');
+}
+
+function navigate(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',pages[i]===page));
+  document.getElementById('page-'+page).classList.add('active');
+  const[t,s]=pageMeta[page];
+  document.getElementById('page-title').textContent=t;
+  document.getElementById('page-subtitle').textContent=s;
+  if(page==='dentistas'&&state.connected) renderDentistas();
+  if(page==='proteticos'&&state.connected) renderProteticos();
+  if(page==='tipopeca'&&state.connected) renderTipoPeca();
+  if(page==='fechamento'&&state.connected) renderFechamento();
+}
+
+/* ── FETCH / POST ── */
+async function fetchSheet(range){
+  await ensureToken();
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}`;
+  const r=await fetch(url,{headers:{Authorization:`Bearer ${state.accessToken}`}});
+  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.statusText);}
+  return(await r.json()).values||[];
+}
+async function postSheet(sheet,row){
+  const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({sheet,row})});
+  const result=await r.json();
+  if(!result.success) throw new Error(result.error||'Erro ao salvar em '+sheet);
+  return result;
+}
+
+/* ── UTILS ── */
+function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
+function parseDate(d){if(!d)return null;const p=d.split('/');if(p.length!==3)return null;return new Date(+p[2],+p[1]-1,+p[0]);}
+function toInput(d){if(!d)return'';const p=d.split('/');return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:''}
+function fromInput(v){if(!v)return'';const p=v.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:''}
+/* ── MULTI-TRATAMENTO HELPERS ── */
+// Extrai o código base (ex: "7457/1" → "7457", "7457" → "7457")
+function baseCod(cod){return String(cod).split('/')[0];}
+
+// Retorna todos os tratamentos do mesmo paciente (mesmo código base)
+function tratamentosRelacionados(cod){
+  const base=baseCod(cod);
+  return state.moldagens.filter(m=>baseCod(m.codigo)===base);
+}
+
+// Sugere o próximo código para um novo tratamento do mesmo paciente
+function proximoCodigoTratamento(nome){
+  const existentes=state.moldagens.filter(m=>m.nome.toLowerCase()===nome.toLowerCase());
+  if(!existentes.length) return null;
+  // Pega todos os códigos base únicos e todos os sufixos /N
+  const bases=[...new Set(existentes.map(m=>baseCod(m.codigo)))];
+  const base=bases[0]; // usa o primeiro código base encontrado
+  const suffixes=existentes
+    .map(m=>{const p=String(m.codigo).split('/');return p.length>1?parseInt(p[1]):0;})
+    .sort((a,b)=>b-a);
+  const nextSuffix=suffixes[0]+1;
+  return{base,proximo:nextSuffix===1?`${base}/1`:`${base}/${nextSuffix}`,existentes};
+}
+
+// Agrupa moldagens por código base para exibição agrupada
+function agruparPorPaciente(lista){
+  const map=new Map();
+  lista.forEach(m=>{
+    const base=baseCod(m.codigo);
+    if(!map.has(base)) map.set(base,[]);
+    map.get(base).push(m);
+  });
+  return map;
+}
+
+function toast(msg,type='info'){
+  const c=document.getElementById('toast-container');
+  const d=document.createElement('div');d.className=`toast toast-${type}`;
+  d.innerHTML=`<span>${{success:'✅',error:'❌',info:'ℹ️'}[type]||'ℹ️'}</span><span>${msg}</span>`;
+  c.appendChild(d);setTimeout(()=>{d.style.cssText='opacity:0;transition:opacity .3s';setTimeout(()=>d.remove(),300);},3500);
+}
+
+/* ── LOAD ── */
+async function loadAll(){
+  state.connected=false;updateStatus();
+  document.getElementById('dashboard-content').innerHTML='<div class="loading-state"><div class="loading-spinner"></div>Carregando dados...</div>';
+  try{
+    const[mRows,bRows,dRows,eRows]=await Promise.all([
+      fetchSheet('Moldagens!A2:H5000'),
+      fetchSheet('BaseProvaArmacao!A2:G2000'),
+      fetchSheet('Prova de Dentes!A2:G2000'),
+      fetchSheet('Entregas!A2:J2000')
+    ]);
+    let pRows=[],dentRows=[],tipoRows=[],remRows=[];
+    try{pRows=await fetchSheet('Proteticos!A2:B200');}catch(e){}
+    try{dentRows=await fetchSheet('Dentistas!A2:A500');}catch(e){}
+    try{tipoRows=await fetchSheet('BaseDados!A3:C200');}catch(e){} // linha 2 = cabeçalho, dados a partir da 3
+    try{remRows=await fetchSheet('Remarcacao!A2:G500');}catch(e){}
+
+    // Filtra apenas linhas com código real (não vazio)
+    state.moldagens=mRows.filter(r=>r[0]&&r[0].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),nome:r[1]||'',dentista:r[2]||'',tipo:r[3]||'',data:r[4]||'',dist:r[5]||'',situacao:r[6]||'Pendente',obs:r[7]||''}));
+    // Só considera etapa como "feita" se a data (col F) estiver preenchida
+    state.baseProva=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
+    state.provaDentes=dRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
+    state.entregas=eRows.filter(r=>r[0]&&r[0].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',entrega:r[6]&&r[6].toString().trim()!==''?r[6].toString().trim():'',obs:r[7]||''}));
+    state.proteticos=pRows.filter(r=>r[0]).map(r=>({codigo:r[0],nome:r[1]||''}));
+    state.dentistas=dentRows.filter(r=>r[0]).map(r=>r[0]);
+    state.tiposPeca=tipoRows.filter(r=>r[0]).map(r=>({desc:r[0],pt:r[1]||'0',ppr:r[2]||'0'}));
+    state.remarcacoes=remRows.filter(r=>r[0]).map(r=>({codigo:r[0].toString().trim(),etapa:r[4]||'',data:r[5]||'',obs:r[6]||''}));
+
+    state.connected=true;updateStatus();
+    toast('Planilha carregada! '+state.moldagens.length+' registros.','success');
+    renderDashboard();renderTable();renderPipeline();renderCadastroForm();
+  }catch(e){
+    state.connected=false;updateStatus();
+    toast('Erro: '+e.message,'error');
+    document.getElementById('dashboard-content').innerHTML=`<div class="not-connected"><div class="icon">❌</div><h3>Erro de conexão</h3><p>${e.message}</p><button class="btn btn-primary" onclick="openConfig()">Reconfigurar</button></div>`;
+  }
+}
+
+/* ── DASHBOARD ── */
+function renderDashboard(){
+  const total=state.moldagens.length;
+  const entregues=state.entregas.filter(e=>e.entrega).length;
+  const pendentes=total-entregues;
+  const pt=state.moldagens.filter(m=>m.tipo.startsWith('PT')).length;
+  const ppr=state.moldagens.filter(m=>m.tipo.startsWith('PPR')).length;
+  const tipoC={},dentC={},mesC={};
+  state.moldagens.forEach(m=>{
+    const k=m.tipo||'Não Preenchido';
+    tipoC[k]=(tipoC[k]||0)+1;
+    dentC[m.dentista]=(dentC[m.dentista]||0)+1;
+  });
+  state.entregas.filter(e=>e.entrega).forEach(e=>{
+    const dt=parseDate(e.entrega);
+    if(dt){const k=`${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}`;mesC[k]=(mesC[k]||0)+1;}
+  });
+  const mesKeys=Object.keys(mesC).sort().slice(-7);
+  const mesLabels=mesKeys.map(k=>{const[y,m]=k.split('/');return MESES[+m-1].slice(0,3)+' '+y;});
+
+  document.getElementById('dashboard-content').innerHTML=`
+    <div class="cards-grid">
+      <div class="stat-card accent"><div class="label">Total de Próteses</div><div class="value">${total}</div><div class="sublabel">registros na planilha</div></div>
+      <div class="stat-card"><div class="label">Entregues</div><div class="value" style="color:var(--accent)">${entregues}</div><div class="sublabel">${total?Math.round(entregues/total*100):0}% do total</div></div>
+      <div class="stat-card"><div class="label">Pendentes</div><div class="value" style="color:var(--accent3)">${pendentes}</div><div class="sublabel">aguardando entrega</div></div>
+      <div class="stat-card"><div class="label">PT / PPR</div><div class="value" style="font-size:22px">${pt}<span style="color:var(--text3);margin:0 6px">/</span>${ppr}</div><div class="sublabel">próteses totais</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><h3>📈 Entregas por mês</h3><div class="chart-container"><canvas id="ch-meses"></canvas></div></div>
+      <div class="chart-card"><h3>🍩 Por tipo de peça</h3><div class="chart-container"><canvas id="ch-tipos"></canvas></div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><h3>👨‍⚕️ Por dentista (top 6)</h3><div class="chart-container"><canvas id="ch-dents"></canvas></div></div>
+      <div class="chart-card"><h3>📊 Situação geral</h3><div style="display:flex;align-items:center;justify-content:center;height:190px"><canvas id="ch-sit" style="max-height:170px;max-width:170px"></canvas></div></div>
+    </div>`;
+  const pal=['#4af0a0','#3b82f6','#f59e0b','#f43f5e','#a78bfa','#34d399','#fb923c','#94a3b8'];
+  const gOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#7c85a2',font:{size:11}},grid:{color:'#2a3048'}},y:{ticks:{color:'#7c85a2',font:{size:11}},grid:{color:'#2a3048'}}}};
+  if(mesKeys.length) new Chart(document.getElementById('ch-meses'),{type:'bar',data:{labels:mesLabels,datasets:[{data:mesKeys.map(k=>mesC[k]),backgroundColor:'rgba(74,240,160,.2)',borderColor:'#4af0a0',borderWidth:2,borderRadius:5}]},options:gOpts});
+  const tLabels=Object.keys(tipoC);
+  new Chart(document.getElementById('ch-tipos'),{type:'doughnut',data:{labels:tLabels,datasets:[{data:tLabels.map(k=>tipoC[k]),backgroundColor:pal,borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7c85a2',font:{size:11},boxWidth:10,padding:8}}}}});
+  const dLabels=Object.keys(dentC).filter(Boolean).sort((a,b)=>dentC[b]-dentC[a]).slice(0,6);
+  new Chart(document.getElementById('ch-dents'),{type:'bar',data:{labels:dLabels.map(cap),datasets:[{data:dLabels.map(k=>dentC[k]),backgroundColor:pal,borderRadius:5}]},options:{...gOpts,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#7c85a2',font:{size:11}},grid:{color:'#2a3048'}},y:{ticks:{color:'#7c85a2',font:{size:11}},grid:{display:false}}}}});
+  new Chart(document.getElementById('ch-sit'),{type:'doughnut',data:{labels:['Entregues','Pendentes'],datasets:[{data:[entregues,pendentes],backgroundColor:['#4af0a0','#f59e0b'],borderWidth:0,hoverOffset:4}]},options:{responsive:false,plugins:{legend:{position:'bottom',labels:{color:'#7c85a2',font:{size:11},boxWidth:10,padding:10}}}}});
+}
+
+/* ── TABLE ── */
+function renderTable(){
+  state.filtered=[...state.moldagens];state.currentPage=1;
+  const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(m=>m.dentista).filter(Boolean))].sort();
+  document.getElementById('filter-dentista').innerHTML='<option value="">Todos os dentistas</option>'+dents.map(d=>`<option>${d}</option>`).join('');
+  const tipos=state.tiposPeca.length?state.tiposPeca.map(t=>t.desc):[...new Set(state.moldagens.map(m=>m.tipo).filter(Boolean))].sort();
+  document.getElementById('filter-tipo').innerHTML='<option value="">Todos os tipos</option>'+tipos.map(t=>`<option>${t}</option>`).join('');
+  renderTablePage();
+}
+
+// State for which groups are expanded (shows children)
+if(!window.expandedGroups) window.expandedGroups=new Set();
+function toggleGroup(base){
+  if(expandedGroups.has(base)) expandedGroups.delete(base);
+  else expandedGroups.add(base);
+  renderTablePage();
+}
+
+function entregaCell(cod){
+  const today=new Date();today.setHours(0,0,0,0);
+  const ent=state.entregas.find(x=>x.codigo===cod);
+  if(ent?.entrega) return`<span style="color:var(--accent);font-weight:600">✓ ${ent.entrega}</span>`;
+  if(ent?.previsao){
+    const prev=parseDate(ent.previsao);
+    const vencido=prev&&prev<today;
+    return`<span style="color:${vencido?'var(--accent4)':'var(--text)'};font-weight:${vencido?'600':'400'}">📅 ${ent.previsao}${vencido?' ⚠️':''}</span>`;
+  }
+  return'<span style="color:var(--text3)">—</span>';
+}
+
+function renderTablePage(){
+  const{filtered,currentPage,perPage}=state;
+
+  // Build groups from filtered list
+  const groupMap=agruparPorPaciente(filtered);
+  // Each group = one "slot" for pagination; single-treatment groups = 1 slot, multi = 1 slot (expandable)
+  const groupKeys=[...groupMap.keys()];
+  const total=groupKeys.length;
+  const start=(currentPage-1)*perPage;
+  const pageKeys=groupKeys.slice(start,start+perPage);
+
+  document.getElementById('table-count').textContent=`${filtered.length} registro${filtered.length!==1?'s':''} · ${total} paciente${total!==1?'s':''}`;
+  if(!total){document.getElementById('table-body').innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><p>Nenhum resultado encontrado.</p></div>';document.getElementById('pagination').style.display='none';return;}
+
+  let h=`<table><thead><tr>
+    <th>Código</th><th>Nome</th><th>Dentista</th><th>Tipo</th><th>Data Moldagem</th>
+    <th>Dist. <button onclick="toggleDistVisibility()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text2)">${state.distVisible?'🔓':'🔒'}</button></th>
+    <th>Entrega / Previsão</th><th>Situação</th><th></th>
+  </tr></thead><tbody>`;
+
+  pageKeys.forEach(base=>{
+    const group=groupMap.get(base);
+    const isMulti=group.length>1;
+    const expanded=expandedGroups.has(base);
+    // Sort group: base code first, then /1, /2...
+    group.sort((a,b)=>{
+      const sa=String(a.codigo).split('/');const sb=String(b.codigo).split('/');
+      return (parseInt(sa[1]||0))-(parseInt(sb[1]||0));
+    });
+    const primary=group[0];
+
+    const sit=(primary.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente';
+    const bc=sit==='Entregue'?'badge-green':'badge-yellow';
+    const prot=state.proteticos.find(p=>p.codigo===primary.dist);
+    const distDisplay=state.distVisible?(prot?`${primary.dist} — ${prot.nome}`:primary.dist):primary.dist;
+    const isNew=String(primary.codigo)===String(state.lastSavedCodigo)||group.some(g=>String(g.codigo)===String(state.lastSavedCodigo));
+
+    // Multi-treatment toggle badge
+    const multiBadge=isMulti
+      ?`<button class="multi-badge" onclick="toggleGroup('${base}')" title="${expanded?'Recolher':'Expandir'} tratamentos">${group.length} tratamentos ${expanded?'▲':'▼'}</button>`
+      :'';
+
+    h+=`<tr class="group-header${isNew?' highlight-new':''}">
+      <td class="td-code">#${primary.codigo}</td>
+      <td class="td-name">${primary.nome}${multiBadge}</td>
+      <td>${cap(primary.dentista)}</td><td>${primary.tipo}</td><td>${primary.data}</td>
+      <td>${distDisplay}</td>
+      <td>${entregaCell(primary.codigo)}</td>
+      <td><span class="badge ${bc}">${sit}</span></td>
+      <td><button class="icon-btn" onclick="showDetail('${primary.codigo}')">🔎</button></td>
+    </tr>`;
+
+    // Render child rows when expanded
+    if(isMulti&&expanded){
+      group.slice(1).forEach(child=>{
+        const csit=(child.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente';
+        const cbc=csit==='Entregue'?'badge-green':'badge-yellow';
+        const cprot=state.proteticos.find(p=>p.codigo===child.dist);
+        const cDist=state.distVisible?(cprot?`${child.dist} — ${cprot.nome}`:child.dist):child.dist;
+        const cNew=String(child.codigo)===String(state.lastSavedCodigo);
+        h+=`<tr class="group-child${cNew?' highlight-new':''}">
+          <td class="td-code">#${child.codigo}</td>
+          <td class="td-name" style="color:var(--text2)">${child.nome}</td>
+          <td>${cap(child.dentista)}</td><td>${child.tipo}</td><td>${child.data}</td>
+          <td>${cDist}</td>
+          <td>${entregaCell(child.codigo)}</td>
+          <td><span class="badge ${cbc}">${csit}</span></td>
+          <td><button class="icon-btn" onclick="showDetail('${child.codigo}')">🔎</button></td>
+        </tr>`;
+      });
+    }
+  });
+
+  h+='</tbody></table>';
+  document.getElementById('table-body').innerHTML=h;
+  if(state.lastSavedCodigo){
+    setTimeout(()=>{document.querySelectorAll('tr.highlight-new').forEach(r=>r.classList.remove('highlight-new'));state.lastSavedCodigo=null;},3000);
+  }
+  const pages=Math.ceil(total/perPage);
+  if(pages<=1){document.getElementById('pagination').style.display='none';return;}
+  document.getElementById('pagination').style.display='flex';
+  let p='';
+  if(currentPage>1)p+=`<button class="page-btn" onclick="goPage(${currentPage-1})">‹</button>`;
+  for(let i=Math.max(1,currentPage-2);i<=Math.min(pages,currentPage+2);i++)p+=`<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  if(currentPage<pages)p+=`<button class="page-btn" onclick="goPage(${currentPage+1})">›</button>`;
+  p+=`<span class="page-info">${start+1}–${Math.min(start+perPage,total)} de ${total} pacientes</span>`;
+  document.getElementById('pagination').innerHTML=p;
+}
+
+function goPage(n){state.currentPage=n;renderTablePage();}
+
+function clearFilters(){
+  document.getElementById('search-input').value='';
+  document.getElementById('filter-dentista').value='';
+  document.getElementById('filter-tipo').value='';
+  document.getElementById('filter-status').value='';
+  document.getElementById('filter-data-de').value='';
+  document.getElementById('filter-data-ate').value='';
+  filterTable();
+}
+
+function toggleDistVisibility(){
+  if(state.distVisible){state.distVisible=false;renderTablePage();return;}
+  // Use a custom prompt with password type
+  const senha=promptPassword('Digite a senha para revelar os protéticos:');
+  if(senha===null)return;
+  const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
+  if(senha===sc){state.distVisible=true;renderTablePage();toast('Protéticos revelados','info');}
+  else toast('Senha incorreta','error');
+}
+
+function promptPassword(msg){
+  // Create inline password prompt to avoid plain-text browser prompt
+  return new Promise(()=>{}).constructor.resolve(null); // fallback handled below
+}
+
+// Override toggleDistVisibility to use a modal-like approach
+function toggleDistVisibility(){
+  if(state.distVisible){state.distVisible=false;renderTablePage();if(document.getElementById('proteticos-content').innerHTML)renderProteticos();return;}
+  showPasswordPrompt('🔒 Revelar Protéticos','Digite a senha para revelar os nomes dos protéticos:',(senha)=>{
+    const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
+    if(senha===sc){state.distVisible=true;renderTablePage();if(document.querySelector('#page-proteticos.active'))renderProteticos();toast('Protéticos revelados','info');}
+    else toast('Senha incorreta','error');
+  });
+}
+
+let _pwCallback=null;
+function showPasswordPrompt(title,msg,cb){
+  _pwCallback=cb;
+  let overlay=document.getElementById('pw-overlay');
+  if(!overlay){
+    overlay=document.createElement('div');overlay.id='pw-overlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;width:380px;max-width:95vw;box-shadow:var(--shadow)">
+      <h3 id="pw-title" style="font-family:Syne,sans-serif;font-size:16px;margin-bottom:8px"></h3>
+      <p id="pw-msg" style="font-size:13px;color:var(--text2);margin-bottom:16px"></p>
+      <input type="password" id="pw-input" style="width:100%;padding:9px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:DM Sans,sans-serif;font-size:13px;outline:none;margin-bottom:16px" placeholder="Senha...">
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closePwPrompt()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmPwPrompt()">Confirmar</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+  }
+  document.getElementById('pw-title').textContent=title;
+  document.getElementById('pw-msg').textContent=msg;
+  document.getElementById('pw-input').value='';
+  overlay.style.display='flex';
+  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+  document.getElementById('pw-input').onkeydown=e=>{if(e.key==='Enter')confirmPwPrompt();if(e.key==='Escape')closePwPrompt();};
+}
+function closePwPrompt(){const o=document.getElementById('pw-overlay');if(o)o.style.display='none';}
+function confirmPwPrompt(){
+  const val=document.getElementById('pw-input').value;
+  closePwPrompt();
+  if(_pwCallback){_pwCallback(val);_pwCallback=null;}
+}
+
+function filterTable(){
+  const q=(document.getElementById('search-input').value||'').toLowerCase();
+  const dent=document.getElementById('filter-dentista').value;
+  const tipo=document.getElementById('filter-tipo').value;
+  const sit=document.getElementById('filter-status').value;
+  const dataDE=document.getElementById('filter-data-de').value;
+  const dataATE=document.getElementById('filter-data-ate').value;
+  state.filtered=state.moldagens.filter(m=>{
+    const mq=!q||m.nome.toLowerCase().includes(q)||String(m.codigo).includes(q)||m.dentista.toLowerCase().includes(q);
+    const md=!dent||m.dentista===dent;
+    const mt=!tipo||m.tipo===tipo;
+    const ms=!sit||((m.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente')===sit;
+    let mde=true,mate=true;
+    if(dataDE||dataATE){
+      const dt=parseDate(m.data);
+      if(dt){
+        if(dataDE){const de=new Date(dataDE+'T00:00:00');mde=dt>=de;}
+        if(dataATE){const ate=new Date(dataATE+'T23:59:59');mate=dt<=ate;}
+      }else{mde=false;mate=false;}
+    }
+    return mq&&md&&mt&&ms&&mde&&mate;
+  });
+  state.currentPage=1;renderTablePage();
+}
+
+/* ── DETAIL ── */
+function showDetail(cod){
+  const m=state.moldagens.find(x=>x.codigo===String(cod));if(!m)return;
+  state.currentDetailCod=cod;
+  document.getElementById('detail-title').textContent=`#${m.codigo} — ${m.nome}`;
+  document.querySelectorAll('.modal-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  ['info','etapas','editar'].forEach((t,i)=>document.getElementById('detail-tab-'+t).style.display=i===0?'block':'none');
+  renderDetailInfo(cod);
+  document.getElementById('detail-modal').classList.add('open');
+}
+function switchDetailTab(tab){
+  const tabs=['info','etapas','editar'];
+  document.querySelectorAll('.modal-tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===tab));
+  tabs.forEach(t=>document.getElementById('detail-tab-'+t).style.display=t===tab?'block':'none');
+  const cod=state.currentDetailCod;
+  if(tab==='info')renderDetailInfo(cod);
+  if(tab==='etapas')renderDetailEtapas(cod);
+  if(tab==='editar')renderDetailEditar(cod);
+}
+function renderDetailInfo(cod){
+  const m=state.moldagens.find(x=>x.codigo===String(cod));if(!m)return;
+  const e=state.entregas.find(x=>x.codigo===String(cod));
+  const bp=state.baseProva.find(x=>x.codigo===String(cod));
+  const pd=state.provaDentes.find(x=>x.codigo===String(cod));
+  const prot=state.proteticos.find(p=>p.codigo===m.dist);
+  const rems=state.remarcacoes.filter(x=>x.codigo===String(cod));
+  const step=(label,date,color,obs)=>`<div class="timeline-step"><div class="timeline-dot" style="background:${date?color:'var(--border)'}"></div><div style="flex:1"><div style="font-size:13px;font-weight:500">${label}</div><div style="font-size:12px;color:var(--text2)">${date||'Pendente'}</div>${obs?`<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 ${obs}</div>`:''}</div>${date?'<span class="badge badge-green">✓</span>':'<span class="badge badge-gray">–</span>'}</div>`;
+  const remHtml=rems.length?`<div style="margin-top:12px"><div style="font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Remarcações</div>${rems.map(r=>`<div style="font-size:12px;padding:6px 10px;background:var(--surface2);border-radius:6px;margin-bottom:4px">🔁 <strong>${r.etapa}</strong> → ${r.data}${r.obs?' — '+r.obs:''}</div>`).join('')}</div>`:'';
+  // Tratamentos relacionados
+  const relacionados=tratamentosRelacionados(cod).filter(x=>x.codigo!==String(cod));
+  const relacionadosHtml=relacionados.length?`
+    <div class="related-tratamentos">
+      <span style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;width:100%;margin-bottom:2px">🔗 Outros tratamentos deste paciente</span>
+      ${relacionados.map(r=>{
+        const re=state.entregas.find(x=>x.codigo===r.codigo);
+        const sit=re?.entrega?'✅ Entregue':'⏳ Pendente';
+        return`<button class="trat-chip" onclick="closeDetail();showDetail('${r.codigo}')">#${r.codigo} · ${r.tipo} · ${sit}</button>`;
+      }).join('')}
+    </div>`:'';
+  document.getElementById('detail-tab-info').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">TIPO DE PEÇA</div><div style="font-size:14px;font-weight:600">${m.tipo}</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">DENTISTA</div><div style="font-size:14px;font-weight:600">${cap(m.dentista)}</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">DISTRIBUIÇÃO</div><div style="font-size:14px;font-weight:600">${m.dist}${state.distVisible&&prot?' — '+prot.nome:''}</div></div>
+      ${m.obs?`<div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">OBSERVAÇÃO</div><div style="font-size:13px">${m.obs}</div></div>`:''}
+    </div>
+    <div style="font-size:10px;color:var(--text2);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Linha do Tempo</div>
+    ${step('Moldagem',m.data,'#4af0a0','')}
+    ${step('Base de Prova / Armação',bp?.data,'#3b82f6',bp?.obs||'')}
+    ${step('Prova de Dentes',pd?.data,'#f59e0b',pd?.obs||'')}
+    ${step('Entrega',e?.entrega,'#4af0a0',e?.obs||'')}
+    ${e?.previsao&&!e?.entrega?`<div style="font-size:12px;color:var(--text2);margin-top:8px">📅 Previsão: <strong style="color:var(--text)">${e.previsao}</strong></div>`:''}
+    ${remHtml}
+    ${relacionadosHtml}`;
+}
+function renderDetailEtapas(cod){
+  const e=state.entregas.find(x=>x.codigo===String(cod))||{};
+  const bp=state.baseProva.find(x=>x.codigo===String(cod))||{};
+  const pd=state.provaDentes.find(x=>x.codigo===String(cod))||{};
+  document.getElementById('detail-tab-etapas').innerHTML=`
+    <div class="alert alert-info">📅 Informe as datas das etapas. Deixe em branco para não alterar.</div>
+
+    <div class="etapa-block bp">
+      <div class="section-divider bp">🔵 Base de Prova / Armação</div>
+      <div class="form-row">
+        <div class="form-group"><label>Data</label><input type="date" id="et-bp" value="${toInput(bp.data)}"></div>
+        <div class="form-group"><label>Observação</label><input type="text" id="et-bp-obs" value="${bp.obs||''}" placeholder="Obs. opcional"></div>
+      </div>
+    </div>
+
+    <div class="etapa-block pd">
+      <div class="section-divider pd">🟡 Prova de Dentes</div>
+      <div class="form-row">
+        <div class="form-group"><label>Data</label><input type="date" id="et-pd" value="${toInput(pd.data)}"></div>
+        <div class="form-group"><label>Observação</label><input type="text" id="et-pd-obs" value="${pd.obs||''}" placeholder="Obs. opcional"></div>
+      </div>
+    </div>
+
+    <div class="etapa-block ent">
+      <div class="section-divider ent">✅ Entrega</div>
+      <div class="form-row">
+        <div class="form-group"><label>Data de Entrega</label><input type="date" id="et-ent" value="${toInput(e.entrega)}"></div>
+        <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="et-prev" value="${toInput(e.previsao)}"></div>
+      </div>
+      <div class="form-group"><label>Observação da Entrega</label><input type="text" id="et-ent-obs" value="${e.obs||''}" placeholder="Obs. opcional"></div>
+    </div>
+
+    <div class="etapa-block rem">
+      <div class="section-divider rem">🔁 Remarcação</div>
+      <div class="form-row">
+        <div class="form-group"><label>Etapa Remarcada</label><select id="et-rem-etapa"><option value="">— Não remarcar —</option><option>Etapa 1</option><option>Etapa 2</option><option>Etapa 3</option></select></div>
+        <div class="form-group"><label>Nova Data</label><input type="date" id="et-rem-data"></div>
+      </div>
+      <div class="form-group"><label>Obs. da Remarcação</label><input type="text" id="et-rem-obs" placeholder="Motivo ou obs."></div>
+    </div>
+
+    <div style="margin-top:4px"><button class="btn btn-primary" onclick="submitEtapas('${cod}')">💾 Salvar</button></div>`;
+}
+async function submitEtapas(cod){
+  const bp=fromInput(document.getElementById('et-bp').value);
+  const bpObs=document.getElementById('et-bp-obs').value;
+  const pd=fromInput(document.getElementById('et-pd').value);
+  const pdObs=document.getElementById('et-pd-obs').value;
+  const ent=fromInput(document.getElementById('et-ent').value);
+  const prev=fromInput(document.getElementById('et-prev').value);
+  const entObs=document.getElementById('et-ent-obs').value;
+  const remEtapa=document.getElementById('et-rem-etapa').value;
+  const remData=fromInput(document.getElementById('et-rem-data').value);
+  const remObs=document.getElementById('et-rem-obs').value;
+  try{
+    toast('Salvando etapas...','info');
+    const tasks=[];
+    if(bp) tasks.push(postSheet('BaseProvaArmacao',[cod,'','','','',bp,bpObs]));
+    if(pd) tasks.push(postSheet('Prova de Dentes',[cod,'','','','',pd,pdObs]));
+    if(ent||prev) tasks.push(postSheet('Entregas',[cod,'','','','',prev,ent,entObs]));
+    if(remEtapa&&remData) tasks.push(postSheet('Remarcacao',[cod,'','','',remEtapa,remData,remObs]));
+    if(!tasks.length){toast('Nenhum dado informado','error');return;}
+    await Promise.all(tasks);
+    toast('Salvo com sucesso!','success');
+    await loadAll();showDetail(cod);switchDetailTab('info');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+function renderDetailEditar(cod){
+  const m=state.moldagens.find(x=>x.codigo===String(cod));if(!m)return;
+  const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(x=>x.dentista).filter(Boolean))].sort();
+  const tipos=state.tiposPeca.length?state.tiposPeca.map(t=>t.desc):[...new Set(state.moldagens.map(x=>x.tipo).filter(Boolean))].sort();
+  const distOpts=state.proteticos.map(p=>`<option value="${p.codigo}"${p.codigo===m.dist?' selected':''}>${p.codigo} — ${p.nome}</option>`).join('');
+  document.getElementById('detail-tab-editar').innerHTML=`
+    <div class="alert alert-warn">✏️ Altere os campos desejados e clique em Salvar.</div>
+    <div class="form-row">
+      <div class="form-group"><label>Código</label><input type="text" id="ed-codigo" value="${m.codigo}" disabled></div>
+      <div class="form-group"><label>Data da Moldagem</label><input type="date" id="ed-data" value="${toInput(m.data)}"></div>
+    </div>
+    <div class="form-group"><label>Nome do Paciente</label><input type="text" id="ed-nome" value="${m.nome}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Dentista</label><select id="ed-dentista">${dents.map(d=>`<option value="${d}"${d===m.dentista?' selected':''}>${cap(d)}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Tipo de Peça</label><select id="ed-tipo">${tipos.map(t=>`<option${t===m.tipo?' selected':''}>${t}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-group"><label>Distribuição</label><select id="ed-dist">${distOpts}</select></div>
+    <div class="form-group"><label>Observação</label><textarea id="ed-obs" rows="2">${m.obs||''}</textarea></div>
+    <div style="margin-top:4px"><button class="btn btn-primary" onclick="submitEditar('${cod}')">💾 Salvar Alterações</button></div>`;
+}
+async function submitEditar(cod){
+  const nome=document.getElementById('ed-nome').value.trim();
+  const dentista=document.getElementById('ed-dentista').value;
+  const tipo=document.getElementById('ed-tipo').value;
+  const dataRaw=document.getElementById('ed-data').value;
+  const dist=document.getElementById('ed-dist').value;
+  const obs=document.getElementById('ed-obs').value.trim();
+  if(!nome){toast('Informe o nome','error');return;}
+  try{
+    toast('Atualizando...','info');
+    const rows=await fetchSheet('Moldagens!A:A');
+    const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
+    if(rowIdx<0) throw new Error('Registro não encontrado');
+    const sheetRow=rowIdx+1;
+    const m=state.moldagens.find(x=>x.codigo===String(cod));
+    const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Moldagens',row:sheetRow,values:[cod,nome,dentista,tipo,fromInput(dataRaw),dist,m?.situacao||'Pendente',obs]})});
+    const result=await r.json();
+    if(!result.success) throw new Error(result.error||'Erro desconhecido');
+    toast('Dados atualizados!','success');
+    await loadAll();showDetail(cod);switchDetailTab('info');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+function closeDetail(){document.getElementById('detail-modal').classList.remove('open');}
+
+/* ── PIPELINE ── */
+function renderPipeline(){
+  const bpSet=new Set(state.baseProva.map(m=>m.codigo));
+  const pdSet=new Set(state.provaDentes.map(m=>m.codigo));
+  const entSet=new Set(state.entregas.filter(e=>e.entrega).map(e=>e.codigo));
+  const totalMold=state.moldagens.length;
+
+  const e1=state.moldagens.filter(m=>!bpSet.has(m.codigo)&&!entSet.has(m.codigo)).slice(0,60);
+  const e2=state.moldagens.filter(m=>bpSet.has(m.codigo)&&!pdSet.has(m.codigo)&&!entSet.has(m.codigo)).slice(0,60);
+  const e3=state.moldagens.filter(m=>pdSet.has(m.codigo)&&!entSet.has(m.codigo)).slice(0,60);
+  const e4=state.moldagens.filter(m=>entSet.has(m.codigo)).slice(-40);
+
+  // Debug info
+  const debugHtml=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">📋 Total moldagens: <strong style="color:var(--text)">${totalMold}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🔵 Com base de prova (c/ data): <strong style="color:var(--accent2)">${bpSet.size}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🟡 Com prova de dentes (c/ data): <strong style="color:var(--accent3)">${pdSet.size}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">✅ Entregues: <strong style="color:var(--accent)">${entSet.size}</strong></span>
+  </div>`;
+
+  // Cards com data relevante por etapa
+  const mkCard=(m,extraHtml='')=>`<div class="pipeline-card" onclick="showDetail('${m.codigo}')">
+    <div class="pc-code">#${m.codigo}</div>
+    <div class="pc-name">${m.nome}</div>
+    <div class="pc-type">${m.tipo}</div>
+    <div class="pc-date">🦷 Moldagem: ${m.data||'—'}</div>
+    ${extraHtml}
+  </div>`;
+
+  const card1=m=>mkCard(m); // moldagem — só data da moldagem
+  const card2=m=>{
+    const bp=state.baseProva.find(b=>b.codigo===m.codigo);
+    return mkCard(m,bp?.data?`<div style="font-size:10px;color:var(--accent2);margin-top:3px;font-weight:600">🔵 Base de Prova: ${bp.data}</div>`:'');
+  };
+  const card3=m=>{
+    const bp=state.baseProva.find(b=>b.codigo===m.codigo);
+    const pd=state.provaDentes.find(p=>p.codigo===m.codigo);
+    return mkCard(m,
+      (bp?.data?`<div style="font-size:10px;color:var(--accent2);margin-top:3px;font-weight:600">🔵 Base: ${bp.data}</div>`:'') +
+      (pd?.data?`<div style="font-size:10px;color:var(--accent3);margin-top:2px;font-weight:600">🟡 Prova Dentes: ${pd.data}</div>`:'')
+    );
+  };
+  const card4=m=>{
+    const ent=state.entregas.find(e=>e.codigo===m.codigo);
+    return mkCard(m,ent?.entrega?`<div style="font-size:10px;color:var(--accent);margin-top:3px;font-weight:600">✅ Entregue: ${ent.entrega}</div>`:'');
+  };
+
+  const empty='<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px 10px">Nenhum item</div>';
+  document.getElementById('pipeline-content').innerHTML=`
+    <div class="alert alert-info" style="margin-bottom:10px">ℹ️ Clique em qualquer card para ver detalhes ou registrar etapas. Etapas são consideradas concluídas apenas quando a <strong>data está preenchida</strong> na planilha.</div>
+    ${debugHtml}
+    <div class="pipeline-grid">
+      <div class="pipeline-col step1"><div class="pipeline-col-header"><h4>🟡 Moldagem</h4><span class="pipeline-count">${e1.length}</span></div><div class="pipeline-cards">${e1.length?e1.map(card1).join(''):empty}</div></div>
+      <div class="pipeline-col step2"><div class="pipeline-col-header"><h4>🔵 Base de Prova</h4><span class="pipeline-count">${e2.length}</span></div><div class="pipeline-cards">${e2.length?e2.map(card2).join(''):empty}</div></div>
+      <div class="pipeline-col step3"><div class="pipeline-col-header"><h4>🟢 Prova de Dentes</h4><span class="pipeline-count">${e3.length}</span></div><div class="pipeline-cards">${e3.length?e3.map(card3).join(''):empty}</div></div>
+      <div class="pipeline-col step4"><div class="pipeline-col-header"><h4>✅ Entregues</h4><span class="pipeline-count">${entSet.size}</span></div><div class="pipeline-cards">${e4.length?e4.map(card4).join(''):empty}</div></div>
+    </div>`;
+}
+
+/* ── FECHAMENTO ── */
+function renderFechamento(){
+  const today=new Date();
+  document.getElementById('fechamento-content').innerHTML=`
+    <div class="form-card" style="max-width:400px;margin-bottom:20px">
+      <h3>📅 Selecionar Período</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Ano</label><input type="number" id="fech-ano" value="${today.getFullYear()}" min="2020" max="2099"></div>
+        <div class="form-group"><label>Mês</label><select id="fech-mes">${MESES.map((m,i)=>`<option value="${i+1}"${i===today.getMonth()?' selected':''}>${m}</option>`).join('')}</select></div>
+      </div>
+      <button class="btn btn-primary" onclick="gerarFechamento()">🔍 Gerar Fechamento</button>
+    </div>
+    <div id="fechamento-resultado"></div>`;
+}
+function gerarFechamento(){
+  const ano=+document.getElementById('fech-ano').value;
+  const mes=+document.getElementById('fech-mes').value;
+  const entregasDoMes=state.entregas.filter(e=>{
+    if(!e.entrega)return false;
+    const dt=parseDate(e.entrega);
+    return dt&&dt.getFullYear()===ano&&dt.getMonth()+1===mes;
+  });
+  if(!entregasDoMes.length){document.getElementById('fechamento-resultado').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>Nenhuma entrega encontrada neste período.</p></div>';return;}
+
+  const rows=entregasDoMes.map(e=>{
+    const m=state.moldagens.find(x=>x.codigo===e.codigo)||{};
+    const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
+    return{...m,entrega:e.entrega,qtPT:+tp.pt||0,qtPPR:+tp.ppr||0};
+  }).sort((a,b)=>{const da=parseDate(a.entrega),db=parseDate(b.entrega);return da&&db?da-db:0;});
+
+  const totPac=rows.length;
+  const totPT=rows.reduce((s,r)=>s+r.qtPT,0);
+  const totPPR=rows.reduce((s,r)=>s+r.qtPPR,0);
+
+  // Por distribuição
+  const distMap={};
+  rows.forEach(r=>{
+    const d=r.dist||'—';
+    if(!distMap[d]) distMap[d]={pac:0,pt:0,ppr:0};
+    distMap[d].pac++;distMap[d].pt+=r.qtPT;distMap[d].ppr+=r.qtPPR;
+  });
+
+  const distTableRows=Object.entries(distMap).map(([d,v])=>`<tr><td><strong>${d}</strong></td><td style="text-align:center">${v.pac}</td><td style="text-align:center">${v.pt}</td><td style="text-align:center">${v.ppr}</td><td style="text-align:center;font-weight:700;color:var(--accent)">${v.pt+v.ppr}</td></tr>`).join('');
+
+  const tableRows=rows.map(r=>{
+    const prot=state.proteticos.find(p=>p.codigo===r.dist);
+    const distLabel=state.distVisible&&prot?`${r.dist} — ${prot.nome}`:r.dist||'—';
+    return`<tr><td class="td-code">#${r.codigo||'—'}</td><td class="td-name">${r.nome||'—'}</td><td>${cap(r.dentista||'')}</td><td>${distLabel}</td><td>${r.entrega}</td><td>${r.tipo||'—'}</td><td style="text-align:center">${r.qtPT}</td><td style="text-align:center">${r.qtPPR}</td></tr>`;
+  }).join('');
+
+  document.getElementById('fechamento-resultado').innerHTML=`
+    <h3 style="font-size:16px;margin-bottom:16px">${MESES[mes-1]} ${ano} — ${totPac} entrega${totPac!==1?'s':''}</h3>
+    <div class="fechamento-totais">
+      <div class="total-card">
+        <h4>🔢 Total Geral</h4>
+        <div class="total-row"><span>Pacientes</span><span class="tval">${totPac}</span></div>
+        <div class="total-row"><span>Total PT</span><span class="tval">${totPT}</span></div>
+        <div class="total-row"><span>Total PPR</span><span class="tval">${totPPR}</span></div>
+        <div class="total-row"><span>Total Peças</span><span class="tval">${totPT+totPPR}</span></div>
+      </div>
+      <div class="total-card">
+        <h4>📦 Total por Distribuição</h4>
+        <table style="width:100%;font-size:12px">
+          <thead><tr><th style="text-align:left;padding:4px 6px;color:var(--text2)">Dist.</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Pac.</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PT</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PPR</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Total</th></tr></thead>
+          <tbody>${distTableRows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><h3>Listagem de Entregas</h3><span style="font-size:12px;color:var(--text2)">${totPac} pacientes · ordem por data</span></div>
+      <table><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Distribuição</th><th>Data Entrega</th><th>Tipo Peça</th><th>Qtde. PT</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
+    </div>`;
+}
+
+/* ── CADASTRO ── */
+function renderCadastroForm(){
+  const lastCod=state.moldagens.length?Math.max(...state.moldagens.map(m=>parseInt(m.codigo)||0))+1:6000;
+  const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(m=>m.dentista).filter(Boolean))].sort();
+  const tipos=state.tiposPeca.length?state.tiposPeca.map(t=>t.desc):['PT Dupla','PT Superior','PT Inferior','PPR Dupla','PPR Superior','PPR Inferior'];
+  const today=new Date().toISOString().split('T')[0];
+  const distOpts=state.proteticos.length
+    ?state.proteticos.map(p=>`<option value="${p.codigo}">${p.codigo} — ${p.nome}</option>`).join('')
+    :'<option value="">Nenhum protético cadastrado</option>';
+  document.getElementById('cadastro-content').innerHTML=`
+    <div class="form-card">
+      <h3>➕ Nova Moldagem</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Código</label><input type="number" id="cad-codigo" value="${lastCod}"></div>
+        <div class="form-group"><label>Data da Moldagem</label><input type="date" id="cad-data" value="${today}"></div>
+      </div>
+      <div class="form-group"><label>Nome do Paciente</label><input type="text" id="cad-nome" placeholder="Nome completo do paciente" onblur="verificarNomeCadastro()"></div>
+      <div id="cad-nome-alerta" style="display:none"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Dentista</label><select id="cad-dentista">${dents.map(d=>`<option value="${d}">${cap(d)}</option>`).join('')}<option value="__novo">+ Novo dentista</option></select></div>
+        <div class="form-group"><label>Tipo de Peça</label><select id="cad-tipo">${tipos.map(t=>`<option>${t}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-group">
+        <label>Distribuição (Protético)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="cad-dist" style="flex:1">${distOpts}</select>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="openProtModal()">+ Novo</button>
+        </div>
+        <small>O código do protético fica visível. O nome é protegido por senha.</small>
+      </div>
+      <div class="form-group"><label>Observação</label><textarea id="cad-obs" rows="2" placeholder="Observações opcionais..."></textarea></div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-primary" onclick="submitCadastro()">💾 Salvar Moldagem</button>
+        <button class="btn btn-secondary" onclick="renderCadastroForm()">✕ Limpar</button>
+      </div>
+    </div>`;
+  document.getElementById('cad-dentista').addEventListener('change',function(){
+    if(this.value==='__novo'){navigate('dentistas');renderDentistas(true);this.selectedIndex=0;}
+  });
+}
+async function submitCadastro(){
+  const codigo=document.getElementById('cad-codigo').value;
+  const nome=document.getElementById('cad-nome').value.trim();
+  const dentista=document.getElementById('cad-dentista').value;
+  const tipo=document.getElementById('cad-tipo').value;
+  const dataRaw=document.getElementById('cad-data').value;
+  const dist=document.getElementById('cad-dist').value;
+  const obs=document.getElementById('cad-obs').value.trim();
+  if(!nome){toast('Informe o nome do paciente','error');return;}
+  if(!codigo){toast('Informe o código','error');return;}
+
+  // Verificar se já existe paciente com o mesmo nome
+  const sugestao=proximoCodigoTratamento(nome);
+  if(sugestao){
+    const existList=sugestao.existentes.map(m=>`#${m.codigo} (${m.tipo})`).join(', ');
+    const confirmMsg=`Já existe "${nome}" na base:\n${existList}\n\nDeseja criar como novo tratamento com código "${sugestao.proximo}"?\n\nClique OK para usar "${sugestao.proximo}" ou Cancelar para manter "${codigo}".`;
+    if(confirm(confirmMsg)){
+      document.getElementById('cad-codigo').value=sugestao.proximo;
+      // Re-read after update
+      const novoCodigo=sugestao.proximo;
+      try{
+        toast('Salvando...','info');
+        await postSheet('Moldagens',[novoCodigo,nome,dentista,tipo,fromInput(dataRaw),dist,'Pendente',obs]);
+        toast(`Novo tratamento de ${nome} cadastrado! (${novoCodigo})`,'success');
+        state.lastSavedCodigo=String(novoCodigo);
+        await loadAll();
+        navigate('pacientes');
+        document.getElementById('search-input').value=nome;
+        filterTable();
+        // Auto-expand the group
+        expandedGroups.add(baseCod(novoCodigo));
+        renderTablePage();
+      }catch(e){toast('Erro ao salvar: '+e.message,'error');}
+      return;
+    }
+  }
+
+  try{
+    toast('Salvando...','info');
+    await postSheet('Moldagens',[codigo,nome,dentista,tipo,fromInput(dataRaw),dist,'Pendente',obs]);
+    toast(`${nome} cadastrado com sucesso!`,'success');
+    state.lastSavedCodigo=String(codigo);
+    await loadAll();
+    navigate('pacientes');
+    document.getElementById('search-input').value=nome;
+    filterTable();
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');}
+}
+
+/* ── VERIFICAÇÃO DE NOME NO CADASTRO ── */
+function verificarNomeCadastro(){
+  const nome=document.getElementById('cad-nome').value.trim();
+  const alertEl=document.getElementById('cad-nome-alerta');
+  if(!alertEl)return;
+  if(!nome){alertEl.style.display='none';return;}
+  const sugestao=proximoCodigoTratamento(nome);
+  if(sugestao){
+    const existList=sugestao.existentes.map(m=>`<strong>#${m.codigo}</strong> — ${m.tipo} (${(m.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente'})`).join('<br>');
+    alertEl.style.display='block';
+    alertEl.innerHTML=`<div class="alert alert-warn" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <div>⚠️ <strong>${nome}</strong> já possui tratamento(s) cadastrado(s):</div>
+      <div style="font-size:12px;line-height:1.8">${existList}</div>
+      <div style="font-size:12px">Ao salvar, será perguntado se deseja criar como novo tratamento com código <strong>${sugestao.proximo}</strong>.</div>
+    </div>`;
+    // Pré-preenche o código sugerido
+    document.getElementById('cad-codigo').value=sugestao.proximo;
+  }else{
+    alertEl.style.display='none';
+  }
+}
+
+/* ── DENTISTAS ── */
+let editingDentista=null;
+function renderDentistas(focusForm=false){
+  const list=state.dentistas;
+  document.getElementById('dentistas-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="dent-form-title">➕ Novo Dentista</h3>
+          <div class="form-group"><label>Nome Completo</label><input type="text" id="nd-nome" placeholder="Nome do dentista"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="submitNovoDentistaDireto()">💾 Salvar</button>
+            <button class="btn btn-secondary" id="dent-cancel-btn" onclick="cancelEditDentista()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>👨‍⚕️ Dentistas cadastrados</h3><span style="font-size:12px;color:var(--text2)">${list.length} dentistas</span></div>
+          <div style="padding:12px">
+            ${list.length?list.map((d,i)=>`<div class="list-item" onclick="editDentista(${i})"><div class="list-item-info"><div class="name">${cap(d)}</div></div><span style="font-size:11px;color:var(--text3)">✏️ editar</span></div>`).join(''):'<div class="empty-state"><p>Nenhum dentista cadastrado.</p></div>'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  editingDentista=null;
+  if(focusForm) setTimeout(()=>document.getElementById('nd-nome')?.focus(),100);
+}
+function editDentista(idx){
+  editingDentista=idx;
+  document.getElementById('nd-nome').value=state.dentistas[idx];
+  document.getElementById('dent-form-title').textContent='✏️ Editar Dentista';
+  document.getElementById('dent-cancel-btn').style.display='inline-flex';
+  document.getElementById('nd-nome').focus();
+}
+function cancelEditDentista(){
+  editingDentista=null;
+  document.getElementById('nd-nome').value='';
+  document.getElementById('dent-form-title').textContent='➕ Novo Dentista';
+  document.getElementById('dent-cancel-btn').style.display='none';
+}
+async function submitNovoDentistaDireto(){
+  const nome=document.getElementById('nd-nome').value.trim();
+  if(!nome){toast('Informe o nome','error');return;}
+  try{
+    if(editingDentista!==null){
+      // Editar — encontra linha na planilha
+      toast('Atualizando...','info');
+      const rows=await fetchSheet('Dentistas!A:A');
+      const oldNome=state.dentistas[editingDentista];
+      const rowIdx=rows.findIndex(r=>r[0]===oldNome);
+      if(rowIdx<0) throw new Error('Dentista não encontrado na planilha');
+      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Dentistas',row:rowIdx+1,values:[nome]})});
+      const result=await r.json();
+      if(!result.success) throw new Error(result.error);
+      state.dentistas[editingDentista]=nome;
+      toast(`Atualizado para ${cap(nome)}!`,'success');
+    }else{
+      if(state.dentistas.find(d=>d.toLowerCase()===nome.toLowerCase())){toast('Dentista já cadastrado','error');return;}
+      toast('Salvando...','info');
+      await postSheet('Dentistas',[nome]);
+      state.dentistas.push(nome);
+      toast(`${cap(nome)} cadastrado!`,'success');
+    }
+    renderDentistas();renderCadastroForm();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ── PROTETICOS ── */
+let editingProtetico=null;
+function renderProteticos(){
+  document.getElementById('proteticos-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="prot-form-title">➕ Novo Protético</h3>
+          <div class="form-group"><label>Código (sigla)</label><input type="text" id="np-cod" placeholder="Ex: E" maxlength="5" style="text-transform:uppercase"></div>
+          <div class="form-group"><label>Nome Completo</label><input type="text" id="np-nome" placeholder="Nome do protético"></div>
+          <div class="form-group"><label>Senha para confirmar</label><input type="password" id="np-senha" placeholder="Senha de acesso"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="submitNovoProteticoDireto()">💾 Salvar</button>
+            <button class="btn btn-secondary" id="prot-cancel-btn" onclick="cancelEditProtetico()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>🧑‍🔧 Protéticos cadastrados</h3><span style="font-size:12px;color:var(--text2)">${state.proteticos.length} protéticos</span></div>
+          <div style="padding:12px">
+            ${state.proteticos.length?state.proteticos.map((p,i)=>`<div class="list-item" onclick="editProtetico(${i})"><div class="list-item-info"><div class="code">${p.codigo}</div><div class="name">${state.distVisible?p.nome:'●●●●●●'}</div></div><span style="font-size:11px;color:var(--text3)">✏️ editar</span></div>`).join(''):'<div class="empty-state"><p>Nenhum protético cadastrado.</p></div>'}
+            ${state.proteticos.length?`<div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="toggleDistVisibility()">${state.distVisible?'🔓 Ocultar nomes':'🔒 Revelar nomes'}</button></div>`:''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  editingProtetico=null;
+}
+function editProtetico(idx){
+  showPasswordPrompt('🔒 Editar Protético','Digite a senha para editar os dados do protético:',(senha)=>{
+    const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
+    if(senha!==sc){toast('Senha incorreta','error');return;}
+    editingProtetico=idx;
+    const p=state.proteticos[idx];
+    document.getElementById('np-cod').value=p.codigo;
+    document.getElementById('np-nome').value=p.nome;
+    document.getElementById('np-senha').value='';
+    document.getElementById('prot-form-title').textContent='✏️ Editar Protético';
+    document.getElementById('prot-cancel-btn').style.display='inline-flex';
+    document.getElementById('np-nome').focus();
+  });
+}
+function cancelEditProtetico(){
+  editingProtetico=null;
+  document.getElementById('np-cod').value='';document.getElementById('np-nome').value='';document.getElementById('np-senha').value='';
+  document.getElementById('prot-form-title').textContent='➕ Novo Protético';
+  document.getElementById('prot-cancel-btn').style.display='none';
+}
+async function submitNovoProteticoDireto(){
+  const codigo=document.getElementById('np-cod').value.trim().toUpperCase();
+  const nome=document.getElementById('np-nome').value.trim();
+  const senha=document.getElementById('np-senha').value;
+  if(!codigo||!nome){toast('Preencha código e nome','error');return;}
+  const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
+  if(senha!==sc){toast('Senha incorreta','error');return;}
+  try{
+    if(editingProtetico!==null){
+      toast('Atualizando...','info');
+      const old=state.proteticos[editingProtetico];
+      const rows=await fetchSheet('Proteticos!A:A');
+      const rowIdx=rows.findIndex(r=>r[0]===old.codigo);
+      if(rowIdx<0) throw new Error('Protético não encontrado na planilha');
+      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Proteticos',row:rowIdx+1,values:[codigo,nome]})});
+      const result=await r.json();
+      if(!result.success) throw new Error(result.error);
+      state.proteticos[editingProtetico]={codigo,nome};
+      toast(`Protético ${codigo} atualizado!`,'success');
+    }else{
+      if(state.proteticos.find(p=>p.codigo===codigo)){toast('Código já existe','error');return;}
+      toast('Salvando...','info');
+      await postSheet('Proteticos',[codigo,nome]);
+      state.proteticos.push({codigo,nome});
+      toast(`Protético ${codigo} cadastrado!`,'success');
+    }
+    renderProteticos();renderCadastroForm();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+function openProtModal(){document.getElementById('protetico-modal').classList.add('open');}
+function closeProtModal(){document.getElementById('protetico-modal').classList.remove('open');document.getElementById('prot-codigo').value='';document.getElementById('prot-nome').value='';document.getElementById('prot-senha').value='';}
+async function submitNovoProtetico(){
+  const codigo=document.getElementById('prot-codigo').value.trim().toUpperCase();
+  const nome=document.getElementById('prot-nome').value.trim();
+  const senha=document.getElementById('prot-senha').value;
+  if(!codigo||!nome){toast('Preencha código e nome','error');return;}
+  const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
+  if(senha!==sc){toast('Senha incorreta','error');return;}
+  if(state.proteticos.find(p=>p.codigo===codigo)){toast('Código já existe','error');return;}
+  try{
+    toast('Salvando...','info');
+    await postSheet('Proteticos',[codigo,nome]);
+    state.proteticos.push({codigo,nome});
+    toast(`Protético ${codigo} cadastrado!`,'success');
+    closeProtModal();renderCadastroForm();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ── TIPO DE PEÇA ── */
+let editingTipo=null;
+function renderTipoPeca(){
+  const list=state.tiposPeca;
+  document.getElementById('tipopeca-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="tipo-form-title">➕ Novo Tipo de Peça</h3>
+          <div class="form-group"><label>Descrição</label><input type="text" id="tp-desc" placeholder="Ex: PT Dupla"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Qtde. PT</label><input type="number" id="tp-pt" value="0" min="0"></div>
+            <div class="form-group"><label>Qtde. PPR</label><input type="number" id="tp-ppr" value="0" min="0"></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="submitNovoTipo()">💾 Salvar</button>
+            <button class="btn btn-secondary" id="tipo-cancel-btn" onclick="cancelEditTipo()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>🦷 Tipos de Peça</h3><span style="font-size:12px;color:var(--text2)">${list.length} tipos</span></div>
+          <table><thead><tr><th>Descrição</th><th>Qtde. PT</th><th>Qtde. PPR</th><th></th></tr></thead><tbody>
+            ${list.length?list.map((t,i)=>`<tr><td class="td-name">${t.desc}</td><td>${t.pt}</td><td>${t.ppr}</td><td><button class="icon-btn" onclick="editTipo(${i})">✏️</button></td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3)">Nenhum tipo cadastrado.</td></tr>'}
+          </tbody></table>
+        </div>
+      </div>
+    </div>`;
+  editingTipo=null;
+}
+function editTipo(idx){
+  editingTipo=idx;
+  const t=state.tiposPeca[idx];
+  document.getElementById('tp-desc').value=t.desc;
+  document.getElementById('tp-pt').value=t.pt;
+  document.getElementById('tp-ppr').value=t.ppr;
+  document.getElementById('tipo-form-title').textContent='✏️ Editar Tipo de Peça';
+  document.getElementById('tipo-cancel-btn').style.display='inline-flex';
+  document.getElementById('tp-desc').focus();
+}
+function cancelEditTipo(){
+  editingTipo=null;
+  document.getElementById('tp-desc').value='';document.getElementById('tp-pt').value='0';document.getElementById('tp-ppr').value='0';
+  document.getElementById('tipo-form-title').textContent='➕ Novo Tipo de Peça';
+  document.getElementById('tipo-cancel-btn').style.display='none';
+}
+async function submitNovoTipo(){
+  const desc=document.getElementById('tp-desc').value.trim();
+  const pt=document.getElementById('tp-pt').value;
+  const ppr=document.getElementById('tp-ppr').value;
+  if(!desc){toast('Informe a descrição','error');return;}
+  try{
+    if(editingTipo!==null){
+      toast('Atualizando...','info');
+      const old=state.tiposPeca[editingTipo];
+      const rows=await fetchSheet('BaseDados!A:A');
+      // Procura a partir da linha 3 (índice 2 = linha 3 na planilha)
+      const rowIdx=rows.findIndex((r,i)=>i>=1&&r[0]===old.desc); // skip cabeçalho linha1
+      if(rowIdx<0) throw new Error('Tipo não encontrado na planilha');
+      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'BaseDados',row:rowIdx+1,values:[desc,pt,ppr]})});
+      const result=await r.json();
+      if(!result.success) throw new Error(result.error);
+      state.tiposPeca[editingTipo]={desc,pt,ppr};
+      toast(`${desc} atualizado!`,'success');
+    }else{
+      if(state.tiposPeca.find(t=>t.desc.toLowerCase()===desc.toLowerCase())){toast('Tipo já cadastrado','error');return;}
+      toast('Salvando...','info');
+      await postSheet('BaseDados',[desc,pt,ppr]);
+      state.tiposPeca.push({desc,pt,ppr});
+      toast(`${desc} cadastrado!`,'success');
+    }
+    renderTipoPeca();renderCadastroForm();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+document.getElementById('config-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeConfig();});
+document.getElementById('detail-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDetail();});
+document.getElementById('protetico-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeProtModal();});
+</script>
+</body>
+</html>
