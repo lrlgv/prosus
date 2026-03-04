@@ -234,6 +234,7 @@
     </div>
     <div class="sidebar-footer">
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
+      <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
     </div>
   </nav>
@@ -475,7 +476,12 @@ function updateStatus(){
   el.innerHTML=state.connected?'<span class="badge badge-green">● Conectado</span>':'<span class="badge badge-yellow">● Carregando...</span>';
 }
 
-function toggleTheme(){
+async function recarregarDados(){
+  const btn=document.getElementById('refresh-btn');
+  if(btn){btn.textContent='⏳ Atualizando...';btn.disabled=true;}
+  await loadAll();
+  if(btn){btn.textContent='🔄 Atualizar dados';btn.disabled=false;}
+}
   const isLight=document.body.classList.toggle('light');
   document.getElementById('theme-icon').textContent=isLight?'🌙':'☀️';
   document.getElementById('theme-label').textContent=isLight?'Tema escuro':'Tema claro';
