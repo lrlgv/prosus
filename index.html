@@ -479,6 +479,8 @@ async function recarregarDados(){
   await loadAll();
   if(btn){btn.textContent='🔄 Atualizar dados';btn.disabled=false;}
 }
+
+function toggleTheme(){
   const isLight=document.body.classList.toggle('light');
   document.getElementById('theme-icon').textContent=isLight?'🌙':'☀️';
   document.getElementById('theme-label').textContent=isLight?'Tema escuro':'Tema claro';
