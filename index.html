@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.21 - fix scopes userinfo.email+profile -->
+<!-- ProSUS v4.22 - fix isAdmin+login silencioso+seletor contrato dashboard -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -346,7 +346,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.21</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.22</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -890,6 +890,11 @@ async function loadAll(){
 }
 
 /* ── DASHBOARD ── */
+function selecionarContrato(id){
+  state.contratoAtivo=state.contratos.find(c=>c.id===id)||null;
+  renderDashboard();
+}
+
 function contratoMeses(){
   const c=state.contratoAtivo;
   if(!c) return null;
@@ -912,17 +917,14 @@ function inContrato(dateStr){
 }
 function renderDashboard(){
   const mesesContrato=contratoMeses();
-  // Filter by contract if configured
   const moldBase=mesesContrato?state.moldagens.filter(m=>inContrato(m.data)):state.moldagens;
   const entregasBase=mesesContrato?state.entregas.filter(e=>inContrato(e.entrega||e.previsao)):state.entregas;
 
-  // Unique patients (by base code)
   const pacientesUnicos=new Set(moldBase.map(m=>baseCod(m.codigo))).size;
   const total=moldBase.length;
   const entregues=entregasBase.filter(e=>e.entrega).length;
   const pendentes=total-entregues;
 
-  // Count total pieces (PT + PPR) for all records
   let totalPecas=0,totalPecasPend=0,pecasEntregues=0;
   moldBase.forEach(m=>{
     const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
@@ -934,12 +936,10 @@ function renderDashboard(){
   });
   const pecasContratadas=state.contratoAtivo?.pecasContratadas||0;
 
-  // Reembase this month
   const today=new Date();
   const reembaseMes=state.reembase.filter(r=>{const dt=parseDate(r.data);return dt&&dt.getFullYear()===today.getFullYear()&&dt.getMonth()===today.getMonth();}).length;
   const reembaseContratado=state.contratoAtivo?.reembaseMes||0;
 
-  // Entregas por mês — all months in contract or last 7
   const mesC={};
   state.entregas.filter(e=>e.entrega).forEach(e=>{
     const dt=parseDate(e.entrega);
@@ -956,14 +956,29 @@ function renderDashboard(){
   const tipoC={},dentC={};
   moldBase.forEach(m=>{tipoC[m.tipo||'Não Preenchido']=(tipoC[m.tipo||'Não Preenchido']||0)+1;dentC[m.dentista]=(dentC[m.dentista]||0)+1;});
 
-  const contratoLabel=state.contratoAtivo
-    ?`Contrato ativo: ${state.contratoAtivo.inicio} a ${state.contratoAtivo.fim} (${state.contratoAtivo.id})`
-    :'Nenhum contrato ativo — cadastre em Contratos';
+  // Seletor de contrato
+  const contratoOpts=state.contratos.length
+    ?state.contratos.map(c=>{
+        const today2=new Date();today2.setHours(0,0,0,0);
+        const ini=parseDate(c.inicio),fim=parseDate(c.fim);
+        const sit=!ini||!fim?'':today2<ini?' (Futuro)':today2>fim?' (Encerrado)':' ✅ Ativo';
+        const sel=state.contratoAtivo?.id===c.id?' selected':'';
+        return`<option value="${c.id}"${sel}>${c.id}${sit}</option>`;
+      }).join('')
+    :'<option value="">Nenhum contrato cadastrado</option>';
+
+  const contratoSelectHtml=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--text2);font-weight:600;white-space:nowrap">📋 Contrato:</span>
+      <select onchange="selecionarContrato(this.value)" style="padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;cursor:pointer;flex:1;max-width:420px">
+        <option value="" ${!state.contratoAtivo?' selected':''}>— Todos os registros (sem filtro) —</option>
+        ${contratoOpts}
+      </select>
+      ${state.contratoAtivo?`<span style="font-size:11px;color:var(--text2)">${state.contratoAtivo.inicio} a ${state.contratoAtivo.fim}</span>`:''}
+    </div>`;
 
   document.getElementById('dashboard-content').innerHTML=`
-    <div style="font-size:11px;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px">
-      📋 <span>${contratoLabel}</span>
-    </div>
+    ${contratoSelectHtml}
     <div class="cards-grid">
       <div class="stat-card accent">
         <div class="label">Pacientes</div>
@@ -1283,11 +1298,9 @@ function isAdmin(){
   if(!stored) return true;
   const emails=stored.toLowerCase().split(',').map(e=>e.trim()).filter(Boolean);
   if(!emails.length) return true;
-  // Tenta pegar email do state primeiro, depois do localStorage
   const rawEmail=state.user?.email || localStorage.getItem('prosus_user_email') || '';
   const userEmail=rawEmail.toLowerCase().trim();
-  console.log('[isAdmin] stored:', stored, '| userEmail:', userEmail, '| result:', emails.includes(userEmail));
-  if(!userEmail) return false;
+  if(!userEmail||userEmail==='undefined'||userEmail==='null') return false;
   return emails.includes(userEmail);
 }
 
