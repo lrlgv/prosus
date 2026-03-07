@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v3.1 - fix duplicate mobTitle -->
+<!-- ProSUS v4.0 - Reembase, Armacao, Dashboard melhorado, isAdmin, fix entrega duplicada -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -333,6 +333,7 @@
       <button class="nav-btn" onclick="navigate('pacientes')"><span class="nav-icon">🔍</span> Consultar</button>
       <button class="nav-btn" onclick="navigate('pipeline')"><span class="nav-icon">⚡</span> Etapas</button>
       <button class="nav-btn" onclick="navigate('fechamento')"><span class="nav-icon">📅</span> Fechamento</button>
+      <button class="nav-btn" onclick="navigate('fechamento-armacao')"><span class="nav-icon">🔩</span> Fecham. Armação</button>
       <div class="nav-section">Cadastros</div>
       <button class="nav-btn" onclick="navigate('cadastro')"><span class="nav-icon">➕</span> Nova Moldagem</button>
       <button class="nav-btn" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
@@ -373,6 +374,7 @@
     <div class="mob-more-handle"></div>
     <div class="mob-more-grid">
       <div class="mob-more-item" onclick="closeMobMore();navigate('fechamento')"><span class="icon">📅</span><span>Fechamento</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('fechamento-armacao')"><span class="icon">🔩</span><span>Armação</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('dentistas')"><span class="icon">👨‍⚕️</span><span>Dentistas</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('proteticos')"><span class="icon">🧑‍🔧</span><span>Protéticos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tipopeca')"><span class="icon">🦷</span><span>Tipos de Peça</span></div>
@@ -429,8 +431,9 @@
         <div id="pipeline-content"><div class="not-connected"><div class="icon">⚡</div><h3>Pipeline de Etapas</h3><p>Faça login para visualizar o fluxo.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
       </div>
 
-      <div class="page" id="page-fechamento">
-        <div id="fechamento-content"><div class="not-connected"><div class="icon">📅</div><h3>Fechamento Mensal</h3><p>Faça login para acessar o fechamento.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
+      <div class="page" id="page-fechamento-armacao">
+        <div id="fechamento-armacao-content"><div class="not-connected"><div class="icon">🔩</div><h3>Fechamento por Armação</h3><p>Faça login para acessar.</p></div></div>
+      </div><div class="not-connected"><div class="icon">📅</div><h3>Fechamento Mensal</h3><p>Faça login para acessar o fechamento.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
       </div>
 
       <div class="page" id="page-cadastro">
@@ -457,7 +460,16 @@
 <div class="modal-overlay" id="config-modal">
   <div class="modal">
     <div class="modal-header"><h3>⚙️ Configurações</h3><button class="modal-close" onclick="closeConfig()">✕</button></div>
-    <div class="form-group"><label>Senha para revelar protéticos</label><input type="password" id="cfg-distsenha" placeholder="Deixe em branco para manter a atual"><small>Senha usada para revelar nomes dos protéticos nas telas públicas.</small></div>
+    <div class="section-divider bp">📋 Vigência do Contrato</div>
+    <div class="form-row">
+      <div class="form-group"><label>Data Início</label><input type="date" id="cfg-contrato-inicio"></div>
+      <div class="form-group"><label>Data Fim</label><input type="date" id="cfg-contrato-fim"></div>
+    </div>
+    <div class="section-divider pd">🦷 Metas Mensais</div>
+    <div class="form-group"><label>Reembase contratado por mês</label><input type="number" id="cfg-reembase-mes" min="0" placeholder="Ex: 6"><small>Exibido no dashboard como "X / total"</small></div>
+    <div class="section-divider ent">🔒 Acesso</div>
+    <div class="form-group"><label>Senha para revelar protéticos</label><input type="password" id="cfg-distsenha" placeholder="Deixe em branco para manter a atual"></div>
+    <div class="form-group"><label>E-mails dos administradores</label><input type="text" id="cfg-admin-emails" placeholder="email1@gmail.com, email2@gmail.com"><small>Administradores podem editar e excluir registros. Separe por vírgula.</small></div>
     <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Cancelar</button><button class="btn btn-primary" onclick="saveConfig()">💾 Salvar</button></div>
   </div>
 </div>
@@ -504,19 +516,26 @@ const state={
   tokenExpiry:null,
   user:null,
   connected:false,
-  moldagens:[],baseProva:[],provaDentes:[],entregas:[],remarcacoes:[],
+  moldagens:[],baseProva:[],provaDentes:[],entregas:[],remarcacoes:[],reembase:[],
   proteticos:[],dentistas:[],tiposPeca:[],
   filtered:[],currentPage:1,perPage:15,
   distVisible:false,currentDetailCod:null,
-  lastSavedCodigo:null
+  lastSavedCodigo:null,
+  config:{
+    reembaseMes:0,
+    contratoInicio:'',
+    contratoFim:'',
+    adminEmails:''
+  }
 };
 
-const pages=['dashboard','pacientes','pipeline','fechamento','cadastro','dentistas','proteticos','tipopeca'];
+const pages=['dashboard','pacientes','pipeline','fechamento','fechamento-armacao','cadastro','dentistas','proteticos','tipopeca'];
 const pageMeta={
   dashboard:['Dashboard','Visão geral do controle de próteses'],
   pacientes:['Consultar Pacientes','Busque e filtre os registros'],
   pipeline:['Etapas de Produção','Acompanhe o fluxo de cada prótese'],
   fechamento:['Fechamento Mensal','Relatório de entregas por período'],
+  'fechamento-armacao':['Fechamento por Armação','Base de Prova concluída por período'],
   cadastro:['Nova Moldagem','Registre uma nova moldagem'],
   dentistas:['Dentistas','Gerencie os dentistas cadastrados'],
   proteticos:['Protéticos','Gerencie os protéticos (acesso restrito)'],
@@ -618,13 +637,33 @@ async function ensureToken(){
   });
 }
 
-function openConfig(){document.getElementById('cfg-distsenha').value='';document.getElementById('config-modal').classList.add('open');}
+function openConfig(){
+  document.getElementById('cfg-distsenha').value='';
+  document.getElementById('cfg-reembase-mes').value=state.config.reembaseMes||'';
+  document.getElementById('cfg-admin-emails').value=state.config.adminEmails||'';
+  document.getElementById('cfg-contrato-inicio').value=toInput(state.config.contratoInicio);
+  document.getElementById('cfg-contrato-fim').value=toInput(state.config.contratoFim);
+  document.getElementById('config-modal').classList.add('open');
+}
 function closeConfig(){document.getElementById('config-modal').classList.remove('open');}
 function saveConfig(){
   const senha=document.getElementById('cfg-distsenha').value.trim();
+  const reembase=document.getElementById('cfg-reembase-mes').value;
+  const adminEmails=document.getElementById('cfg-admin-emails').value.trim();
+  const contratoInicio=fromInput(document.getElementById('cfg-contrato-inicio').value);
+  const contratoFim=fromInput(document.getElementById('cfg-contrato-fim').value);
   if(senha) localStorage.setItem('prosus_distsenha',senha);
+  if(reembase) localStorage.setItem('prosus_reembase_mes',reembase);
+  if(adminEmails) localStorage.setItem('prosus_admin_emails',adminEmails);
+  if(contratoInicio) localStorage.setItem('prosus_contrato_inicio',contratoInicio);
+  if(contratoFim) localStorage.setItem('prosus_contrato_fim',contratoFim);
+  state.config.reembaseMes=+reembase||state.config.reembaseMes;
+  state.config.adminEmails=adminEmails||state.config.adminEmails;
+  state.config.contratoInicio=contratoInicio||state.config.contratoInicio;
+  state.config.contratoFim=contratoFim||state.config.contratoFim;
   closeConfig();
   toast('Configurações salvas!','success');
+  renderDashboard();
 }
 function updateStatus(){
   const el=document.getElementById('connection-status');
@@ -671,6 +710,7 @@ function navigate(page){
   if(page==='proteticos'&&state.connected) renderProteticos();
   if(page==='tipopeca'&&state.connected) renderTipoPeca();
   if(page==='fechamento'&&state.connected) renderFechamento();
+  if(page==='fechamento-armacao'&&state.connected) renderFechamentoArmacao();
   // Scroll to top on mobile
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -750,6 +790,11 @@ function toast(msg,type='info'){
 async function loadAll(){
   state.connected=false;updateStatus();
   document.getElementById('dashboard-content').innerHTML='<div class="loading-state"><div class="loading-spinner"></div>Carregando dados...</div>';
+  // Load config from localStorage
+  state.config.reembaseMes=+localStorage.getItem('prosus_reembase_mes')||0;
+  state.config.contratoInicio=localStorage.getItem('prosus_contrato_inicio')||'';
+  state.config.contratoFim=localStorage.getItem('prosus_contrato_fim')||'';
+  state.config.adminEmails=localStorage.getItem('prosus_admin_emails')||'';
   try{
     const[mRows,bRows,dRows,eRows]=await Promise.all([
       fetchSheet('Moldagens!A2:H5000'),
@@ -757,19 +802,19 @@ async function loadAll(){
       fetchSheet('Prova de Dentes!A2:G2000'),
       fetchSheet('Entregas!A2:J2000')
     ]);
-    let pRows=[],dentRows=[],tipoRows=[],remRows=[];
-    try{pRows=await fetchSheet('Proteticos!A2:B200');}catch(e){}
+    let pRows=[],dentRows=[],tipoRows=[],remRows=[],reemRows=[];
+    try{pRows=await fetchSheet('Proteticos!A2:C200');}catch(e){}
     try{dentRows=await fetchSheet('Dentistas!A2:A500');}catch(e){}
-    try{tipoRows=await fetchSheet('BaseDados!A3:C200');}catch(e){} // linha 2 = cabeçalho, dados a partir da 3
+    try{tipoRows=await fetchSheet('BaseDados!A3:C200');}catch(e){}
     try{remRows=await fetchSheet('Remarcacao!A2:G500');}catch(e){}
+    try{reemRows=await fetchSheet('Reembase!A2:G2000');}catch(e){}
 
-    // Filtra apenas linhas com código real (não vazio)
     state.moldagens=mRows.filter(r=>r[0]&&r[0].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),nome:r[1]||'',dentista:r[2]||'',tipo:r[3]||'',data:r[4]||'',dist:r[5]||'',situacao:r[6]||'Pendente',obs:r[7]||''}));
-    // Só considera etapa como "feita" se a data (col F) estiver preenchida
     state.baseProva=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
     state.provaDentes=dRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
     state.entregas=eRows.filter(r=>r[0]&&r[0].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',entrega:r[6]&&r[6].toString().trim()!==''?r[6].toString().trim():'',obs:r[7]||''}));
-    state.proteticos=pRows.filter(r=>r[0]).map(r=>({codigo:r[0],nome:r[1]||''}));
+    state.reembase=reemRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
+    state.proteticos=pRows.filter(r=>r[0]).map(r=>({codigo:r[0],nome:r[1]||'',pagaArmacao:r[2]==='S'||r[2]==='s'||r[2]==='1'}));
     state.dentistas=dentRows.filter(r=>r[0]).map(r=>r[0]);
     state.tiposPeca=tipoRows.filter(r=>r[0]).map(r=>({desc:r[0],pt:r[1]||'0',ppr:r[2]||'0'}));
     state.remarcacoes=remRows.filter(r=>r[0]).map(r=>({codigo:r[0].toString().trim(),etapa:r[4]||'',data:r[5]||'',obs:r[6]||''}));
@@ -780,36 +825,105 @@ async function loadAll(){
   }catch(e){
     state.connected=false;updateStatus();
     toast('Erro: '+e.message,'error');
-    document.getElementById('dashboard-content').innerHTML=`<div class="not-connected"><div class="icon">❌</div><h3>Erro de conexão</h3><p>${e.message}</p><button class="btn btn-primary" onclick="openConfig()">Reconfigurar</button></div>`;
+    document.getElementById('dashboard-content').innerHTML=`<div class="not-connected"><div class="icon">❌</div><h3>Erro de conexão</h3><p>${e.message}</p><button class="btn btn-primary" onclick="loadAll()">🔄 Tentar novamente</button></div>`;
   }
 }
 
 /* ── DASHBOARD ── */
+function contratoMeses(){
+  // Returns array of {ano,mes} within contract period
+  const ini=parseDate(state.config.contratoInicio?.split('/').reverse().join('/'));
+  const fim=parseDate(state.config.contratoFim?.split('/').reverse().join('/'));
+  if(!ini||!fim) return null;
+  const meses=[];
+  const cur=new Date(ini.getFullYear(),ini.getMonth(),1);
+  const end=new Date(fim.getFullYear(),fim.getMonth(),1);
+  while(cur<=end){meses.push({ano:cur.getFullYear(),mes:cur.getMonth()+1});cur.setMonth(cur.getMonth()+1);}
+  return meses;
+}
+function inContrato(dateStr){
+  if(!state.config.contratoInicio||!state.config.contratoFim) return true;
+  const dt=parseDate(dateStr);if(!dt)return false;
+  const ini=parseDate(state.config.contratoInicio?.split('/').reverse().join('/'));
+  const fim=parseDate(state.config.contratoFim?.split('/').reverse().join('/'));
+  return dt>=ini&&dt<=fim;
+}
 function renderDashboard(){
-  const total=state.moldagens.length;
-  const entregues=state.entregas.filter(e=>e.entrega).length;
+  const mesesContrato=contratoMeses();
+  // Filter by contract if configured
+  const moldBase=mesesContrato?state.moldagens.filter(m=>inContrato(m.data)):state.moldagens;
+  const entregasBase=mesesContrato?state.entregas.filter(e=>inContrato(e.entrega||e.previsao)):state.entregas;
+
+  // Unique patients (by base code)
+  const pacientesUnicos=new Set(moldBase.map(m=>baseCod(m.codigo))).size;
+  const total=moldBase.length;
+  const entregues=entregasBase.filter(e=>e.entrega).length;
   const pendentes=total-entregues;
-  const pt=state.moldagens.filter(m=>m.tipo.startsWith('PT')).length;
-  const ppr=state.moldagens.filter(m=>m.tipo.startsWith('PPR')).length;
-  const tipoC={},dentC={},mesC={};
-  state.moldagens.forEach(m=>{
-    const k=m.tipo||'Não Preenchido';
-    tipoC[k]=(tipoC[k]||0)+1;
-    dentC[m.dentista]=(dentC[m.dentista]||0)+1;
+
+  // Count total pieces (PT + PPR) for all records
+  let totalPecas=0,totalPecasPend=0;
+  moldBase.forEach(m=>{
+    const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
+    const pecas=(+tp.pt||0)+(+tp.ppr||0);
+    totalPecas+=pecas;
+    const entregue=state.entregas.find(e=>e.codigo===m.codigo&&e.entrega);
+    if(!entregue) totalPecasPend+=pecas;
   });
+
+  // Reembase this month
+  const today=new Date();
+  const reembaseMes=state.reembase.filter(r=>{const dt=parseDate(r.data);return dt&&dt.getFullYear()===today.getFullYear()&&dt.getMonth()===today.getMonth();}).length;
+  const reembaseContratado=state.config.reembaseMes||0;
+
+  // Entregas por mês — all months in contract or last 7
+  const mesC={};
   state.entregas.filter(e=>e.entrega).forEach(e=>{
     const dt=parseDate(e.entrega);
     if(dt){const k=`${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}`;mesC[k]=(mesC[k]||0)+1;}
   });
-  const mesKeys=Object.keys(mesC).sort().slice(-7);
+  let mesKeys;
+  if(mesesContrato){
+    mesKeys=mesesContrato.map(({ano,mes})=>`${ano}/${String(mes).padStart(2,'0')}`);
+  }else{
+    mesKeys=Object.keys(mesC).sort().slice(-7);
+  }
   const mesLabels=mesKeys.map(k=>{const[y,m]=k.split('/');return MESES[+m-1].slice(0,3)+' '+y;});
 
+  const tipoC={},dentC={};
+  moldBase.forEach(m=>{tipoC[m.tipo||'Não Preenchido']=(tipoC[m.tipo||'Não Preenchido']||0)+1;dentC[m.dentista]=(dentC[m.dentista]||0)+1;});
+
+  const contratoLabel=state.config.contratoInicio&&state.config.contratoFim?`Vigência: ${state.config.contratoInicio} a ${state.config.contratoFim}`:'Sem vigência configurada';
+
   document.getElementById('dashboard-content').innerHTML=`
+    <div style="font-size:11px;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+      📋 <span>${contratoLabel}</span>
+    </div>
     <div class="cards-grid">
-      <div class="stat-card accent"><div class="label">Total de Próteses</div><div class="value">${total}</div><div class="sublabel">registros na planilha</div></div>
-      <div class="stat-card"><div class="label">Entregues</div><div class="value" style="color:var(--accent)">${entregues}</div><div class="sublabel">${total?Math.round(entregues/total*100):0}% do total</div></div>
-      <div class="stat-card"><div class="label">Pendentes</div><div class="value" style="color:var(--accent3)">${pendentes}</div><div class="sublabel">aguardando entrega</div></div>
-      <div class="stat-card"><div class="label">PT / PPR</div><div class="value" style="font-size:22px">${pt}<span style="color:var(--text3);margin:0 6px">/</span>${ppr}</div><div class="sublabel">próteses totais</div></div>
+      <div class="stat-card accent">
+        <div class="label">Pacientes</div>
+        <div class="value">${pacientesUnicos}</div>
+        <div class="sublabel">${total} próteses cadastradas</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Entregues</div>
+        <div class="value" style="color:var(--accent)">${entregues}</div>
+        <div class="sublabel">${total?Math.round(entregues/total*100):0}% do total</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Pendentes</div>
+        <div class="value" style="color:var(--accent3)">${pendentes}</div>
+        <div class="sublabel">${totalPecasPend} peças pendentes</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Peças Total</div>
+        <div class="value" style="font-size:22px">${totalPecas}</div>
+        <div class="sublabel">PT + PPR cadastradas</div>
+      </div>
+      ${reembaseContratado>0?`<div class="stat-card">
+        <div class="label">Reembase</div>
+        <div class="value" style="font-size:22px;color:var(--accent2)">${reembaseMes}<span style="color:var(--text3);font-size:16px"> / ${reembaseContratado}</span></div>
+        <div class="sublabel">realizados / contratados este mês</div>
+      </div>`:''}
     </div>
     <div class="charts-grid">
       <div class="chart-card"><h3>📈 Entregas por mês</h3><div class="chart-container"><canvas id="ch-meses"></canvas></div></div>
@@ -819,13 +933,14 @@ function renderDashboard(){
       <div class="chart-card"><h3>👨‍⚕️ Por dentista (top 6)</h3><div class="chart-container"><canvas id="ch-dents"></canvas></div></div>
       <div class="chart-card"><h3>📊 Situação geral</h3><div style="display:flex;align-items:center;justify-content:center;height:190px"><canvas id="ch-sit" style="max-height:170px;max-width:170px"></canvas></div></div>
     </div>`;
+
   const pal=['#4af0a0','#3b82f6','#f59e0b','#f43f5e','#a78bfa','#34d399','#fb923c','#94a3b8'];
   const gOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#7c85a2',font:{size:11}},grid:{color:'#2a3048'}},y:{ticks:{color:'#7c85a2',font:{size:11}},grid:{color:'#2a3048'}}}};
-  if(mesKeys.length) new Chart(document.getElementById('ch-meses'),{type:'bar',data:{labels:mesLabels,datasets:[{data:mesKeys.map(k=>mesC[k]),backgroundColor:'rgba(74,240,160,.2)',borderColor:'#4af0a0',borderWidth:2,borderRadius:5}]},options:gOpts});
+  if(mesKeys.length) new Chart(document.getElementById('ch-meses'),{type:'bar',data:{labels:mesLabels,datasets:[{data:mesKeys.map(k=>mesC[k]||0),backgroundColor:'rgba(74,240,160,.2)',borderColor:'#4af0a0',borderWidth:2,borderRadius:5}]},options:gOpts});
   const tLabels=Object.keys(tipoC);
-  new Chart(document.getElementById('ch-tipos'),{type:'doughnut',data:{labels:tLabels,datasets:[{data:tLabels.map(k=>tipoC[k]),backgroundColor:pal,borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7c85a2',font:{size:11},boxWidth:10,padding:8}}}}});
+  if(tLabels.length) new Chart(document.getElementById('ch-tipos'),{type:'doughnut',data:{labels:tLabels,datasets:[{data:tLabels.map(k=>tipoC[k]),backgroundColor:pal,borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7c85a2',font:{size:11},boxWidth:10,padding:8}}}}});
   const dLabels=Object.keys(dentC).filter(Boolean).sort((a,b)=>dentC[b]-dentC[a]).slice(0,6);
-  new Chart(document.getElementById('ch-dents'),{type:'bar',data:{labels:dLabels.map(cap),datasets:[{data:dLabels.map(k=>dentC[k]),backgroundColor:pal,borderRadius:5}]},options:{...gOpts,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#7c85a2',font:{size:11}},grid:{color:'#2a3048'}},y:{ticks:{color:'#7c85a2',font:{size:11}},grid:{display:false}}}}});
+  if(dLabels.length) new Chart(document.getElementById('ch-dents'),{type:'bar',data:{labels:dLabels.map(cap),datasets:[{data:dLabels.map(k=>dentC[k]),backgroundColor:pal,borderRadius:5}]},options:{...gOpts,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#7c85a2',font:{size:11}},grid:{color:'#2a3048'}},y:{ticks:{color:'#7c85a2',font:{size:11}},grid:{display:false}}}}});
   new Chart(document.getElementById('ch-sit'),{type:'doughnut',data:{labels:['Entregues','Pendentes'],datasets:[{data:[entregues,pendentes],backgroundColor:['#4af0a0','#f59e0b'],borderWidth:0,hoverOffset:4}]},options:{responsive:false,plugins:{legend:{position:'bottom',labels:{color:'#7c85a2',font:{size:11},boxWidth:10,padding:10}}}}});
 }
 
@@ -1101,71 +1216,114 @@ function renderDetailInfo(cod){
     ${remHtml}
     ${relacionadosHtml}`;
 }
+function isAdmin(){
+  const emails=(state.config.adminEmails||localStorage.getItem('prosus_admin_emails')||'').toLowerCase().split(',').map(e=>e.trim()).filter(Boolean);
+  if(!emails.length) return true; // se não configurado, todos são admin
+  return emails.includes((state.user?.email||'').toLowerCase());
+}
+
 function renderDetailEtapas(cod){
   const e=state.entregas.find(x=>x.codigo===String(cod))||{};
   const bp=state.baseProva.find(x=>x.codigo===String(cod))||{};
   const pd=state.provaDentes.find(x=>x.codigo===String(cod))||{};
+  const rb=state.reembase.find(x=>x.codigo===String(cod))||{};
+  const admin=isAdmin();
+  const ro=admin?'':'disabled';
   document.getElementById('detail-tab-etapas').innerHTML=`
-    <div class="alert alert-info">📅 Informe as datas das etapas. Deixe em branco para não alterar.</div>
+    <div class="alert alert-info">📅 Informe as datas das etapas. Cada etapa tem seu próprio botão de salvar.${!admin?' <strong>Modo leitura — sem permissão de edição.</strong>':''}</div>
 
     <div class="etapa-block bp">
       <div class="section-divider bp">🔵 Base de Prova / Armação</div>
       <div class="form-row">
-        <div class="form-group"><label>Data</label><input type="date" id="et-bp" value="${toInput(bp.data)}"></div>
-        <div class="form-group"><label>Observação</label><input type="text" id="et-bp-obs" value="${bp.obs||''}" placeholder="Obs. opcional"></div>
+        <div class="form-group"><label>Data</label><input type="date" id="et-bp" value="${toInput(bp.data)}" ${ro}></div>
+        <div class="form-group"><label>Observação</label><input type="text" id="et-bp-obs" value="${bp.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       </div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','bp')">💾 Salvar Base de Prova</button>`:''}
     </div>
 
     <div class="etapa-block pd">
       <div class="section-divider pd">🟡 Prova de Dentes</div>
       <div class="form-row">
-        <div class="form-group"><label>Data</label><input type="date" id="et-pd" value="${toInput(pd.data)}"></div>
-        <div class="form-group"><label>Observação</label><input type="text" id="et-pd-obs" value="${pd.obs||''}" placeholder="Obs. opcional"></div>
+        <div class="form-group"><label>Data</label><input type="date" id="et-pd" value="${toInput(pd.data)}" ${ro}></div>
+        <div class="form-group"><label>Observação</label><input type="text" id="et-pd-obs" value="${pd.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       </div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','pd')">💾 Salvar Prova de Dentes</button>`:''}
     </div>
 
     <div class="etapa-block ent">
       <div class="section-divider ent">✅ Entrega</div>
       <div class="form-row">
-        <div class="form-group"><label>Data de Entrega</label><input type="date" id="et-ent" value="${toInput(e.entrega)}"></div>
-        <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="et-prev" value="${toInput(e.previsao)}"></div>
+        <div class="form-group"><label>Data de Entrega</label><input type="date" id="et-ent" value="${toInput(e.entrega)}" ${ro}></div>
+        <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="et-prev" value="${toInput(e.previsao)}" ${ro}></div>
       </div>
-      <div class="form-group"><label>Observação da Entrega</label><input type="text" id="et-ent-obs" value="${e.obs||''}" placeholder="Obs. opcional"></div>
+      <div class="form-group"><label>Observação da Entrega</label><input type="text" id="et-ent-obs" value="${e.obs||''}" placeholder="Obs. opcional" ${ro}></div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','ent')">💾 Salvar Entrega</button>`:''}
+    </div>
+
+    <div class="etapa-block" style="border-color:rgba(74,240,160,.3);background:rgba(74,240,160,.04)">
+      <div class="section-divider" style="background:rgba(74,240,160,.12);color:var(--accent);border-left:3px solid var(--accent)">🔧 Reembase</div>
+      <div class="form-row">
+        <div class="form-group"><label>Data do Reembase</label><input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro}></div>
+        <div class="form-group"><label>Observação</label><input type="text" id="et-rb-obs" value="${rb.obs||''}" placeholder="Obs. opcional" ${ro}></div>
+      </div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rb')">💾 Salvar Reembase</button>`:''}
     </div>
 
     <div class="etapa-block rem">
       <div class="section-divider rem">🔁 Remarcação</div>
       <div class="form-row">
-        <div class="form-group"><label>Etapa Remarcada</label><select id="et-rem-etapa"><option value="">— Não remarcar —</option><option>Etapa 1</option><option>Etapa 2</option><option>Etapa 3</option></select></div>
-        <div class="form-group"><label>Nova Data</label><input type="date" id="et-rem-data"></div>
+        <div class="form-group"><label>Etapa Remarcada</label><select id="et-rem-etapa" ${ro}><option value="">— Não remarcar —</option><option>Etapa 1</option><option>Etapa 2</option><option>Etapa 3</option></select></div>
+        <div class="form-group"><label>Nova Data</label><input type="date" id="et-rem-data" ${ro}></div>
       </div>
-      <div class="form-group"><label>Obs. da Remarcação</label><input type="text" id="et-rem-obs" placeholder="Motivo ou obs."></div>
-    </div>
+      <div class="form-group"><label>Obs. da Remarcação</label><input type="text" id="et-rem-obs" placeholder="Motivo ou obs." ${ro}></div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rem')">💾 Salvar Remarcação</button>`:''}
+    </div>`;}
 
-    <div style="margin-top:4px"><button class="btn btn-primary" onclick="submitEtapas('${cod}')">💾 Salvar</button></div>`;
-}
-async function submitEtapas(cod){
-  const bp=fromInput(document.getElementById('et-bp').value);
-  const bpObs=document.getElementById('et-bp-obs').value;
-  const pd=fromInput(document.getElementById('et-pd').value);
-  const pdObs=document.getElementById('et-pd-obs').value;
-  const ent=fromInput(document.getElementById('et-ent').value);
-  const prev=fromInput(document.getElementById('et-prev').value);
-  const entObs=document.getElementById('et-ent-obs').value;
-  const remEtapa=document.getElementById('et-rem-etapa').value;
-  const remData=fromInput(document.getElementById('et-rem-data').value);
-  const remObs=document.getElementById('et-rem-obs').value;
+async function submitEtapaUnica(cod,tipo){
   try{
-    toast('Salvando etapas...','info');
-    const tasks=[];
-    if(bp) tasks.push(postSheet('BaseProvaArmacao',[cod,'','','','',bp,bpObs]));
-    if(pd) tasks.push(postSheet('Prova de Dentes',[cod,'','','','',pd,pdObs]));
-    if(ent||prev) tasks.push(postSheet('Entregas',[cod,'','','','',prev,ent,entObs]));
-    if(remEtapa&&remData) tasks.push(postSheet('Remarcacao',[cod,'','','',remEtapa,remData,remObs]));
-    if(!tasks.length){toast('Nenhum dado informado','error');return;}
-    await Promise.all(tasks);
+    toast('Salvando...','info');
+    if(tipo==='bp'){
+      const bp=fromInput(document.getElementById('et-bp').value);
+      const bpObs=document.getElementById('et-bp-obs').value;
+      if(!bp){toast('Informe a data da Base de Prova','error');return;}
+      await postSheet('BaseProvaArmacao',[cod,'','','','',bp,bpObs]);
+    } else if(tipo==='pd'){
+      const pd=fromInput(document.getElementById('et-pd').value);
+      const pdObs=document.getElementById('et-pd-obs').value;
+      if(!pd){toast('Informe a data da Prova de Dentes','error');return;}
+      await postSheet('Prova de Dentes',[cod,'','','','',pd,pdObs]);
+    } else if(tipo==='ent'){
+      const ent=fromInput(document.getElementById('et-ent').value);
+      const prev=fromInput(document.getElementById('et-prev').value);
+      const entObs=document.getElementById('et-ent-obs').value;
+      if(!ent&&!prev){toast('Informe ao menos a previsão ou data de entrega','error');return;}
+      // Fix #5: check if record exists and update instead of duplicate
+      const existing=state.entregas.find(x=>x.codigo===String(cod));
+      if(existing){
+        const eRows=await fetchSheet('Entregas!A:A');
+        const rowIdx=eRows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
+        if(rowIdx>=0){
+          await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Entregas',row:rowIdx+1,values:[cod,'','','','',prev||existing.previsao,ent||existing.entrega,entObs||existing.obs]})});
+        } else {
+          await postSheet('Entregas',[cod,'','','','',prev,ent,entObs]);
+        }
+      } else {
+        await postSheet('Entregas',[cod,'','','','',prev,ent,entObs]);
+      }
+    } else if(tipo==='rb'){
+      const rb=fromInput(document.getElementById('et-rb').value);
+      const rbObs=document.getElementById('et-rb-obs').value;
+      if(!rb){toast('Informe a data do Reembase','error');return;}
+      await postSheet('Reembase',[cod,'','','','',rb,rbObs]);
+    } else if(tipo==='rem'){
+      const remEtapa=document.getElementById('et-rem-etapa').value;
+      const remData=fromInput(document.getElementById('et-rem-data').value);
+      const remObs=document.getElementById('et-rem-obs').value;
+      if(!remEtapa||!remData){toast('Informe a etapa e nova data','error');return;}
+      await postSheet('Remarcacao',[cod,'','','',remEtapa,remData,remObs]);
+    }
     toast('Salvo com sucesso!','success');
-    await loadAll();showDetail(cod);switchDetailTab('info');
+    await loadAll();showDetail(cod);switchDetailTab('etapas');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
 function renderDetailEditar(cod){
@@ -1345,7 +1503,76 @@ function gerarFechamento(){
     </div>`;
 }
 
-/* ── CADASTRO ── */
+/* ── FECHAMENTO ARMAÇÃO ── */
+function renderFechamentoArmacao(){
+  const today=new Date();
+  document.getElementById('fechamento-armacao-content').innerHTML=`
+    <div class="form-card" style="max-width:400px;margin-bottom:20px">
+      <h3>🔩 Fechamento por Armação</h3>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Exibe as Base de Prova concluídas (com data) de protéticos com pagamento por armação.</p>
+      <div class="form-row">
+        <div class="form-group"><label>Ano</label><input type="number" id="fa-ano" value="${today.getFullYear()}" min="2020" max="2099"></div>
+        <div class="form-group"><label>Mês</label><select id="fa-mes">${MESES.map((m,i)=>`<option value="${i+1}"${i===today.getMonth()?' selected':''}>${m}</option>`).join('')}</select></div>
+      </div>
+      <button class="btn btn-primary" onclick="gerarFechamentoArmacao()">🔍 Gerar Fechamento</button>
+    </div>
+    <div id="fechamento-armacao-resultado"></div>`;
+}
+function gerarFechamentoArmacao(){
+  const ano=+document.getElementById('fa-ano').value;
+  const mes=+document.getElementById('fa-mes').value;
+  // Proteticos que pagam por armação
+  const proteticosPagam=new Set(state.proteticos.filter(p=>p.pagaArmacao).map(p=>p.codigo));
+  if(!proteticosPagam.size){
+    document.getElementById('fechamento-armacao-resultado').innerHTML='<div class="alert alert-warn">⚠️ Nenhum protético com pagamento por armação cadastrado. Configure na tela de Protéticos.</div>';
+    return;
+  }
+  const bpDoMes=state.baseProva.filter(bp=>{
+    const dt=parseDate(bp.data);
+    if(!dt||dt.getFullYear()!==ano||dt.getMonth()+1!==mes) return false;
+    const m=state.moldagens.find(x=>x.codigo===bp.codigo);
+    return m&&proteticosPagam.has(m.dist);
+  });
+  if(!bpDoMes.length){document.getElementById('fechamento-armacao-resultado').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>Nenhuma Base de Prova encontrada neste período para protéticos com armação.</p></div>';return;}
+
+  // Group by protetico
+  const distMap={};
+  bpDoMes.forEach(bp=>{
+    const m=state.moldagens.find(x=>x.codigo===bp.codigo)||{};
+    const d=m.dist||'—';
+    if(!distMap[d]) distMap[d]=[];
+    distMap[d].push({...m,dataBP:bp.data});
+  });
+
+  const distRows=Object.entries(distMap).map(([d,items])=>{
+    const prot=state.proteticos.find(p=>p.codigo===d);
+    const nome=state.distVisible&&prot?prot.nome:'●●●●●●';
+    return`<tr><td><strong>${d}</strong> ${state.distVisible?`— ${nome}`:''}</td><td style="text-align:center;font-weight:700;color:var(--accent2)">${items.length}</td></tr>`;
+  }).join('');
+
+  const tableRows=bpDoMes.map(bp=>{
+    const m=state.moldagens.find(x=>x.codigo===bp.codigo)||{};
+    const prot=state.proteticos.find(p=>p.codigo===m.dist);
+    const distLabel=state.distVisible&&prot?`${m.dist} — ${prot.nome}`:m.dist||'—';
+    return`<tr><td class="td-code">#${bp.codigo}</td><td class="td-name">${m.nome||'—'}</td><td>${cap(m.dentista||'')}</td><td>${distLabel}</td><td>${bp.data}</td><td>${m.tipo||'—'}</td></tr>`;
+  }).sort((a,b)=>0).join('');
+
+  document.getElementById('fechamento-armacao-resultado').innerHTML=`
+    <h3 style="font-size:16px;margin-bottom:16px">${MESES[mes-1]} ${ano} — ${bpDoMes.length} armação(ões)</h3>
+    <div class="fechamento-totais">
+      <div class="total-card">
+        <h4>🔢 Total por Protético</h4>
+        <table style="width:100%;font-size:12px">
+          <thead><tr><th style="text-align:left;padding:4px 6px;color:var(--text2)">Protético</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Armações</th></tr></thead>
+          <tbody>${distRows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><h3>Listagem de Armações</h3><span style="font-size:12px;color:var(--text2)">${bpDoMes.length} registros · ordem por código</span></div>
+      <table><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Protético</th><th>Data Base Prova</th><th>Tipo Peça</th></tr></thead><tbody>${tableRows}</tbody></table>
+    </div>`;
+}
 function renderCadastroForm(){
   const lastCod=state.moldagens.length?Math.max(...state.moldagens.map(m=>parseInt(m.codigo)||0))+1:6000;
   const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(m=>m.dentista).filter(Boolean))].sort();
@@ -1534,6 +1761,13 @@ function renderProteticos(){
           <h3 id="prot-form-title">➕ Novo Protético</h3>
           <div class="form-group"><label>Código (sigla)</label><input type="text" id="np-cod" placeholder="Ex: E" maxlength="5" style="text-transform:uppercase"></div>
           <div class="form-group"><label>Nome Completo</label><input type="text" id="np-nome" placeholder="Nome do protético"></div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px">
+              <input type="checkbox" id="np-paga-armacao" style="width:auto;accent-color:var(--accent2)">
+              Pagamento por Armação (Base de Prova)
+            </label>
+            <small>Ao marcar, este protético será incluído no Fechamento por Armação.</small>
+          </div>
           <div class="form-group"><label>Senha para confirmar</label><input type="password" id="np-senha" placeholder="Senha de acesso"></div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-primary" onclick="submitNovoProteticoDireto()">💾 Salvar</button>
@@ -1545,7 +1779,13 @@ function renderProteticos(){
         <div class="table-card">
           <div class="table-header"><h3>🧑‍🔧 Protéticos cadastrados</h3><span style="font-size:12px;color:var(--text2)">${state.proteticos.length} protéticos</span></div>
           <div style="padding:12px">
-            ${state.proteticos.length?state.proteticos.map((p,i)=>`<div class="list-item" onclick="editProtetico(${i})"><div class="list-item-info"><div class="code">${p.codigo}</div><div class="name">${state.distVisible?p.nome:'●●●●●●'}</div></div><span style="font-size:11px;color:var(--text3)">✏️ editar</span></div>`).join(''):'<div class="empty-state"><p>Nenhum protético cadastrado.</p></div>'}
+            ${state.proteticos.length?state.proteticos.map((p,i)=>`<div class="list-item" onclick="editProtetico(${i})">
+              <div class="list-item-info">
+                <div class="code">${p.codigo} ${p.pagaArmacao?'<span style="font-size:10px;background:rgba(59,130,246,.15);color:var(--accent2);padding:1px 5px;border-radius:4px">Armação</span>':''}</div>
+                <div class="name">${state.distVisible?p.nome:'●●●●●●'}</div>
+              </div>
+              <span style="font-size:11px;color:var(--text3)">✏️ editar</span>
+            </div>`).join(''):'<div class="empty-state"><p>Nenhum protético cadastrado.</p></div>'}
             ${state.proteticos.length?`<div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="toggleDistVisibility()">${state.distVisible?'🔓 Ocultar nomes':'🔒 Revelar nomes'}</button></div>`:''}
           </div>
         </div>
@@ -1561,6 +1801,7 @@ function editProtetico(idx){
     const p=state.proteticos[idx];
     document.getElementById('np-cod').value=p.codigo;
     document.getElementById('np-nome').value=p.nome;
+    document.getElementById('np-paga-armacao').checked=p.pagaArmacao||false;
     document.getElementById('np-senha').value='';
     document.getElementById('prot-form-title').textContent='✏️ Editar Protético';
     document.getElementById('prot-cancel-btn').style.display='inline-flex';
@@ -1576,6 +1817,7 @@ function cancelEditProtetico(){
 async function submitNovoProteticoDireto(){
   const codigo=document.getElementById('np-cod').value.trim().toUpperCase();
   const nome=document.getElementById('np-nome').value.trim();
+  const pagaArmacao=document.getElementById('np-paga-armacao').checked?'S':'N';
   const senha=document.getElementById('np-senha').value;
   if(!codigo||!nome){toast('Preencha código e nome','error');return;}
   const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
@@ -1587,16 +1829,16 @@ async function submitNovoProteticoDireto(){
       const rows=await fetchSheet('Proteticos!A:A');
       const rowIdx=rows.findIndex(r=>r[0]===old.codigo);
       if(rowIdx<0) throw new Error('Protético não encontrado na planilha');
-      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Proteticos',row:rowIdx+1,values:[codigo,nome]})});
+      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Proteticos',row:rowIdx+1,values:[codigo,nome,pagaArmacao]})});
       const result=await r.json();
       if(!result.success) throw new Error(result.error);
-      state.proteticos[editingProtetico]={codigo,nome};
+      state.proteticos[editingProtetico]={codigo,nome,pagaArmacao:pagaArmacao==='S'};
       toast(`Protético ${codigo} atualizado!`,'success');
     }else{
       if(state.proteticos.find(p=>p.codigo===codigo)){toast('Código já existe','error');return;}
       toast('Salvando...','info');
-      await postSheet('Proteticos',[codigo,nome]);
-      state.proteticos.push({codigo,nome});
+      await postSheet('Proteticos',[codigo,nome,pagaArmacao]);
+      state.proteticos.push({codigo,nome,pagaArmacao:pagaArmacao==='S'});
       toast(`Protético ${codigo} cadastrado!`,'success');
     }
     renderProteticos();renderCadastroForm();
