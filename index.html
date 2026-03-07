@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.22 - fix isAdmin+login silencioso+seletor contrato dashboard -->
+<!-- ProSUS v4.23 - fix editar isAdmin, debug etapas -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -346,7 +346,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.22</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.23</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1321,9 +1321,16 @@ function renderDetailEtapas(cod){
   const rb=state.reembase.find(x=>x.codigo===String(cod))||{};
   const admin=isAdmin();
   const ro=admin?'':'disabled';
+  const userEmail=state.user?.email||localStorage.getItem('prosus_user_email')||'';
+  const adminEmails=state.config.adminEmails||'';
+  const debugInfo=`<div style="font-size:10px;color:var(--text3);margin-bottom:8px;padding:6px 10px;background:var(--surface2);border-radius:6px">
+    👤 Email: <strong>${userEmail||'não detectado'}</strong> |
+    📋 Admins: <strong>${adminEmails||'(todos)'}</strong> |
+    🔑 Admin: <strong style="color:${admin?'var(--accent)':'var(--accent4)'}">${admin?'SIM':'NÃO'}</strong>
+  </div>`;
   document.getElementById('detail-tab-etapas').innerHTML=`
     <div class="alert alert-info">📅 Informe as datas das etapas. Cada etapa tem seu próprio botão de salvar.${!admin?' <strong>Modo leitura — sem permissão de edição.</strong>':''}</div>
-
+    ${debugInfo}
     <div class="etapa-block bp">
       <div class="section-divider bp">🔵 Base de Prova / Armação</div>
       <div class="form-row">
@@ -1440,23 +1447,25 @@ async function submitEtapaUnica(cod,tipo){
 }
 function renderDetailEditar(cod){
   const m=state.moldagens.find(x=>x.codigo===String(cod));if(!m)return;
+  const admin=isAdmin();
+  const ro=admin?'':'disabled';
   const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(x=>x.dentista).filter(Boolean))].sort();
   const tipos=state.tiposPeca.length?state.tiposPeca.map(t=>t.desc):[...new Set(state.moldagens.map(x=>x.tipo).filter(Boolean))].sort();
   const distOpts=state.proteticos.map(p=>`<option value="${p.codigo}"${p.codigo===m.dist?' selected':''}>${p.codigo} — ${p.nome}</option>`).join('');
   document.getElementById('detail-tab-editar').innerHTML=`
-    <div class="alert alert-warn">✏️ Altere os campos desejados e clique em Salvar.</div>
+    <div class="alert alert-warn">✏️ ${admin?'Altere os campos desejados e clique em Salvar.':'<strong>Modo leitura — sem permissão de edição.</strong>'}</div>
     <div class="form-row">
       <div class="form-group"><label>Código</label><input type="text" id="ed-codigo" value="${m.codigo}" disabled></div>
-      <div class="form-group"><label>Data da Moldagem</label><input type="date" id="ed-data" value="${toInput(m.data)}"></div>
+      <div class="form-group"><label>Data da Moldagem</label><input type="date" id="ed-data" value="${toInput(m.data)}" ${ro}></div>
     </div>
-    <div class="form-group"><label>Nome do Paciente</label><input type="text" id="ed-nome" value="${m.nome}"></div>
+    <div class="form-group"><label>Nome do Paciente</label><input type="text" id="ed-nome" value="${m.nome}" ${ro}></div>
     <div class="form-row">
-      <div class="form-group"><label>Dentista</label><select id="ed-dentista">${dents.map(d=>`<option value="${d}"${d===m.dentista?' selected':''}>${cap(d)}</option>`).join('')}</select></div>
-      <div class="form-group"><label>Tipo de Peça</label><select id="ed-tipo">${tipos.map(t=>`<option${t===m.tipo?' selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Dentista</label><select id="ed-dentista" ${ro}>${dents.map(d=>`<option value="${d}"${d===m.dentista?' selected':''}>${cap(d)}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Tipo de Peça</label><select id="ed-tipo" ${ro}>${tipos.map(t=>`<option${t===m.tipo?' selected':''}>${t}</option>`).join('')}</select></div>
     </div>
-    <div class="form-group"><label>Distribuição</label><select id="ed-dist">${distOpts}</select></div>
-    <div class="form-group"><label>Observação</label><textarea id="ed-obs" rows="2">${m.obs||''}</textarea></div>
-    <div style="margin-top:4px"><button class="btn btn-primary" onclick="submitEditar('${cod}')">💾 Salvar Alterações</button></div>`;
+    <div class="form-group"><label>Distribuição</label><select id="ed-dist" ${ro}>${distOpts}</select></div>
+    <div class="form-group"><label>Observação</label><textarea id="ed-obs" rows="2" ${ro}>${m.obs||''}</textarea></div>
+    ${admin?`<div style="margin-top:4px"><button class="btn btn-primary" onclick="submitEditar('${cod}')">💾 Salvar Alterações</button></div>`:''}`;
 }
 async function submitEditar(cod){
   const nome=document.getElementById('ed-nome').value.trim();
