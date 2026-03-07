@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.4 - reembase na linha do tempo, fix isAdmin, usuario na sidebar -->
+<!-- ProSUS v4.6 - aba Contratos, contrato ativo automatico, config simplificada -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -326,10 +326,12 @@
       <div class="logo-icon">🦷</div>
       <h1>ProSUS</h1>
       <p>Controle de Próteses</p>
-      <div id="sidebar-user" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-        <div id="sidebar-user-avatar" style="width:28px;height:28px;border-radius:50%;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:7px;background:var(--accent);"></div>
-        <span id="sidebar-user-name" style="font-size:12px;color:var(--text);font-weight:600;vertical-align:middle"></span>
-        <div id="sidebar-user-email" style="font-size:10px;color:var(--text2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <div id="sidebar-user" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);align-items:center;gap:8px">
+        <div id="sidebar-user-avatar" style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:16px"></div>
+        <div style="min-width:0;flex:1">
+          <div id="sidebar-user-name" style="font-size:12px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+          <div id="sidebar-user-email" style="font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        </div>
       </div>
     </div>
     <div class="sidebar-nav">
@@ -339,6 +341,7 @@
       <button class="nav-btn" onclick="navigate('pipeline')"><span class="nav-icon">⚡</span> Etapas</button>
       <button class="nav-btn" onclick="navigate('fechamento')"><span class="nav-icon">📅</span> Fechamento</button>
       <button class="nav-btn" onclick="navigate('fechamento-armacao')"><span class="nav-icon">🔩</span> Fecham. Armação</button>
+      <button class="nav-btn" onclick="navigate('contratos')"><span class="nav-icon">📃</span> Contratos</button>
       <div class="nav-section">Cadastros</div>
       <button class="nav-btn" onclick="navigate('cadastro')"><span class="nav-icon">➕</span> Nova Moldagem</button>
       <button class="nav-btn" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
@@ -346,7 +349,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.4</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.6</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -381,6 +384,7 @@
     <div class="mob-more-grid">
       <div class="mob-more-item" onclick="closeMobMore();navigate('fechamento')"><span class="icon">📅</span><span>Fechamento</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('fechamento-armacao')"><span class="icon">🔩</span><span>Armação</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('contratos')"><span class="icon">📃</span><span>Contratos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('dentistas')"><span class="icon">👨‍⚕️</span><span>Dentistas</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('proteticos')"><span class="icon">🧑‍🔧</span><span>Protéticos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tipopeca')"><span class="icon">🦷</span><span>Tipos de Peça</span></div>
@@ -437,6 +441,10 @@
         <div id="pipeline-content"><div class="not-connected"><div class="icon">⚡</div><h3>Pipeline de Etapas</h3><p>Faça login para visualizar o fluxo.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
       </div>
 
+      <div class="page" id="page-contratos">
+        <div id="contratos-content"></div>
+      </div>
+
       <div class="page" id="page-fechamento-armacao">
         <div id="fechamento-armacao-content"><div class="not-connected"><div class="icon">🔩</div><h3>Fechamento por Armação</h3><p>Faça login para acessar.</p></div></div>
       </div>
@@ -469,15 +477,8 @@
 <div class="modal-overlay" id="config-modal">
   <div class="modal">
     <div class="modal-header"><h3>⚙️ Configurações</h3><button class="modal-close" onclick="closeConfig()">✕</button></div>
-    <div class="section-divider bp">📋 Vigência do Contrato</div>
-    <div class="form-row">
-      <div class="form-group"><label>Data Início</label><input type="date" id="cfg-contrato-inicio"></div>
-      <div class="form-group"><label>Data Fim</label><input type="date" id="cfg-contrato-fim"></div>
-    </div>
-    <div class="section-divider pd">🦷 Metas Mensais</div>
-    <div class="form-group"><label>Reembase contratado por mês</label><input type="number" id="cfg-reembase-mes" min="0" placeholder="Ex: 6"><small>Exibido no dashboard como "X / total"</small></div>
     <div class="section-divider ent">🔒 Acesso</div>
-    <div class="form-group"><label>E-mails dos administradores</label><input type="text" id="cfg-admin-emails" placeholder="email1@gmail.com, email2@gmail.com"><small>Administradores podem editar e excluir registros. Separe por vírgula.</small></div>
+    <div class="form-group"><label>E-mails dos administradores</label><input type="text" id="cfg-admin-emails" placeholder="email1@gmail.com, email2@gmail.com"><small>Administradores podem editar e excluir registros. Separe por vírgula. Salvo na planilha (aba Configuracao).</small></div>
     <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Cancelar</button><button class="btn btn-primary" onclick="saveConfig()">💾 Salvar</button></div>
   </div>
 </div>
@@ -525,25 +526,24 @@ const state={
   user:null,
   connected:false,
   moldagens:[],baseProva:[],provaDentes:[],entregas:[],remarcacoes:[],reembase:[],
-  proteticos:[],dentistas:[],tiposPeca:[],
+  proteticos:[],dentistas:[],tiposPeca:[],contratos:[],
   filtered:[],currentPage:1,perPage:15,
   distVisible:true,currentDetailCod:null,
   lastSavedCodigo:null,
+  contratoAtivo:null, // { id, inicio, fim, reembaseMes }
   config:{
-    reembaseMes:0,
-    contratoInicio:'',
-    contratoFim:'',
     adminEmails:''
   }
 };
 
-const pages=['dashboard','pacientes','pipeline','fechamento','fechamento-armacao','cadastro','dentistas','proteticos','tipopeca'];
+const pages=['dashboard','pacientes','pipeline','fechamento','fechamento-armacao','contratos','cadastro','dentistas','proteticos','tipopeca'];
 const pageMeta={
   dashboard:['Dashboard','Visão geral do controle de próteses'],
   pacientes:['Consultar Pacientes','Busque e filtre os registros'],
   pipeline:['Etapas de Produção','Acompanhe o fluxo de cada prótese'],
   fechamento:['Fechamento Mensal','Relatório de entregas por período'],
   'fechamento-armacao':['Fechamento por Armação','Base de Prova concluída por período'],
+  contratos:['Contratos','Gerencie os contratos vigentes e histórico'],
   cadastro:['Nova Moldagem','Registre uma nova moldagem'],
   dentistas:['Dentistas','Gerencie os dentistas cadastrados'],
   proteticos:['Protéticos','Gerencie os protéticos (acesso restrito)'],
@@ -625,11 +625,11 @@ async function fetchUserInfo(){
     // Populate sidebar user block
     const sidebarUser=document.getElementById('sidebar-user');
     if(sidebarUser){
-      sidebarUser.style.display='block';
+      sidebarUser.style.display='flex';
       const avatarEl=document.getElementById('sidebar-user-avatar');
-      if(u.picture) avatarEl.innerHTML=`<img src="${u.picture}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.textContent='👤'">`;
+      if(u.picture) avatarEl.innerHTML=`<img src="${u.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.textContent='👤'">`;
       else avatarEl.textContent='👤';
-      document.getElementById('sidebar-user-name').textContent=u.name.split(' ')[0];
+      document.getElementById('sidebar-user-name').textContent=u.name;
       document.getElementById('sidebar-user-email').textContent=u.email;
     }
     loadAll();
@@ -656,29 +656,26 @@ async function ensureToken(){
 }
 
 function openConfig(){
-  document.getElementById('cfg-reembase-mes').value=state.config.reembaseMes||'';
   document.getElementById('cfg-admin-emails').value=state.config.adminEmails||'';
-  document.getElementById('cfg-contrato-inicio').value=toInput(state.config.contratoInicio);
-  document.getElementById('cfg-contrato-fim').value=toInput(state.config.contratoFim);
   document.getElementById('config-modal').classList.add('open');
 }
 function closeConfig(){document.getElementById('config-modal').classList.remove('open');}
-function saveConfig(){
-  const reembase=document.getElementById('cfg-reembase-mes').value;
+async function saveConfig(){
   const adminEmails=document.getElementById('cfg-admin-emails').value.trim();
-  const contratoInicio=fromInput(document.getElementById('cfg-contrato-inicio').value);
-  const contratoFim=fromInput(document.getElementById('cfg-contrato-fim').value);
-  if(reembase) localStorage.setItem('prosus_reembase_mes',reembase);
-  if(adminEmails) localStorage.setItem('prosus_admin_emails',adminEmails);
-  if(contratoInicio) localStorage.setItem('prosus_contrato_inicio',contratoInicio);
-  if(contratoFim) localStorage.setItem('prosus_contrato_fim',contratoFim);
-  state.config.reembaseMes=+reembase||state.config.reembaseMes;
-  state.config.adminEmails=adminEmails||state.config.adminEmails;
-  state.config.contratoInicio=contratoInicio||state.config.contratoInicio;
-  state.config.contratoFim=contratoFim||state.config.contratoFim;
-  closeConfig();
-  toast('Configurações salvas!','success');
-  renderDashboard();
+  try{
+    toast('Salvando...','info');
+    let cfgRows=[];
+    try{cfgRows=await fetchSheet('Configuracao!A:B');}catch(e){}
+    const rowIdx=cfgRows.findIndex(r=>r[0]&&r[0].toString().trim().toLowerCase()==='admin_emails');
+    if(rowIdx>=0){
+      await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Configuracao',row:rowIdx+1,values:['admin_emails',adminEmails]})});
+    } else {
+      await postSheet('Configuracao',['admin_emails',adminEmails]);
+    }
+    state.config.adminEmails=adminEmails;
+    closeConfig();
+    toast('Configurações salvas!','success');
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');}
 }
 function updateStatus(){
   const el=document.getElementById('connection-status');
@@ -726,6 +723,7 @@ function navigate(page){
   if(page==='tipopeca'&&state.connected) renderTipoPeca();
   if(page==='fechamento'&&state.connected) renderFechamento();
   if(page==='fechamento-armacao'&&state.connected) renderFechamentoArmacao();
+  if(page==='contratos'&&state.connected) renderContratos();
   // Scroll to top on mobile
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -805,11 +803,6 @@ function toast(msg,type='info'){
 async function loadAll(){
   state.connected=false;updateStatus();
   document.getElementById('dashboard-content').innerHTML='<div class="loading-state"><div class="loading-spinner"></div>Carregando dados...</div>';
-  // Load config from localStorage
-  state.config.reembaseMes=+localStorage.getItem('prosus_reembase_mes')||0;
-  state.config.contratoInicio=localStorage.getItem('prosus_contrato_inicio')||'';
-  state.config.contratoFim=localStorage.getItem('prosus_contrato_fim')||'';
-  state.config.adminEmails=localStorage.getItem('prosus_admin_emails')||'';
   try{
     const[mRows,bRows,dRows,eRows]=await Promise.all([
       fetchSheet('Moldagens!A2:H5000'),
@@ -817,12 +810,36 @@ async function loadAll(){
       fetchSheet('Prova de Dentes!A2:G2000'),
       fetchSheet('Entregas!A2:J2000')
     ]);
-    let pRows=[],dentRows=[],tipoRows=[],remRows=[],reemRows=[];
+    let pRows=[],dentRows=[],tipoRows=[],remRows=[],reemRows=[],cfgRows=[];
     try{pRows=await fetchSheet('Proteticos!A2:C200');}catch(e){}
     try{dentRows=await fetchSheet('Dentistas!A2:A500');}catch(e){}
     try{tipoRows=await fetchSheet('BaseDados!A3:C200');}catch(e){}
     try{remRows=await fetchSheet('Remarcacao!A2:G500');}catch(e){}
     try{reemRows=await fetchSheet('Reembase!A2:G2000');}catch(e){}
+    try{cfgRows=await fetchSheet('Configuracao!A2:B50');}catch(e){}
+    let contratoRows=[];
+    try{contratoRows=await fetchSheet('Contratos!A2:D100');}catch(e){}
+
+    // Parse config from sheet: col A = chave, col B = valor
+    const cfg={};
+    cfgRows.forEach(r=>{ if(r[0]) cfg[r[0].toString().trim().toLowerCase()]=r[1]||''; });
+    state.config.adminEmails=cfg['admin_emails']||'';
+
+    // Parse contratos: A=id, B=inicio(dd/mm/aaaa), C=fim(dd/mm/aaaa), D=reembase_mes
+    state.contratos=contratoRows.filter(r=>r[0]&&r[1]&&r[2]).map(r=>({
+      id:r[0].toString().trim(),
+      inicio:r[1].toString().trim(),
+      fim:r[2].toString().trim(),
+      reembaseMes:+(r[3]||0)
+    }));
+
+    // Detect active contract (today within period)
+    const today=new Date(); today.setHours(0,0,0,0);
+    state.contratoAtivo=state.contratos.find(c=>{
+      const ini=parseDate(c.inicio.split('/').reverse().join('/'));
+      const fim=parseDate(c.fim.split('/').reverse().join('/'));
+      return ini&&fim&&today>=ini&&today<=fim;
+    })||state.contratos[state.contratos.length-1]||null;
 
     state.moldagens=mRows.filter(r=>r[0]&&r[0].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),nome:r[1]||'',dentista:r[2]||'',tipo:r[3]||'',data:r[4]||'',dist:r[5]||'',situacao:r[6]||'Pendente',obs:r[7]||''}));
     state.baseProva=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
@@ -838,6 +855,7 @@ async function loadAll(){
     toast('Planilha carregada! '+state.moldagens.length+' registros.','success');
     renderDashboard();renderTable();renderPipeline();renderCadastroForm();
     renderFechamento();renderFechamentoArmacao();
+    if(document.querySelector('#page-contratos.active')) renderContratos();
   }catch(e){
     state.connected=false;updateStatus();
     toast('Erro: '+e.message,'error');
@@ -847,9 +865,10 @@ async function loadAll(){
 
 /* ── DASHBOARD ── */
 function contratoMeses(){
-  // Returns array of {ano,mes} within contract period
-  const ini=parseDate(state.config.contratoInicio?.split('/').reverse().join('/'));
-  const fim=parseDate(state.config.contratoFim?.split('/').reverse().join('/'));
+  const c=state.contratoAtivo;
+  if(!c) return null;
+  const ini=parseDate(c.inicio.split('/').reverse().join('/'));
+  const fim=parseDate(c.fim.split('/').reverse().join('/'));
   if(!ini||!fim) return null;
   const meses=[];
   const cur=new Date(ini.getFullYear(),ini.getMonth(),1);
@@ -858,10 +877,11 @@ function contratoMeses(){
   return meses;
 }
 function inContrato(dateStr){
-  if(!state.config.contratoInicio||!state.config.contratoFim) return true;
+  const c=state.contratoAtivo;
+  if(!c) return true;
   const dt=parseDate(dateStr);if(!dt)return false;
-  const ini=parseDate(state.config.contratoInicio?.split('/').reverse().join('/'));
-  const fim=parseDate(state.config.contratoFim?.split('/').reverse().join('/'));
+  const ini=parseDate(c.inicio.split('/').reverse().join('/'));
+  const fim=parseDate(c.fim.split('/').reverse().join('/'));
   return dt>=ini&&dt<=fim;
 }
 function renderDashboard(){
@@ -889,7 +909,7 @@ function renderDashboard(){
   // Reembase this month
   const today=new Date();
   const reembaseMes=state.reembase.filter(r=>{const dt=parseDate(r.data);return dt&&dt.getFullYear()===today.getFullYear()&&dt.getMonth()===today.getMonth();}).length;
-  const reembaseContratado=state.config.reembaseMes||0;
+  const reembaseContratado=state.contratoAtivo?.reembaseMes||0;
 
   // Entregas por mês — all months in contract or last 7
   const mesC={};
@@ -908,7 +928,9 @@ function renderDashboard(){
   const tipoC={},dentC={};
   moldBase.forEach(m=>{tipoC[m.tipo||'Não Preenchido']=(tipoC[m.tipo||'Não Preenchido']||0)+1;dentC[m.dentista]=(dentC[m.dentista]||0)+1;});
 
-  const contratoLabel=state.config.contratoInicio&&state.config.contratoFim?`Vigência: ${state.config.contratoInicio} a ${state.config.contratoFim}`:'Sem vigência configurada';
+  const contratoLabel=state.contratoAtivo
+    ?`Contrato ativo: ${state.contratoAtivo.inicio} a ${state.contratoAtivo.fim} (${state.contratoAtivo.id})`
+    :'Nenhum contrato ativo — cadastre em Contratos';
 
   document.getElementById('dashboard-content').innerHTML=`
     <div style="font-size:11px;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px">
@@ -1211,10 +1233,9 @@ function renderDetailInfo(cod){
     ${relacionadosHtml}`;
 }
 function isAdmin(){
-  // Sempre lê do localStorage para pegar valor mais recente (mesmo após saveConfig)
-  const stored=localStorage.getItem('prosus_admin_emails')||state.config.adminEmails||'';
+  const stored=(state.config.adminEmails||'').trim();
+  if(!stored) return true; // se não configurado, todos são admin
   const emails=stored.toLowerCase().split(',').map(e=>e.trim()).filter(Boolean);
-  if(!emails.length) return true; // se não configurado, todos são admin
   const userEmail=(state.user?.email||'').toLowerCase().trim();
   return emails.includes(userEmail);
 }
@@ -1455,6 +1476,111 @@ function renderPipeline(){
       <div class="pipeline-col step4"><div class="pipeline-col-header"><h4>✅ Entregues</h4><span class="pipeline-count">${e4.length}</span></div><div class="pipeline-cards">${e4.length?e4.map(card4).join(''):empty}</div></div>
       <div class="pipeline-col" style="border-top:3px solid var(--accent4)"><div class="pipeline-col-header"><h4>🔧 Reembase</h4><span class="pipeline-count">${e5.length}</span></div><div class="pipeline-cards">${e5.length?e5.map(card5).join(''):empty}</div></div>
     </div>`;
+}
+
+/* ── CONTRATOS ── */
+let editingContrato=null;
+function renderContratos(){
+  const admin=isAdmin();
+  const list=state.contratos;
+  const today=new Date();today.setHours(0,0,0,0);
+
+  const statusBadge=(c)=>{
+    const ini=parseDate(c.inicio.split('/').reverse().join('/'));
+    const fim=parseDate(c.fim.split('/').reverse().join('/'));
+    if(!ini||!fim) return '<span class="badge badge-gray">—</span>';
+    if(today<ini) return '<span class="badge badge-yellow">Futuro</span>';
+    if(today>fim) return '<span class="badge badge-gray">Encerrado</span>';
+    return '<span class="badge badge-green">● Ativo</span>';
+  };
+
+  document.getElementById('contratos-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${admin?`<div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="contrato-form-title">➕ Novo Contrato</h3>
+          <div class="form-group"><label>Identificação</label><input type="text" id="ct-id" placeholder="Ex: Contrato 2024-2026"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Data Início</label><input type="date" id="ct-inicio"></div>
+            <div class="form-group"><label>Data Fim</label><input type="date" id="ct-fim"></div>
+          </div>
+          <div class="form-group"><label>Reembase contratado / mês</label><input type="number" id="ct-reembase" min="0" placeholder="Ex: 6"></div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn btn-primary" onclick="submitContrato()">💾 Salvar</button>
+            <button class="btn btn-secondary" id="ct-cancel-btn" onclick="cancelEditContrato()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>`:''}
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>📃 Contratos</h3><span style="font-size:12px;color:var(--text2)">${list.length} contrato(s)</span></div>
+          <table>
+            <thead><tr><th>Identificação</th><th>Início</th><th>Fim</th><th>Reembase/mês</th><th>Situação</th>${admin?'<th></th>':''}</tr></thead>
+            <tbody>
+            ${list.length?list.map((c,i)=>`<tr>
+              <td class="td-name"><strong>${c.id}</strong></td>
+              <td>${c.inicio}</td>
+              <td>${c.fim}</td>
+              <td style="text-align:center">${c.reembaseMes||'—'}</td>
+              <td>${statusBadge(c)}</td>
+              ${admin?`<td><button class="icon-btn" onclick="editContrato(${i})">✏️</button></td>`:''}
+            </tr>`).join(''):`<tr><td colspan="${admin?6:5}" style="text-align:center;padding:20px;color:var(--text3)">Nenhum contrato cadastrado.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <div class="alert alert-info" style="margin-top:14px">
+          ℹ️ O contrato <strong>ativo</strong> é detectado automaticamente pela data de hoje. O dashboard exibe apenas dados dentro do período do contrato ativo.
+          ${state.contratoAtivo?`<br><strong>Ativo agora:</strong> ${state.contratoAtivo.id} (${state.contratoAtivo.inicio} a ${state.contratoAtivo.fim})`:'<br><strong>Nenhum contrato ativo no momento.</strong>'}
+        </div>
+      </div>
+    </div>`;
+  editingContrato=null;
+}
+
+function editContrato(idx){
+  editingContrato=idx;
+  const c=state.contratos[idx];
+  document.getElementById('ct-id').value=c.id;
+  document.getElementById('ct-inicio').value=toInput(c.inicio);
+  document.getElementById('ct-fim').value=toInput(c.fim);
+  document.getElementById('ct-reembase').value=c.reembaseMes||'';
+  document.getElementById('contrato-form-title').textContent='✏️ Editar Contrato';
+  document.getElementById('ct-cancel-btn').style.display='inline-flex';
+  document.getElementById('ct-id').focus();
+}
+function cancelEditContrato(){
+  editingContrato=null;
+  document.getElementById('ct-id').value='';
+  document.getElementById('ct-inicio').value='';
+  document.getElementById('ct-fim').value='';
+  document.getElementById('ct-reembase').value='';
+  document.getElementById('contrato-form-title').textContent='➕ Novo Contrato';
+  document.getElementById('ct-cancel-btn').style.display='none';
+}
+async function submitContrato(){
+  const id=document.getElementById('ct-id').value.trim();
+  const inicio=fromInput(document.getElementById('ct-inicio').value);
+  const fim=fromInput(document.getElementById('ct-fim').value);
+  const reembase=document.getElementById('ct-reembase').value||'0';
+  if(!id||!inicio||!fim){toast('Preencha identificação, início e fim','error');return;}
+  try{
+    toast('Salvando...','info');
+    if(editingContrato!==null){
+      const old=state.contratos[editingContrato];
+      const rows=await fetchSheet('Contratos!A:A');
+      const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===old.id);
+      if(rowIdx<0) throw new Error('Contrato não encontrado na planilha');
+      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Contratos',row:rowIdx+1,values:[id,inicio,fim,reembase]})});
+      const res=await r.json();
+      if(!res.success) throw new Error(res.error||'Erro ao atualizar');
+      toast(`Contrato "${id}" atualizado!`,'success');
+    } else {
+      await postSheet('Contratos',[id,inicio,fim,reembase]);
+      toast(`Contrato "${id}" cadastrado!`,'success');
+    }
+    await loadAll();
+    navigate('contratos');
+  }catch(e){toast('Erro: '+e.message,'error');}
 }
 
 /* ── FECHAMENTO ── */
