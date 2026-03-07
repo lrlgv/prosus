@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.23 - fix editar isAdmin, debug etapas -->
+<!-- ProSUS v4.24 - fix isAdmin separador ponto-virgula, fix editar isAdmin -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -346,7 +346,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.23</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.24</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1296,7 +1296,8 @@ function renderDetailInfo(cod){
 function isAdmin(){
   const stored=(state.config.adminEmails||'').trim();
   if(!stored) return true;
-  const emails=stored.toLowerCase().split(',').map(e=>e.trim()).filter(Boolean);
+  // Aceita vírgula ou ponto e vírgula como separador
+  const emails=stored.toLowerCase().split(/[,;]/).map(e=>e.trim()).filter(Boolean);
   if(!emails.length) return true;
   const rawEmail=state.user?.email || localStorage.getItem('prosus_user_email') || '';
   const userEmail=rawEmail.toLowerCase().trim();
@@ -1321,16 +1322,8 @@ function renderDetailEtapas(cod){
   const rb=state.reembase.find(x=>x.codigo===String(cod))||{};
   const admin=isAdmin();
   const ro=admin?'':'disabled';
-  const userEmail=state.user?.email||localStorage.getItem('prosus_user_email')||'';
-  const adminEmails=state.config.adminEmails||'';
-  const debugInfo=`<div style="font-size:10px;color:var(--text3);margin-bottom:8px;padding:6px 10px;background:var(--surface2);border-radius:6px">
-    👤 Email: <strong>${userEmail||'não detectado'}</strong> |
-    📋 Admins: <strong>${adminEmails||'(todos)'}</strong> |
-    🔑 Admin: <strong style="color:${admin?'var(--accent)':'var(--accent4)'}">${admin?'SIM':'NÃO'}</strong>
-  </div>`;
   document.getElementById('detail-tab-etapas').innerHTML=`
     <div class="alert alert-info">📅 Informe as datas das etapas. Cada etapa tem seu próprio botão de salvar.${!admin?' <strong>Modo leitura — sem permissão de edição.</strong>':''}</div>
-    ${debugInfo}
     <div class="etapa-block bp">
       <div class="section-divider bp">🔵 Base de Prova / Armação</div>
       <div class="form-row">
