@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.19 - fix isAdmin email localStorage, fix fetchUserInfo 401 -->
+<!-- ProSUS v4.20 - fix login silencioso nao mostra erro, fix 401 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -346,7 +346,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.19</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.20</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -577,12 +577,19 @@ function waitForGSI(){
 waitForGSI();
 
 let tokenClient=null;
+let _silentLogin=false;
 function initOAuth(){
   tokenClient=google.accounts.oauth2.initTokenClient({
     client_id:CLIENT_ID,
     scope:SCOPES,
     callback:(resp)=>{
-      if(resp.error){showLoginError('Erro ao autenticar: '+resp.error);return;}
+      if(resp.error){
+        // Login silencioso falhou — normal, só mostra botão de login sem erro
+        if(_silentLogin){_silentLogin=false;return;}
+        showLoginError('Erro ao autenticar: '+resp.error);
+        return;
+      }
+      _silentLogin=false;
       state.accessToken=resp.access_token;
       state.tokenExpiry=Date.now()+(resp.expires_in-60)*1000;
       fetchUserInfo();
@@ -592,6 +599,7 @@ function initOAuth(){
   const hint=localStorage.getItem('prosus_user_email');
   if(hint && hint!=='undefined' && hint!=='null'){
     if(!state.user?.email) state.user={email:hint,name:localStorage.getItem('prosus_user_name')||'',picture:''};
+    _silentLogin=true;
     tokenClient.requestAccessToken({prompt:'none',login_hint:hint});
   }
 }
