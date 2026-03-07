@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.6 - aba Contratos, contrato ativo automatico, config simplificada -->
+<!-- ProSUS v4.8 - card reembase clicavel navega para consulta filtrada -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -349,7 +349,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.6</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.8</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -426,6 +426,14 @@
           <select class="filter-select" id="filter-dentista" onchange="filterTable()"><option value="">Todos os dentistas</option></select>
           <select class="filter-select" id="filter-tipo" onchange="filterTable()"><option value="">Todos os tipos</option></select>
           <select class="filter-select" id="filter-status" onchange="filterTable()"><option value="">Todas situações</option><option>Entregue</option><option>Pendente</option></select>
+          <select class="filter-select" id="filter-etapa" onchange="filterTable()">
+            <option value="">Todas as etapas</option>
+            <option value="moldagem">Moldagem</option>
+            <option value="base_prova">Base de Prova / Armação</option>
+            <option value="prova_dentes">Prova de Dentes</option>
+            <option value="entregue">Entregue</option>
+            <option value="reembase">Reembase</option>
+          </select>
           <input type="date" class="filter-select" id="filter-data-de" onchange="filterTable()" title="Data moldagem DE">
           <input type="date" class="filter-select" id="filter-data-ate" onchange="filterTable()" title="Data moldagem ATÉ">
           <button class="btn btn-secondary btn-sm" onclick="clearFilters()">✕ Limpar</button>
@@ -623,15 +631,19 @@ async function fetchUserInfo(){
     const mobUs=document.getElementById('mob-user-status');
     if(mobUs) mobUs.innerHTML=userChipHtml;
     // Populate sidebar user block
-    const sidebarUser=document.getElementById('sidebar-user');
-    if(sidebarUser){
-      sidebarUser.style.display='flex';
-      const avatarEl=document.getElementById('sidebar-user-avatar');
-      if(u.picture) avatarEl.innerHTML=`<img src="${u.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.textContent='👤'">`;
-      else avatarEl.textContent='👤';
-      document.getElementById('sidebar-user-name').textContent=u.name;
-      document.getElementById('sidebar-user-email').textContent=u.email;
-    }
+    const setSidebarUser=()=>{
+      const sidebarUser=document.getElementById('sidebar-user');
+      if(sidebarUser){
+        sidebarUser.style.cssText+='display:flex!important';
+        const avatarEl=document.getElementById('sidebar-user-avatar');
+        if(u.picture) avatarEl.innerHTML=`<img src="${u.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.textContent='👤'">`;
+        else avatarEl.textContent='👤';
+        document.getElementById('sidebar-user-name').textContent=u.name;
+        document.getElementById('sidebar-user-email').textContent=u.email;
+      }
+    };
+    setSidebarUser();
+    setTimeout(setSidebarUser, 300);
     loadAll();
   }catch(e){showLoginError('Erro ao obter dados do usuário.');}
 }
@@ -836,8 +848,8 @@ async function loadAll(){
     // Detect active contract (today within period)
     const today=new Date(); today.setHours(0,0,0,0);
     state.contratoAtivo=state.contratos.find(c=>{
-      const ini=parseDate(c.inicio.split('/').reverse().join('/'));
-      const fim=parseDate(c.fim.split('/').reverse().join('/'));
+      const ini=parseDate(c.inicio);
+      const fim=parseDate(c.fim);
       return ini&&fim&&today>=ini&&today<=fim;
     })||state.contratos[state.contratos.length-1]||null;
 
@@ -867,8 +879,8 @@ async function loadAll(){
 function contratoMeses(){
   const c=state.contratoAtivo;
   if(!c) return null;
-  const ini=parseDate(c.inicio.split('/').reverse().join('/'));
-  const fim=parseDate(c.fim.split('/').reverse().join('/'));
+  const ini=parseDate(c.inicio);
+  const fim=parseDate(c.fim);
   if(!ini||!fim) return null;
   const meses=[];
   const cur=new Date(ini.getFullYear(),ini.getMonth(),1);
@@ -880,8 +892,8 @@ function inContrato(dateStr){
   const c=state.contratoAtivo;
   if(!c) return true;
   const dt=parseDate(dateStr);if(!dt)return false;
-  const ini=parseDate(c.inicio.split('/').reverse().join('/'));
-  const fim=parseDate(c.fim.split('/').reverse().join('/'));
+  const ini=parseDate(c.inicio);
+  const fim=parseDate(c.fim);
   return dt>=ini&&dt<=fim;
 }
 function renderDashboard(){
@@ -957,10 +969,10 @@ function renderDashboard(){
         <div class="value" style="font-size:22px">${totalPecas}</div>
         <div class="sublabel">PT + PPR cadastradas</div>
       </div>
-      ${reembaseContratado>0?`<div class="stat-card">
+      ${reembaseContratado>0?`<div class="stat-card" onclick="navegarComFiltroEtapa('reembase')" style="cursor:pointer" title="Clique para ver pacientes com reembase">
         <div class="label">Reembase</div>
         <div class="value" style="font-size:22px;color:var(--accent2)">${reembaseMes}<span style="color:var(--text3);font-size:16px"> / ${reembaseContratado}</span></div>
-        <div class="sublabel">realizados / contratados este mês</div>
+        <div class="sublabel">realizados / contratados este mês · 🔍 ver registros</div>
       </div>`:''}
     </div>
     <div class="charts-grid">
@@ -1112,6 +1124,7 @@ function clearFilters(){
   document.getElementById('filter-dentista').value='';
   document.getElementById('filter-tipo').value='';
   document.getElementById('filter-status').value='';
+  document.getElementById('filter-etapa').value='';
   document.getElementById('filter-data-de').value='';
   document.getElementById('filter-data-ate').value='';
   filterTable();
@@ -1156,13 +1169,30 @@ function filterTable(){
   const dent=document.getElementById('filter-dentista').value;
   const tipo=document.getElementById('filter-tipo').value;
   const sit=document.getElementById('filter-status').value;
+  const etapa=document.getElementById('filter-etapa').value;
   const dataDE=document.getElementById('filter-data-de').value;
   const dataATE=document.getElementById('filter-data-ate').value;
+
+  // Build sets for etapa filtering
+  const bpSet=new Set(state.baseProva.map(x=>x.codigo));
+  const pdSet=new Set(state.provaDentes.map(x=>x.codigo));
+  const entSet=new Set(state.entregas.filter(e=>e.entrega).map(e=>e.codigo));
+  const rbSet=new Set(state.reembase.map(x=>x.codigo));
+
   state.filtered=state.moldagens.filter(m=>{
     const mq=!q||m.nome.toLowerCase().includes(q)||String(m.codigo).includes(q)||m.dentista.toLowerCase().includes(q);
     const md=!dent||m.dentista===dent;
     const mt=!tipo||m.tipo===tipo;
     const ms=!sit||((m.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente')===sit;
+    let me=true;
+    if(etapa){
+      const cod=m.codigo;
+      if(etapa==='moldagem')      me=!bpSet.has(cod)&&!entSet.has(cod);
+      else if(etapa==='base_prova')   me=bpSet.has(cod)&&!pdSet.has(cod)&&!entSet.has(cod);
+      else if(etapa==='prova_dentes') me=pdSet.has(cod)&&!entSet.has(cod);
+      else if(etapa==='entregue')     me=entSet.has(cod);
+      else if(etapa==='reembase')     me=rbSet.has(cod);
+    }
     let mde=true,mate=true;
     if(dataDE||dataATE){
       const dt=parseDate(m.data);
@@ -1171,7 +1201,7 @@ function filterTable(){
         if(dataATE){const ate=new Date(dataATE+'T23:59:59');mate=dt<=ate;}
       }else{mde=false;mate=false;}
     }
-    return mq&&md&&mt&&ms&&mde&&mate;
+    return mq&&md&&mt&&ms&&me&&mde&&mate;
   });
   state.currentPage=1;renderTablePage();
 }
@@ -1235,9 +1265,11 @@ function renderDetailInfo(cod){
 function isAdmin(){
   const stored=(state.config.adminEmails||'').trim();
   if(!stored) return true; // se não configurado, todos são admin
+  if(!state.user?.email) return true; // usuário ainda não carregado
   const emails=stored.toLowerCase().split(',').map(e=>e.trim()).filter(Boolean);
-  const userEmail=(state.user?.email||'').toLowerCase().trim();
-  return emails.includes(userEmail);
+  const userEmail=state.user.email.toLowerCase().trim();
+  const result=emails.includes(userEmail);
+  return result;
 }
 
 function renderDetailEtapas(cod){
@@ -1388,6 +1420,15 @@ async function submitEditar(cod){
 }
 function closeDetail(){document.getElementById('detail-modal').classList.remove('open');}
 
+function navegarComFiltroEtapa(etapa){
+  navigate('pacientes');
+  // Aguarda a tela renderizar antes de aplicar o filtro
+  setTimeout(()=>{
+    const sel=document.getElementById('filter-etapa');
+    if(sel){sel.value=etapa;filterTable();}
+  },100);
+}
+
 /* ── PIPELINE ── */
 function renderPipeline(){
   const bpSet=new Set(state.baseProva.map(m=>m.codigo));
@@ -1486,8 +1527,8 @@ function renderContratos(){
   const today=new Date();today.setHours(0,0,0,0);
 
   const statusBadge=(c)=>{
-    const ini=parseDate(c.inicio.split('/').reverse().join('/'));
-    const fim=parseDate(c.fim.split('/').reverse().join('/'));
+    const ini=parseDate(c.inicio);
+    const fim=parseDate(c.fim);
     if(!ini||!fim) return '<span class="badge badge-gray">—</span>';
     if(today<ini) return '<span class="badge badge-yellow">Futuro</span>';
     if(today>fim) return '<span class="badge badge-gray">Encerrado</span>';
@@ -1720,11 +1761,11 @@ function gerarFechamentoArmacao(){
   }).join('');
 
   document.getElementById('fechamento-armacao-resultado').innerHTML=`
-    <h3 style="font-size:16px;margin-bottom:16px">${MESES[mes-1]} ${ano} — ${bpDoMes.length} registro(s) · ${totPT+totPPR} peça(s)</h3>
+    <h3 style="font-size:16px;margin-bottom:16px">${MESES[mes-1]} ${ano} — ${bpDoMes.length} paciente(s) · ${totPT+totPPR} peça(s)</h3>
     <div class="fechamento-totais">
       <div class="total-card">
         <h4>🔢 Total Geral</h4>
-        <div class="total-row"><span>Registros</span><span class="tval">${bpDoMes.length}</span></div>
+        <div class="total-row"><span>Pacientes</span><span class="tval">${bpDoMes.length}</span></div>
         <div class="total-row"><span>Total PT</span><span class="tval">${totPT}</span></div>
         <div class="total-row"><span>Total PPR</span><span class="tval">${totPPR}</span></div>
         <div class="total-row"><span>Total Peças</span><span class="tval">${totPT+totPPR}</span></div>
@@ -1732,13 +1773,13 @@ function gerarFechamentoArmacao(){
       <div class="total-card">
         <h4>📦 Total por Protético</h4>
         <table style="width:100%;font-size:12px">
-          <thead><tr><th style="text-align:left;padding:4px 6px;color:var(--text2)">Protético</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Reg.</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PT</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PPR</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Total</th></tr></thead>
+          <thead><tr><th style="text-align:left;padding:4px 6px;color:var(--text2)">Protético</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Pac.</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PT</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PPR</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Total</th></tr></thead>
           <tbody>${distRows}</tbody>
         </table>
       </div>
     </div>
     <div class="table-card">
-      <div class="table-header"><h3>Listagem de Armações</h3><span style="font-size:12px;color:var(--text2)">${bpDoMes.length} registros · ${totPT+totPPR} peças</span></div>
+      <div class="table-header"><h3>Listagem de Armações</h3><span style="font-size:12px;color:var(--text2)">${bpDoMes.length} pacientes · ${totPT+totPPR} peças</span></div>
       <table><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Protético</th><th>Data Base Prova</th><th>Tipo Peça</th><th>Qtde. PT</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
     </div>`;
 }
