@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.3 - fechamento armacao por pecas, remove senha revelar protetico -->
+<!-- ProSUS v4.4 - reembase na linha do tempo, fix isAdmin, usuario na sidebar -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -326,6 +326,11 @@
       <div class="logo-icon">🦷</div>
       <h1>ProSUS</h1>
       <p>Controle de Próteses</p>
+      <div id="sidebar-user" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <div id="sidebar-user-avatar" style="width:28px;height:28px;border-radius:50%;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:7px;background:var(--accent);"></div>
+        <span id="sidebar-user-name" style="font-size:12px;color:var(--text);font-weight:600;vertical-align:middle"></span>
+        <div id="sidebar-user-email" style="font-size:10px;color:var(--text2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      </div>
     </div>
     <div class="sidebar-nav">
       <div class="nav-section">Geral</div>
@@ -341,7 +346,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.3</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.4</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -617,6 +622,16 @@ async function fetchUserInfo(){
     document.getElementById('user-status').innerHTML=userChipHtml;
     const mobUs=document.getElementById('mob-user-status');
     if(mobUs) mobUs.innerHTML=userChipHtml;
+    // Populate sidebar user block
+    const sidebarUser=document.getElementById('sidebar-user');
+    if(sidebarUser){
+      sidebarUser.style.display='block';
+      const avatarEl=document.getElementById('sidebar-user-avatar');
+      if(u.picture) avatarEl.innerHTML=`<img src="${u.picture}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.textContent='👤'">`;
+      else avatarEl.textContent='👤';
+      document.getElementById('sidebar-user-name').textContent=u.name.split(' ')[0];
+      document.getElementById('sidebar-user-email').textContent=u.email;
+    }
     loadAll();
   }catch(e){showLoginError('Erro ao obter dados do usuário.');}
 }
@@ -1163,11 +1178,11 @@ function renderDetailInfo(cod){
   const e=state.entregas.find(x=>x.codigo===String(cod));
   const bp=state.baseProva.find(x=>x.codigo===String(cod));
   const pd=state.provaDentes.find(x=>x.codigo===String(cod));
+  const rb=state.reembase.find(x=>x.codigo===String(cod));
   const prot=state.proteticos.find(p=>p.codigo===m.dist);
   const rems=state.remarcacoes.filter(x=>x.codigo===String(cod));
   const step=(label,date,color,obs)=>`<div class="timeline-step"><div class="timeline-dot" style="background:${date?color:'var(--border)'}"></div><div style="flex:1"><div style="font-size:13px;font-weight:500">${label}</div><div style="font-size:12px;color:var(--text2)">${date||'Pendente'}</div>${obs?`<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 ${obs}</div>`:''}</div>${date?'<span class="badge badge-green">✓</span>':'<span class="badge badge-gray">–</span>'}</div>`;
   const remHtml=rems.length?`<div style="margin-top:12px"><div style="font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Remarcações</div>${rems.map(r=>`<div style="font-size:12px;padding:6px 10px;background:var(--surface2);border-radius:6px;margin-bottom:4px">🔁 <strong>${r.etapa}</strong> → ${r.data}${r.obs?' — '+r.obs:''}</div>`).join('')}</div>`:'';
-  // Tratamentos relacionados
   const relacionados=tratamentosRelacionados(cod).filter(x=>x.codigo!==String(cod));
   const relacionadosHtml=relacionados.length?`
     <div class="related-tratamentos">
@@ -1190,14 +1205,18 @@ function renderDetailInfo(cod){
     ${step('Base de Prova / Armação',bp?.data,'#3b82f6',bp?.obs||'')}
     ${step('Prova de Dentes',pd?.data,'#f59e0b',pd?.obs||'')}
     ${step('Entrega',e?.entrega,'#4af0a0',e?.obs||'')}
-    ${e?.previsao&&!e?.entrega?`<div style="font-size:12px;color:var(--text2);margin-top:8px">📅 Previsão: <strong style="color:var(--text)">${e.previsao}</strong></div>`:''}
+    ${e?.previsao&&!e?.entrega?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-left:26px">📅 Previsão: <strong style="color:var(--text)">${e.previsao}</strong></div>`:''}
     ${remHtml}
+    ${rb?.data?step('Reembase',rb.data,'#f43f5e',rb.obs||''):''}
     ${relacionadosHtml}`;
 }
 function isAdmin(){
-  const emails=(state.config.adminEmails||localStorage.getItem('prosus_admin_emails')||'').toLowerCase().split(',').map(e=>e.trim()).filter(Boolean);
+  // Sempre lê do localStorage para pegar valor mais recente (mesmo após saveConfig)
+  const stored=localStorage.getItem('prosus_admin_emails')||state.config.adminEmails||'';
+  const emails=stored.toLowerCase().split(',').map(e=>e.trim()).filter(Boolean);
   if(!emails.length) return true; // se não configurado, todos são admin
-  return emails.includes((state.user?.email||'').toLowerCase());
+  const userEmail=(state.user?.email||'').toLowerCase().trim();
+  return emails.includes(userEmail);
 }
 
 function renderDetailEtapas(cod){
