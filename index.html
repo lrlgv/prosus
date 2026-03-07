@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.16 - fix isAdmin+sidebar definitivo -->
+<!-- ProSUS v4.17 - logs diagnostico isAdmin e sidebar -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -346,7 +346,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.16</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.17</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -630,6 +630,8 @@ async function fetchUserInfo(){
     if(mobUs) mobUs.innerHTML=userChipHtml;
     // Sidebar user
     const su=document.getElementById('sidebar-user');
+    console.log('[sidebar] elemento encontrado:', !!su);
+    console.log('[sidebar] app visível:', document.getElementById('app').style.display);
     if(su){
       su.innerHTML=`
         <img src="${u.picture}" width="32" height="32" style="border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'">
@@ -638,6 +640,8 @@ async function fetchUserInfo(){
           <div style="font-size:10px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.email}</div>
         </div>`;
       su.setAttribute('style','display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #2a3048');
+      console.log('[sidebar] style após setAttribute:', su.getAttribute('style'));
+      console.log('[sidebar] display computado:', window.getComputedStyle(su).display);
     }
     await loadAll();
   }catch(e){showLoginError('Erro ao obter dados do usuário.');}
@@ -1263,12 +1267,14 @@ function renderDetailInfo(cod){
 }
 function isAdmin(){
   const stored=(state.config.adminEmails||'').trim();
-  if(!stored) return true;
-  const emails=stored.toLowerCase().split(',').map(e=>e.trim()).filter(Boolean);
-  if(!emails.length) return true;
   const userEmail=(state.user?.email||localStorage.getItem('prosus_user_email')||'').toLowerCase().trim();
-  if(!userEmail) return false;
-  return emails.includes(userEmail);
+  console.log('[isAdmin] adminEmails:', stored);
+  console.log('[isAdmin] userEmail:', userEmail);
+  if(!stored) { console.log('[isAdmin] → true (sem lista)'); return true; }
+  const emails=stored.toLowerCase().split(',').map(e=>e.trim()).filter(Boolean);
+  const result=emails.includes(userEmail);
+  console.log('[isAdmin] emails lista:', emails, '→', result);
+  return result;
 }
 
 // Re-renderiza etapas se modal estiver aberto — chamado após loadAll garantir adminEmails carregado
