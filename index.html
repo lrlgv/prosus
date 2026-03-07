@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.8 - card reembase clicavel navega para consulta filtrada -->
+<!-- ProSUS v4.10 - cards entregues/pendentes por pecas, pecas contratadas no contrato -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -69,6 +69,9 @@
   .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
   .btn{padding:9px 18px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
   .btn-primary{background:var(--accent);color:#000;}.btn-primary:hover{filter:brightness(.9);}
+  body.light .btn-primary{color:#fff;}
+  .section-divider.rb{background:rgba(6,182,212,.12);color:#06b6d4;border-left:3px solid #06b6d4;}
+  .etapa-block.rb{border-color:rgba(6,182,212,.3);background:rgba(6,182,212,.04);}
   .btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}.btn-secondary:hover{color:var(--text);border-color:var(--text3);}
   .btn-danger{background:var(--accent4);color:#fff;}.btn-danger:hover{filter:brightness(.9);}
   .btn-sm{padding:5px 10px;font-size:12px;}
@@ -349,7 +352,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.8</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.10</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -837,12 +840,13 @@ async function loadAll(){
     cfgRows.forEach(r=>{ if(r[0]) cfg[r[0].toString().trim().toLowerCase()]=r[1]||''; });
     state.config.adminEmails=cfg['admin_emails']||'';
 
-    // Parse contratos: A=id, B=inicio(dd/mm/aaaa), C=fim(dd/mm/aaaa), D=reembase_mes
+    // Parse contratos: A=id, B=inicio(dd/mm/aaaa), C=fim(dd/mm/aaaa), D=reembase_mes, E=pecas_contratadas
     state.contratos=contratoRows.filter(r=>r[0]&&r[1]&&r[2]).map(r=>({
       id:r[0].toString().trim(),
       inicio:r[1].toString().trim(),
       fim:r[2].toString().trim(),
-      reembaseMes:+(r[3]||0)
+      reembaseMes:+(r[3]||0),
+      pecasContratadas:+(r[4]||0)
     }));
 
     // Detect active contract (today within period)
@@ -909,14 +913,16 @@ function renderDashboard(){
   const pendentes=total-entregues;
 
   // Count total pieces (PT + PPR) for all records
-  let totalPecas=0,totalPecasPend=0;
+  let totalPecas=0,totalPecasPend=0,pecasEntregues=0;
   moldBase.forEach(m=>{
     const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
     const pecas=(+tp.pt||0)+(+tp.ppr||0);
     totalPecas+=pecas;
     const entregue=state.entregas.find(e=>e.codigo===m.codigo&&e.entrega);
-    if(!entregue) totalPecasPend+=pecas;
+    if(entregue) pecasEntregues+=pecas;
+    else totalPecasPend+=pecas;
   });
+  const pecasContratadas=state.contratoAtivo?.pecasContratadas||0;
 
   // Reembase this month
   const today=new Date();
@@ -956,13 +962,13 @@ function renderDashboard(){
       </div>
       <div class="stat-card">
         <div class="label">Entregues</div>
-        <div class="value" style="color:var(--accent)">${entregues}</div>
-        <div class="sublabel">${total?Math.round(entregues/total*100):0}% do total</div>
+        <div class="value" style="color:var(--accent)">${pecasEntregues}${pecasContratadas>0?`<span style="color:var(--text3);font-size:16px;font-weight:400"> / ${pecasContratadas}</span>`:''}</div>
+        <div class="sublabel">${pecasContratadas>0?`${Math.round(pecasEntregues/pecasContratadas*100)}% do contratado · `:``}${entregues} paciente(s) entregue(s)</div>
       </div>
       <div class="stat-card">
         <div class="label">Pendentes</div>
-        <div class="value" style="color:var(--accent3)">${pendentes}</div>
-        <div class="sublabel">${totalPecasPend} peças pendentes</div>
+        <div class="value" style="color:var(--accent3)">${totalPecasPend}</div>
+        <div class="sublabel">${pendentes} paciente(s) pendente(s)</div>
       </div>
       <div class="stat-card">
         <div class="label">Peças Total</div>
@@ -1320,8 +1326,8 @@ function renderDetailEtapas(cod){
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rem')">💾 Salvar Remarcação</button>`:''}
     </div>
 
-    <div class="etapa-block" style="border-color:rgba(74,240,160,.3);background:rgba(74,240,160,.04)">
-      <div class="section-divider" style="background:rgba(74,240,160,.12);color:var(--accent);border-left:3px solid var(--accent)">🔧 Reembase</div>
+    <div class="etapa-block rb">
+      <div class="section-divider rb">🔧 Reembase</div>
       <div class="form-row">
         <div class="form-group"><label>Data do Reembase</label><input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro}></div>
         <div class="form-group"><label>Observação</label><input type="text" id="et-rb-obs" value="${rb.obs||''}" placeholder="Obs. opcional" ${ro}></div>
@@ -1332,22 +1338,40 @@ function renderDetailEtapas(cod){
 async function submitEtapaUnica(cod,tipo){
   try{
     toast('Salvando...','info');
+
+    // Helper: upsert — atualiza se já existe, insere se não existe
+    const upsert=async(sheet,stateArr,values)=>{
+      const existing=stateArr.find(x=>x.codigo===String(cod));
+      if(existing){
+        const rows=await fetchSheet(sheet+'!A:A');
+        const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
+        if(rowIdx>=0){
+          const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet,row:rowIdx+1,values})});
+          const res=await r.json();
+          if(!res.success) throw new Error(res.error||'Erro ao atualizar');
+          return;
+        }
+      }
+      await postSheet(sheet,values);
+    };
+
     if(tipo==='bp'){
       const bp=fromInput(document.getElementById('et-bp').value);
       const bpObs=document.getElementById('et-bp-obs').value;
       if(!bp){toast('Informe a data da Base de Prova','error');return;}
-      await postSheet('BaseProvaArmacao',[cod,'','','','',bp,bpObs]);
+      await upsert('BaseProvaArmacao',state.baseProva,[cod,'','','','',bp,bpObs]);
+
     } else if(tipo==='pd'){
       const pd=fromInput(document.getElementById('et-pd').value);
       const pdObs=document.getElementById('et-pd-obs').value;
       if(!pd){toast('Informe a data da Prova de Dentes','error');return;}
-      await postSheet('Prova de Dentes',[cod,'','','','',pd,pdObs]);
+      await upsert('Prova de Dentes',state.provaDentes,[cod,'','','','',pd,pdObs]);
+
     } else if(tipo==='ent'){
       const ent=fromInput(document.getElementById('et-ent').value);
       const prev=fromInput(document.getElementById('et-prev').value);
       const entObs=document.getElementById('et-ent-obs').value;
       if(!ent&&!prev){toast('Informe ao menos a previsão ou data de entrega','error');return;}
-      // Fix #5: check if record exists and update instead of duplicate
       const existing=state.entregas.find(x=>x.codigo===String(cod));
       if(existing){
         const eRows=await fetchSheet('Entregas!A:A');
@@ -1360,11 +1384,13 @@ async function submitEtapaUnica(cod,tipo){
       } else {
         await postSheet('Entregas',[cod,'','','','',prev,ent,entObs]);
       }
+
     } else if(tipo==='rb'){
       const rb=fromInput(document.getElementById('et-rb').value);
       const rbObs=document.getElementById('et-rb-obs').value;
       if(!rb){toast('Informe a data do Reembase','error');return;}
-      await postSheet('Reembase',[cod,'','','','',rb,rbObs]);
+      await upsert('Reembase',state.reembase,[cod,'','','','',rb,rbObs]);
+
     } else if(tipo==='rem'){
       const remEtapa=document.getElementById('et-rem-etapa').value;
       const remData=fromInput(document.getElementById('et-rem-data').value);
@@ -1469,7 +1495,7 @@ function renderPipeline(){
     <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🔵 Base Prova: <strong style="color:var(--accent2)">${bpSet.size}</strong></span>
     <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🟡 Prova Dentes: <strong style="color:var(--accent3)">${pdSet.size}</strong></span>
     <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">✅ Entregues: <strong style="color:var(--accent)">${entSet.size}</strong></span>
-    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🔧 Reembase: <strong style="color:var(--accent)">${rbSet.size}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🔧 Reembase: <strong style="color:#06b6d4">${rbSet.size}</strong></span>
   </div>`;
 
   const mkCard=(m,extraHtml='')=>`<div class="pipeline-card" onclick="showDetail('${m.codigo}')">
@@ -1502,7 +1528,7 @@ function renderPipeline(){
     const ent=state.entregas.find(e=>e.codigo===m.codigo);
     return mkCard(m,
       (ent?.entrega?`<div style="font-size:10px;color:var(--accent);margin-top:3px;font-weight:600">✅ Entregue: ${ent.entrega}</div>`:'') +
-      (rb?.data?`<div style="font-size:10px;color:var(--accent4);margin-top:2px;font-weight:600">🔧 Reembase: ${rb.data}</div>`:'')
+      (rb?.data?`<div style="font-size:10px;color:#06b6d4;margin-top:2px;font-weight:600">🔧 Reembase: ${rb.data}</div>`:'')
     );
   };
 
@@ -1515,7 +1541,7 @@ function renderPipeline(){
       <div class="pipeline-col step2"><div class="pipeline-col-header"><h4>🔵 Base de Prova</h4><span class="pipeline-count">${e2.length}</span></div><div class="pipeline-cards">${e2.length?e2.map(card2).join(''):empty}</div></div>
       <div class="pipeline-col step3"><div class="pipeline-col-header"><h4>🟢 Prova de Dentes</h4><span class="pipeline-count">${e3.length}</span></div><div class="pipeline-cards">${e3.length?e3.map(card3).join(''):empty}</div></div>
       <div class="pipeline-col step4"><div class="pipeline-col-header"><h4>✅ Entregues</h4><span class="pipeline-count">${e4.length}</span></div><div class="pipeline-cards">${e4.length?e4.map(card4).join(''):empty}</div></div>
-      <div class="pipeline-col" style="border-top:3px solid var(--accent4)"><div class="pipeline-col-header"><h4>🔧 Reembase</h4><span class="pipeline-count">${e5.length}</span></div><div class="pipeline-cards">${e5.length?e5.map(card5).join(''):empty}</div></div>
+      <div class="pipeline-col" style="border-top:3px solid #06b6d4"><div class="pipeline-col-header"><h4>🔧 Reembase</h4><span class="pipeline-count">${e5.length}</span></div><div class="pipeline-cards">${e5.length?e5.map(card5).join(''):empty}</div></div>
     </div>`;
 }
 
@@ -1546,6 +1572,7 @@ function renderContratos(){
             <div class="form-group"><label>Data Fim</label><input type="date" id="ct-fim"></div>
           </div>
           <div class="form-group"><label>Reembase contratado / mês</label><input type="number" id="ct-reembase" min="0" placeholder="Ex: 6"></div>
+          <div class="form-group"><label>Total de peças contratadas</label><input type="number" id="ct-pecas" min="0" placeholder="Ex: 1200"><small>Exibido no card Entregues do dashboard como "X / total"</small></div>
           <div style="display:flex;gap:8px;margin-top:4px">
             <button class="btn btn-primary" onclick="submitContrato()">💾 Salvar</button>
             <button class="btn btn-secondary" id="ct-cancel-btn" onclick="cancelEditContrato()" style="display:none">✕ Cancelar</button>
@@ -1556,16 +1583,17 @@ function renderContratos(){
         <div class="table-card">
           <div class="table-header"><h3>📃 Contratos</h3><span style="font-size:12px;color:var(--text2)">${list.length} contrato(s)</span></div>
           <table>
-            <thead><tr><th>Identificação</th><th>Início</th><th>Fim</th><th>Reembase/mês</th><th>Situação</th>${admin?'<th></th>':''}</tr></thead>
+            <thead><tr><th>Identificação</th><th>Início</th><th>Fim</th><th>Reembase/mês</th><th>Peças contratadas</th><th>Situação</th>${admin?'<th></th>':''}</tr></thead>
             <tbody>
             ${list.length?list.map((c,i)=>`<tr>
               <td class="td-name"><strong>${c.id}</strong></td>
               <td>${c.inicio}</td>
               <td>${c.fim}</td>
               <td style="text-align:center">${c.reembaseMes||'—'}</td>
+              <td style="text-align:center;font-weight:600;color:var(--accent2)">${c.pecasContratadas||'—'}</td>
               <td>${statusBadge(c)}</td>
               ${admin?`<td><button class="icon-btn" onclick="editContrato(${i})">✏️</button></td>`:''}
-            </tr>`).join(''):`<tr><td colspan="${admin?6:5}" style="text-align:center;padding:20px;color:var(--text3)">Nenhum contrato cadastrado.</td></tr>`}
+            </tr>`).join(''):`<tr><td colspan="${admin?7:6}" style="text-align:center;padding:20px;color:var(--text3)">Nenhum contrato cadastrado.</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -1585,16 +1613,14 @@ function editContrato(idx){
   document.getElementById('ct-inicio').value=toInput(c.inicio);
   document.getElementById('ct-fim').value=toInput(c.fim);
   document.getElementById('ct-reembase').value=c.reembaseMes||'';
+  document.getElementById('ct-pecas').value=c.pecasContratadas||'';
   document.getElementById('contrato-form-title').textContent='✏️ Editar Contrato';
   document.getElementById('ct-cancel-btn').style.display='inline-flex';
   document.getElementById('ct-id').focus();
 }
 function cancelEditContrato(){
   editingContrato=null;
-  document.getElementById('ct-id').value='';
-  document.getElementById('ct-inicio').value='';
-  document.getElementById('ct-fim').value='';
-  document.getElementById('ct-reembase').value='';
+  ['ct-id','ct-inicio','ct-fim','ct-reembase','ct-pecas'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('contrato-form-title').textContent='➕ Novo Contrato';
   document.getElementById('ct-cancel-btn').style.display='none';
 }
@@ -1603,6 +1629,7 @@ async function submitContrato(){
   const inicio=fromInput(document.getElementById('ct-inicio').value);
   const fim=fromInput(document.getElementById('ct-fim').value);
   const reembase=document.getElementById('ct-reembase').value||'0';
+  const pecas=document.getElementById('ct-pecas').value||'0';
   if(!id||!inicio||!fim){toast('Preencha identificação, início e fim','error');return;}
   try{
     toast('Salvando...','info');
@@ -1611,12 +1638,12 @@ async function submitContrato(){
       const rows=await fetchSheet('Contratos!A:A');
       const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===old.id);
       if(rowIdx<0) throw new Error('Contrato não encontrado na planilha');
-      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Contratos',row:rowIdx+1,values:[id,inicio,fim,reembase]})});
+      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Contratos',row:rowIdx+1,values:[id,inicio,fim,reembase,pecas]})});
       const res=await r.json();
       if(!res.success) throw new Error(res.error||'Erro ao atualizar');
       toast(`Contrato "${id}" atualizado!`,'success');
     } else {
-      await postSheet('Contratos',[id,inicio,fim,reembase]);
+      await postSheet('Contratos',[id,inicio,fim,reembase,pecas]);
       toast(`Contrato "${id}" cadastrado!`,'success');
     }
     await loadAll();
