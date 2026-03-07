@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.0 - Reembase, Armacao, Dashboard melhorado, isAdmin, fix entrega duplicada -->
+<!-- ProSUS v4.2 - fix JS syntax, pipeline reembase + ordenacao recente -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -341,7 +341,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.0</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.2</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -434,7 +434,10 @@
 
       <div class="page" id="page-fechamento-armacao">
         <div id="fechamento-armacao-content"><div class="not-connected"><div class="icon">🔩</div><h3>Fechamento por Armação</h3><p>Faça login para acessar.</p></div></div>
-      </div><div class="not-connected"><div class="icon">📅</div><h3>Fechamento Mensal</h3><p>Faça login para acessar o fechamento.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
+      </div>
+
+      <div class="page" id="page-fechamento">
+        <div id="fechamento-content"><div class="not-connected"><div class="icon">📅</div><h3>Fechamento Mensal</h3><p>Carregando...</p></div></div>
       </div>
 
       <div class="page" id="page-cadastro">
@@ -520,7 +523,7 @@ const state={
   moldagens:[],baseProva:[],provaDentes:[],entregas:[],remarcacoes:[],reembase:[],
   proteticos:[],dentistas:[],tiposPeca:[],
   filtered:[],currentPage:1,perPage:15,
-  distVisible:false,currentDetailCod:null,
+  distVisible:true,currentDetailCod:null,
   lastSavedCodigo:null,
   config:{
     reembaseMes:0,
@@ -823,6 +826,7 @@ async function loadAll(){
     state.connected=true;updateStatus();
     toast('Planilha carregada! '+state.moldagens.length+' registros.','success');
     renderDashboard();renderTable();renderPipeline();renderCadastroForm();
+    renderFechamento();renderFechamentoArmacao();
   }catch(e){
     state.connected=false;updateStatus();
     toast('Erro: '+e.message,'error');
@@ -991,7 +995,7 @@ function renderTablePage(){
 
   let h=`<table><thead><tr>
     <th>Código</th><th>Nome</th><th>Dentista</th><th>Tipo</th><th>Data Moldagem</th>
-    <th>Dist. <button onclick="toggleDistVisibility()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text2)">${state.distVisible?'🔓':'🔒'}</button></th>
+    <th>Distribuição</th>
     <th>Entrega / Previsão</th><th>Situação</th><th></th>
   </tr></thead><tbody>`;
 
@@ -1009,7 +1013,7 @@ function renderTablePage(){
     const sit=(primary.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente';
     const bc=sit==='Entregue'?'badge-green':'badge-yellow';
     const prot=state.proteticos.find(p=>p.codigo===primary.dist);
-    const distDisplay=state.distVisible?(prot?`${primary.dist} — ${prot.nome}`:primary.dist):primary.dist;
+    const distDisplay=prot?`${primary.dist} — ${prot.nome}`:primary.dist;
     const isNew=String(primary.codigo)===String(state.lastSavedCodigo)||group.some(g=>String(g.codigo)===String(state.lastSavedCodigo));
 
     // Multi-treatment toggle badge
@@ -1205,7 +1209,7 @@ function renderDetailInfo(cod){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
       <div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">TIPO DE PEÇA</div><div style="font-size:14px;font-weight:600">${m.tipo}</div></div>
       <div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">DENTISTA</div><div style="font-size:14px;font-weight:600">${cap(m.dentista)}</div></div>
-      <div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">DISTRIBUIÇÃO</div><div style="font-size:14px;font-weight:600">${m.dist}${state.distVisible&&prot?' — '+prot.nome:''}</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">DISTRIBUIÇÃO</div><div style="font-size:14px;font-weight:600">${m.dist}${prot?' — '+prot.nome:''}</div></div>
       ${m.obs?`<div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">OBSERVAÇÃO</div><div style="font-size:13px">${m.obs}</div></div>`:''}
     </div>
     <div style="font-size:10px;color:var(--text2);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Linha do Tempo</div>
@@ -1261,15 +1265,6 @@ function renderDetailEtapas(cod){
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','ent')">💾 Salvar Entrega</button>`:''}
     </div>
 
-    <div class="etapa-block" style="border-color:rgba(74,240,160,.3);background:rgba(74,240,160,.04)">
-      <div class="section-divider" style="background:rgba(74,240,160,.12);color:var(--accent);border-left:3px solid var(--accent)">🔧 Reembase</div>
-      <div class="form-row">
-        <div class="form-group"><label>Data do Reembase</label><input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro}></div>
-        <div class="form-group"><label>Observação</label><input type="text" id="et-rb-obs" value="${rb.obs||''}" placeholder="Obs. opcional" ${ro}></div>
-      </div>
-      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rb')">💾 Salvar Reembase</button>`:''}
-    </div>
-
     <div class="etapa-block rem">
       <div class="section-divider rem">🔁 Remarcação</div>
       <div class="form-row">
@@ -1278,6 +1273,15 @@ function renderDetailEtapas(cod){
       </div>
       <div class="form-group"><label>Obs. da Remarcação</label><input type="text" id="et-rem-obs" placeholder="Motivo ou obs." ${ro}></div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rem')">💾 Salvar Remarcação</button>`:''}
+    </div>
+
+    <div class="etapa-block" style="border-color:rgba(74,240,160,.3);background:rgba(74,240,160,.04)">
+      <div class="section-divider" style="background:rgba(74,240,160,.12);color:var(--accent);border-left:3px solid var(--accent)">🔧 Reembase</div>
+      <div class="form-row">
+        <div class="form-group"><label>Data do Reembase</label><input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro}></div>
+        <div class="form-group"><label>Observação</label><input type="text" id="et-rb-obs" value="${rb.obs||''}" placeholder="Obs. opcional" ${ro}></div>
+      </div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rb')">💾 Salvar Reembase</button>`:''}
     </div>`;}
 
 async function submitEtapaUnica(cod,tipo){
@@ -1376,57 +1380,88 @@ function renderPipeline(){
   const bpSet=new Set(state.baseProva.map(m=>m.codigo));
   const pdSet=new Set(state.provaDentes.map(m=>m.codigo));
   const entSet=new Set(state.entregas.filter(e=>e.entrega).map(e=>e.codigo));
+  const rbSet=new Set(state.reembase.map(r=>r.codigo));
   const totalMold=state.moldagens.length;
 
-  const e1=state.moldagens.filter(m=>!bpSet.has(m.codigo)&&!entSet.has(m.codigo)).slice(0,60);
-  const e2=state.moldagens.filter(m=>bpSet.has(m.codigo)&&!pdSet.has(m.codigo)&&!entSet.has(m.codigo)).slice(0,60);
-  const e3=state.moldagens.filter(m=>pdSet.has(m.codigo)&&!entSet.has(m.codigo)).slice(0,60);
-  const e4=state.moldagens.filter(m=>entSet.has(m.codigo)).slice(-40);
+  // Sort helper: most recent date first
+  const sortByDate=(arr,getDate)=>[...arr].sort((a,b)=>{
+    const da=parseDate(getDate(a)),db=parseDate(getDate(b));
+    if(!da&&!db)return 0; if(!da)return 1; if(!db)return -1;
+    return db-da;
+  });
 
-  // Debug info
+  // Etapa 1: sem base de prova e não entregue — mais recente (moldagem) primeiro
+  const e1raw=state.moldagens.filter(m=>!bpSet.has(m.codigo)&&!entSet.has(m.codigo));
+  const e1=sortByDate(e1raw,m=>m.data).slice(0,60);
+
+  // Etapa 2: com BP, sem prova de dentes, não entregue — mais recente (BP) primeiro
+  const e2raw=state.moldagens.filter(m=>bpSet.has(m.codigo)&&!pdSet.has(m.codigo)&&!entSet.has(m.codigo));
+  const e2=sortByDate(e2raw,m=>state.baseProva.find(b=>b.codigo===m.codigo)?.data||m.data).slice(0,60);
+
+  // Etapa 3: com prova de dentes, não entregue — mais recente (PD) primeiro
+  const e3raw=state.moldagens.filter(m=>pdSet.has(m.codigo)&&!entSet.has(m.codigo));
+  const e3=sortByDate(e3raw,m=>state.provaDentes.find(p=>p.codigo===m.codigo)?.data||m.data).slice(0,60);
+
+  // Etapa 4: entregues — mais recente (entrega) primeiro
+  const e4raw=state.moldagens.filter(m=>entSet.has(m.codigo));
+  const e4=sortByDate(e4raw,m=>state.entregas.find(e=>e.codigo===m.codigo)?.entrega||m.data).slice(0,60);
+
+  // Etapa 5: reembase — mais recente primeiro
+  const e5raw=state.moldagens.filter(m=>rbSet.has(m.codigo));
+  const e5=sortByDate(e5raw,m=>state.reembase.find(r=>r.codigo===m.codigo)?.data||m.data).slice(0,60);
+
   const debugHtml=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">📋 Total moldagens: <strong style="color:var(--text)">${totalMold}</strong></span>
-    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🔵 Com base de prova (c/ data): <strong style="color:var(--accent2)">${bpSet.size}</strong></span>
-    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🟡 Com prova de dentes (c/ data): <strong style="color:var(--accent3)">${pdSet.size}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">📋 Total: <strong style="color:var(--text)">${totalMold}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🔵 Base Prova: <strong style="color:var(--accent2)">${bpSet.size}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🟡 Prova Dentes: <strong style="color:var(--accent3)">${pdSet.size}</strong></span>
     <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">✅ Entregues: <strong style="color:var(--accent)">${entSet.size}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🔧 Reembase: <strong style="color:var(--accent)">${rbSet.size}</strong></span>
   </div>`;
 
-  // Cards com data relevante por etapa
   const mkCard=(m,extraHtml='')=>`<div class="pipeline-card" onclick="showDetail('${m.codigo}')">
     <div class="pc-code">#${m.codigo}</div>
     <div class="pc-name">${m.nome}</div>
     <div class="pc-type">${m.tipo}</div>
-    <div class="pc-date">🦷 Moldagem: ${m.data||'—'}</div>
+    <div class="pc-date">🦷 ${m.data||'—'}</div>
     ${extraHtml}
   </div>`;
 
-  const card1=m=>mkCard(m); // moldagem — só data da moldagem
+  const card1=m=>mkCard(m);
   const card2=m=>{
     const bp=state.baseProva.find(b=>b.codigo===m.codigo);
-    return mkCard(m,bp?.data?`<div style="font-size:10px;color:var(--accent2);margin-top:3px;font-weight:600">🔵 Base de Prova: ${bp.data}</div>`:'');
+    return mkCard(m,bp?.data?`<div style="font-size:10px;color:var(--accent2);margin-top:3px;font-weight:600">🔵 Base: ${bp.data}</div>`:'');
   };
   const card3=m=>{
     const bp=state.baseProva.find(b=>b.codigo===m.codigo);
     const pd=state.provaDentes.find(p=>p.codigo===m.codigo);
     return mkCard(m,
       (bp?.data?`<div style="font-size:10px;color:var(--accent2);margin-top:3px;font-weight:600">🔵 Base: ${bp.data}</div>`:'') +
-      (pd?.data?`<div style="font-size:10px;color:var(--accent3);margin-top:2px;font-weight:600">🟡 Prova Dentes: ${pd.data}</div>`:'')
+      (pd?.data?`<div style="font-size:10px;color:var(--accent3);margin-top:2px;font-weight:600">🟡 Dentes: ${pd.data}</div>`:'')
     );
   };
   const card4=m=>{
     const ent=state.entregas.find(e=>e.codigo===m.codigo);
     return mkCard(m,ent?.entrega?`<div style="font-size:10px;color:var(--accent);margin-top:3px;font-weight:600">✅ Entregue: ${ent.entrega}</div>`:'');
   };
+  const card5=m=>{
+    const rb=state.reembase.find(r=>r.codigo===m.codigo);
+    const ent=state.entregas.find(e=>e.codigo===m.codigo);
+    return mkCard(m,
+      (ent?.entrega?`<div style="font-size:10px;color:var(--accent);margin-top:3px;font-weight:600">✅ Entregue: ${ent.entrega}</div>`:'') +
+      (rb?.data?`<div style="font-size:10px;color:var(--accent4);margin-top:2px;font-weight:600">🔧 Reembase: ${rb.data}</div>`:'')
+    );
+  };
 
   const empty='<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px 10px">Nenhum item</div>';
   document.getElementById('pipeline-content').innerHTML=`
-    <div class="alert alert-info" style="margin-bottom:10px">ℹ️ Clique em qualquer card para ver detalhes ou registrar etapas. Etapas são consideradas concluídas apenas quando a <strong>data está preenchida</strong> na planilha.</div>
+    <div class="alert alert-info" style="margin-bottom:10px">ℹ️ Clique em qualquer card para ver detalhes. Cards ordenados do mais recente ao mais antigo.</div>
     ${debugHtml}
     <div class="pipeline-grid">
       <div class="pipeline-col step1"><div class="pipeline-col-header"><h4>🟡 Moldagem</h4><span class="pipeline-count">${e1.length}</span></div><div class="pipeline-cards">${e1.length?e1.map(card1).join(''):empty}</div></div>
       <div class="pipeline-col step2"><div class="pipeline-col-header"><h4>🔵 Base de Prova</h4><span class="pipeline-count">${e2.length}</span></div><div class="pipeline-cards">${e2.length?e2.map(card2).join(''):empty}</div></div>
       <div class="pipeline-col step3"><div class="pipeline-col-header"><h4>🟢 Prova de Dentes</h4><span class="pipeline-count">${e3.length}</span></div><div class="pipeline-cards">${e3.length?e3.map(card3).join(''):empty}</div></div>
-      <div class="pipeline-col step4"><div class="pipeline-col-header"><h4>✅ Entregues</h4><span class="pipeline-count">${entSet.size}</span></div><div class="pipeline-cards">${e4.length?e4.map(card4).join(''):empty}</div></div>
+      <div class="pipeline-col step4"><div class="pipeline-col-header"><h4>✅ Entregues</h4><span class="pipeline-count">${e4.length}</span></div><div class="pipeline-cards">${e4.length?e4.map(card4).join(''):empty}</div></div>
+      <div class="pipeline-col" style="border-top:3px solid var(--accent4)"><div class="pipeline-col-header"><h4>🔧 Reembase</h4><span class="pipeline-count">${e5.length}</span></div><div class="pipeline-cards">${e5.length?e5.map(card5).join(''):empty}</div></div>
     </div>`;
 }
 
@@ -1476,7 +1511,7 @@ function gerarFechamento(){
 
   const tableRows=rows.map(r=>{
     const prot=state.proteticos.find(p=>p.codigo===r.dist);
-    const distLabel=state.distVisible&&prot?`${r.dist} — ${prot.nome}`:r.dist||'—';
+    const distLabel=prot?`${r.dist} — ${prot.nome}`:r.dist||'—';
     return`<tr><td class="td-code">#${r.codigo||'—'}</td><td class="td-name">${r.nome||'—'}</td><td>${cap(r.dentista||'')}</td><td>${distLabel}</td><td>${r.entrega}</td><td>${r.tipo||'—'}</td><td style="text-align:center">${r.qtPT}</td><td style="text-align:center">${r.qtPPR}</td></tr>`;
   }).join('');
 
@@ -1547,14 +1582,14 @@ function gerarFechamentoArmacao(){
 
   const distRows=Object.entries(distMap).map(([d,items])=>{
     const prot=state.proteticos.find(p=>p.codigo===d);
-    const nome=state.distVisible&&prot?prot.nome:'●●●●●●';
+    const nome=prot?prot.nome:p.nome;
     return`<tr><td><strong>${d}</strong> ${state.distVisible?`— ${nome}`:''}</td><td style="text-align:center;font-weight:700;color:var(--accent2)">${items.length}</td></tr>`;
   }).join('');
 
   const tableRows=bpDoMes.map(bp=>{
     const m=state.moldagens.find(x=>x.codigo===bp.codigo)||{};
     const prot=state.proteticos.find(p=>p.codigo===m.dist);
-    const distLabel=state.distVisible&&prot?`${m.dist} — ${prot.nome}`:m.dist||'—';
+    const distLabel=prot?`${m.dist} — ${prot.nome}`:m.dist||'—';
     return`<tr><td class="td-code">#${bp.codigo}</td><td class="td-name">${m.nome||'—'}</td><td>${cap(m.dentista||'')}</td><td>${distLabel}</td><td>${bp.data}</td><td>${m.tipo||'—'}</td></tr>`;
   }).sort((a,b)=>0).join('');
 
@@ -1783,11 +1818,10 @@ function renderProteticos(){
             ${state.proteticos.length?state.proteticos.map((p,i)=>`<div class="list-item" onclick="editProtetico(${i})">
               <div class="list-item-info">
                 <div class="code">${p.codigo} ${p.pagaArmacao?'<span style="font-size:10px;background:rgba(59,130,246,.15);color:var(--accent2);padding:1px 5px;border-radius:4px">Armação</span>':''}</div>
-                <div class="name">${state.distVisible?p.nome:'●●●●●●'}</div>
+                <div class="name">${p.nome}</div>
               </div>
               <span style="font-size:11px;color:var(--text3)">✏️ editar</span>
             </div>`).join(''):'<div class="empty-state"><p>Nenhum protético cadastrado.</p></div>'}
-            ${state.proteticos.length?`<div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="toggleDistVisibility()">${state.distVisible?'🔓 Ocultar nomes':'🔒 Revelar nomes'}</button></div>`:''}
           </div>
         </div>
       </div>
