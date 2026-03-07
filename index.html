@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.2 - fix JS syntax, pipeline reembase + ordenacao recente -->
+<!-- ProSUS v4.3 - fechamento armacao por pecas, remove senha revelar protetico -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -341,7 +341,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.2</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.3</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -472,7 +472,6 @@
     <div class="section-divider pd">🦷 Metas Mensais</div>
     <div class="form-group"><label>Reembase contratado por mês</label><input type="number" id="cfg-reembase-mes" min="0" placeholder="Ex: 6"><small>Exibido no dashboard como "X / total"</small></div>
     <div class="section-divider ent">🔒 Acesso</div>
-    <div class="form-group"><label>Senha para revelar protéticos</label><input type="password" id="cfg-distsenha" placeholder="Deixe em branco para manter a atual"></div>
     <div class="form-group"><label>E-mails dos administradores</label><input type="text" id="cfg-admin-emails" placeholder="email1@gmail.com, email2@gmail.com"><small>Administradores podem editar e excluir registros. Separe por vírgula.</small></div>
     <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Cancelar</button><button class="btn btn-primary" onclick="saveConfig()">💾 Salvar</button></div>
   </div>
@@ -642,7 +641,6 @@ async function ensureToken(){
 }
 
 function openConfig(){
-  document.getElementById('cfg-distsenha').value='';
   document.getElementById('cfg-reembase-mes').value=state.config.reembaseMes||'';
   document.getElementById('cfg-admin-emails').value=state.config.adminEmails||'';
   document.getElementById('cfg-contrato-inicio').value=toInput(state.config.contratoInicio);
@@ -651,12 +649,10 @@ function openConfig(){
 }
 function closeConfig(){document.getElementById('config-modal').classList.remove('open');}
 function saveConfig(){
-  const senha=document.getElementById('cfg-distsenha').value.trim();
   const reembase=document.getElementById('cfg-reembase-mes').value;
   const adminEmails=document.getElementById('cfg-admin-emails').value.trim();
   const contratoInicio=fromInput(document.getElementById('cfg-contrato-inicio').value);
   const contratoFim=fromInput(document.getElementById('cfg-contrato-fim').value);
-  if(senha) localStorage.setItem('prosus_distsenha',senha);
   if(reembase) localStorage.setItem('prosus_reembase_mes',reembase);
   if(adminEmails) localStorage.setItem('prosus_admin_emails',adminEmails);
   if(contratoInicio) localStorage.setItem('prosus_contrato_inicio',contratoInicio);
@@ -1039,7 +1035,7 @@ function renderTablePage(){
         const csit=(child.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente';
         const cbc=csit==='Entregue'?'badge-green':'badge-yellow';
         const cprot=state.proteticos.find(p=>p.codigo===child.dist);
-        const cDist=state.distVisible?(cprot?`${child.dist} — ${cprot.nome}`:child.dist):child.dist;
+        const cDist=cprot?`${child.dist} — ${cprot.nome}`:child.dist;
         const cNew=String(child.codigo)===String(state.lastSavedCodigo);
         h+=`<tr class="group-child${cNew?' highlight-new':''}">
           <td class="td-code" data-label="Código">#${child.codigo}</td>
@@ -1084,30 +1080,7 @@ function clearFilters(){
   filterTable();
 }
 
-function toggleDistVisibility(){
-  if(state.distVisible){state.distVisible=false;renderTablePage();return;}
-  // Use a custom prompt with password type
-  const senha=promptPassword('Digite a senha para revelar os protéticos:');
-  if(senha===null)return;
-  const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
-  if(senha===sc){state.distVisible=true;renderTablePage();toast('Protéticos revelados','info');}
-  else toast('Senha incorreta','error');
-}
-
-function promptPassword(msg){
-  // Create inline password prompt to avoid plain-text browser prompt
-  return new Promise(()=>{}).constructor.resolve(null); // fallback handled below
-}
-
-// Override toggleDistVisibility to use a modal-like approach
-function toggleDistVisibility(){
-  if(state.distVisible){state.distVisible=false;renderTablePage();if(document.getElementById('proteticos-content').innerHTML)renderProteticos();return;}
-  showPasswordPrompt('🔒 Revelar Protéticos','Digite a senha para revelar os nomes dos protéticos:',(senha)=>{
-    const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
-    if(senha===sc){state.distVisible=true;renderTablePage();if(document.querySelector('#page-proteticos.active'))renderProteticos();toast('Protéticos revelados','info');}
-    else toast('Senha incorreta','error');
-  });
-}
+// toggleDistVisibility removed — proteticos sempre visíveis
 
 let _pwCallback=null;
 function showPasswordPrompt(title,msg,cb){
@@ -1571,42 +1544,57 @@ function gerarFechamentoArmacao(){
   });
   if(!bpDoMes.length){document.getElementById('fechamento-armacao-resultado').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>Nenhuma Base de Prova encontrada neste período para protéticos com armação.</p></div>';return;}
 
-  // Group by protetico
+  // Group by protetico — contabiliza peças via tabela de tipos
   const distMap={};
   bpDoMes.forEach(bp=>{
     const m=state.moldagens.find(x=>x.codigo===bp.codigo)||{};
     const d=m.dist||'—';
-    if(!distMap[d]) distMap[d]=[];
-    distMap[d].push({...m,dataBP:bp.data});
+    const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
+    const qtPT=+tp.pt||0, qtPPR=+tp.ppr||0;
+    if(!distMap[d]) distMap[d]={items:[],pt:0,ppr:0};
+    distMap[d].items.push({...m,dataBP:bp.data,qtPT,qtPPR});
+    distMap[d].pt+=qtPT;
+    distMap[d].ppr+=qtPPR;
   });
 
-  const distRows=Object.entries(distMap).map(([d,items])=>{
+  const totPT=Object.values(distMap).reduce((s,v)=>s+v.pt,0);
+  const totPPR=Object.values(distMap).reduce((s,v)=>s+v.ppr,0);
+
+  const distRows=Object.entries(distMap).map(([d,v])=>{
     const prot=state.proteticos.find(p=>p.codigo===d);
-    const nome=prot?prot.nome:p.nome;
-    return`<tr><td><strong>${d}</strong> ${state.distVisible?`— ${nome}`:''}</td><td style="text-align:center;font-weight:700;color:var(--accent2)">${items.length}</td></tr>`;
+    const nome=prot?prot.nome:'—';
+    return`<tr><td><strong>${d}</strong> — ${nome}</td><td style="text-align:center">${v.items.length}</td><td style="text-align:center">${v.pt}</td><td style="text-align:center">${v.ppr}</td><td style="text-align:center;font-weight:700;color:var(--accent2)">${v.pt+v.ppr}</td></tr>`;
   }).join('');
 
   const tableRows=bpDoMes.map(bp=>{
     const m=state.moldagens.find(x=>x.codigo===bp.codigo)||{};
     const prot=state.proteticos.find(p=>p.codigo===m.dist);
     const distLabel=prot?`${m.dist} — ${prot.nome}`:m.dist||'—';
-    return`<tr><td class="td-code">#${bp.codigo}</td><td class="td-name">${m.nome||'—'}</td><td>${cap(m.dentista||'')}</td><td>${distLabel}</td><td>${bp.data}</td><td>${m.tipo||'—'}</td></tr>`;
-  }).sort((a,b)=>0).join('');
+    const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
+    return`<tr><td class="td-code">#${bp.codigo}</td><td class="td-name">${m.nome||'—'}</td><td>${cap(m.dentista||'')}</td><td>${distLabel}</td><td>${bp.data}</td><td>${m.tipo||'—'}</td><td style="text-align:center">${tp.pt||0}</td><td style="text-align:center">${tp.ppr||0}</td></tr>`;
+  }).join('');
 
   document.getElementById('fechamento-armacao-resultado').innerHTML=`
-    <h3 style="font-size:16px;margin-bottom:16px">${MESES[mes-1]} ${ano} — ${bpDoMes.length} armação(ões)</h3>
+    <h3 style="font-size:16px;margin-bottom:16px">${MESES[mes-1]} ${ano} — ${bpDoMes.length} registro(s) · ${totPT+totPPR} peça(s)</h3>
     <div class="fechamento-totais">
       <div class="total-card">
-        <h4>🔢 Total por Protético</h4>
+        <h4>🔢 Total Geral</h4>
+        <div class="total-row"><span>Registros</span><span class="tval">${bpDoMes.length}</span></div>
+        <div class="total-row"><span>Total PT</span><span class="tval">${totPT}</span></div>
+        <div class="total-row"><span>Total PPR</span><span class="tval">${totPPR}</span></div>
+        <div class="total-row"><span>Total Peças</span><span class="tval">${totPT+totPPR}</span></div>
+      </div>
+      <div class="total-card">
+        <h4>📦 Total por Protético</h4>
         <table style="width:100%;font-size:12px">
-          <thead><tr><th style="text-align:left;padding:4px 6px;color:var(--text2)">Protético</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Armações</th></tr></thead>
+          <thead><tr><th style="text-align:left;padding:4px 6px;color:var(--text2)">Protético</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Reg.</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PT</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PPR</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Total</th></tr></thead>
           <tbody>${distRows}</tbody>
         </table>
       </div>
     </div>
     <div class="table-card">
-      <div class="table-header"><h3>Listagem de Armações</h3><span style="font-size:12px;color:var(--text2)">${bpDoMes.length} registros · ordem por código</span></div>
-      <table><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Protético</th><th>Data Base Prova</th><th>Tipo Peça</th></tr></thead><tbody>${tableRows}</tbody></table>
+      <div class="table-header"><h3>Listagem de Armações</h3><span style="font-size:12px;color:var(--text2)">${bpDoMes.length} registros · ${totPT+totPPR} peças</span></div>
+      <table><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Protético</th><th>Data Base Prova</th><th>Tipo Peça</th><th>Qtde. PT</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
     </div>`;
 }
 function renderCadastroForm(){
