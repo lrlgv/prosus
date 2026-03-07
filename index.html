@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.20 - fix login silencioso nao mostra erro, fix 401 -->
+<!-- ProSUS v4.21 - fix scopes userinfo.email+profile -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -346,7 +346,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.20</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.21</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -521,7 +521,7 @@
 <script>
 const CLIENT_ID='29814188441-tk6mg6ni8r63u5jmncog34ijv719cff0.apps.googleusercontent.com';
 const SHEET_ID='1cWCh7bcDlsBJA9NkmHHPUEgweFYNnVGWO2h3HtuqiNY';
-const SCOPES='https://www.googleapis.com/auth/spreadsheets';
+const SCOPES='https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
 const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbyT3XF5rauK9vOZxPMlzHy4gsGLyhkko_XzI2j2XqQIsU5FSCjnETtWf0Tb462YBvmhyw/exec';
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
