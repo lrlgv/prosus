@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.31 - previsão base de prova: campo no cadastro, col H na planilha, card no pipeline -->
+<!-- ProSUS v4.32 - fix: previsão BP na linha do tempo, ordem campos etapas, cor card pipeline -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -351,7 +351,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.31</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.32</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1302,6 +1302,7 @@ function renderDetailInfo(cod){
     <div style="font-size:10px;color:var(--text2);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Linha do Tempo</div>
     ${step('Moldagem',m.data,'#4af0a0','')}
     ${step('Base de Prova / Armação',bp?.data,'#3b82f6',bp?.obs||'')}
+    ${(()=>{const prev=state.basePrevista.find(x=>x.codigo===String(cod));return (!bp?.data&&prev?.previsao)?`<div style="font-size:12px;color:var(--text2);margin-top:-4px;margin-bottom:4px;padding-left:26px">📅 Previsão: <strong style="color:#3b82f6">${prev.previsao}</strong></div>`:''})()}
     ${step('Prova de Dentes',pd?.data,'#f59e0b',pd?.obs||'')}
     ${step('Entrega',e?.entrega,'#4af0a0',e?.obs||'')}
     ${e?.previsao&&!e?.entrega?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-left:26px">📅 Previsão: <strong style="color:var(--text)">${e.previsao}</strong></div>`:''}
@@ -1344,8 +1345,8 @@ function renderDetailEtapas(cod){
     <div class="etapa-block bp">
       <div class="section-divider bp">🔵 Base de Prova / Armação</div>
       <div class="form-row">
-        <div class="form-group"><label>📅 Previsão</label><input type="date" id="et-bp-prev" value="${toInput(bp.previsao||bpPrev?.previsao||'')}" ${ro}></div>
-        <div class="form-group"><label>✅ Data Real</label><input type="date" id="et-bp" value="${toInput(bp.data)}" ${ro}></div>
+        <div class="form-group"><label>Data</label><input type="date" id="et-bp" value="${toInput(bp.data)}" ${ro}></div>
+        <div class="form-group"><label>Previsão</label><input type="date" id="et-bp-prev" value="${toInput(bp.previsao||bpPrev?.previsao||'')}" ${ro}></div>
       </div>
       <div class="form-group"><label>Observação</label><input type="text" id="et-bp-obs" value="${bp.obs||bpPrev?.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','bp')">💾 Salvar Base de Prova</button>`:''}
@@ -1581,7 +1582,7 @@ function renderPipeline(){
 
   const card1=m=>{
     const prev=state.basePrevista.find(b=>b.codigo===m.codigo);
-    return mkCard(m,prev?`<div style="font-size:10px;color:var(--accent3);margin-top:4px;font-weight:600">📅 Prev. Base: ${prev.previsao}</div>`:'');
+    return mkCard(m,prev?`<div style="font-size:10px;color:var(--accent2);margin-top:4px;font-weight:600">📅 Prev. Base: ${prev.previsao}</div>`:'');
   };
   const card2=m=>{
     const bp=state.baseProva.find(b=>b.codigo===m.codigo);
