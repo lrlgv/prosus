@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.35 - fix alinhamento previsão BP na linha do tempo -->
+<!-- ProSUS v4.36 - config modal modo leitura para não-admin -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -351,7 +351,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.35</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.36</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -488,8 +488,9 @@
   <div class="modal">
     <div class="modal-header"><h3>⚙️ Configurações</h3><button class="modal-close" onclick="closeConfig()">✕</button></div>
     <div class="section-divider ent">🔒 Acesso</div>
-    <div class="form-group"><label>E-mails dos administradores</label><input type="text" id="cfg-admin-emails" placeholder="email1@gmail.com, email2@gmail.com"><small>Administradores podem editar e excluir registros. Separe por vírgula. Salvo na planilha (aba Configuracao).</small></div>
-    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Cancelar</button><button class="btn btn-primary" onclick="saveConfig()">💾 Salvar</button></div>
+    <div id="cfg-readonly-warn" style="display:none" class="alert alert-warn">🔒 Modo leitura — sem permissão de edição.</div>
+    <div class="form-group"><label>E-mails dos administradores</label><input type="text" id="cfg-admin-emails" placeholder="email1@gmail.com, email2@gmail.com"><small>Administradores podem editar e excluir registros. Separe por vírgula ou ponto e vírgula. Salvo na planilha (aba Configuracao).</small></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Fechar</button><button id="cfg-save-btn" class="btn btn-primary" onclick="saveConfig()">💾 Salvar</button></div>
   </div>
 </div>
 
@@ -685,11 +686,17 @@ async function ensureToken(){
 }
 
 function openConfig(){
-  document.getElementById('cfg-admin-emails').value=state.config.adminEmails||'';
+  const admin=isAdmin();
+  const input=document.getElementById('cfg-admin-emails');
+  input.value=state.config.adminEmails||'';
+  input.disabled=!admin;
+  document.getElementById('cfg-save-btn').style.display=admin?'':'none';
+  document.getElementById('cfg-readonly-warn').style.display=admin?'none':'block';
   document.getElementById('config-modal').classList.add('open');
 }
 function closeConfig(){document.getElementById('config-modal').classList.remove('open');}
 async function saveConfig(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   const adminEmails=document.getElementById('cfg-admin-emails').value.trim();
   try{
     toast('Salvando...','info');
