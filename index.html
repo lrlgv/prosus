@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.28 - isAdmin em toda a app, remove senhas de protético -->
+<!-- ProSUS v4.29 - código moldagem vem em branco, validação e alerta de duplicata -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -351,7 +351,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.28</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.29</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1865,7 +1865,6 @@ function gerarFechamentoArmacao(){
 }
 function renderCadastroForm(){
   const admin=isAdmin();
-  const lastCod=state.moldagens.length?Math.max(...state.moldagens.map(m=>parseInt(m.codigo)||0))+1:6000;
   const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(m=>m.dentista).filter(Boolean))].sort();
   const tipos=state.tiposPeca.length?state.tiposPeca.map(t=>t.desc):['PT Dupla','PT Superior','PT Inferior','PPR Dupla','PPR Superior','PPR Inferior'];
   const today=new Date().toISOString().split('T')[0];
@@ -1878,7 +1877,7 @@ function renderCadastroForm(){
       <h3>➕ Nova Moldagem</h3>
       ${!admin?'<div class="alert alert-warn">🔒 Modo leitura — sem permissão de edição.</div>':''}
       <div class="form-row">
-        <div class="form-group"><label>Código</label><input type="number" id="cad-codigo" value="${lastCod}" ${ro}></div>
+        <div class="form-group"><label>Código</label><input type="number" id="cad-codigo" placeholder="Informe o código" ${ro}></div>
         <div class="form-group"><label>Data da Moldagem</label><input type="date" id="cad-data" value="${today}" ${ro}></div>
       </div>
       <div class="form-group"><label>Nome do Paciente</label><input type="text" id="cad-nome" placeholder="Nome completo do paciente" ${admin?'onblur="verificarNomeCadastro()"':''} ${ro}></div>
@@ -1913,8 +1912,18 @@ async function submitCadastro(){
   const dataRaw=document.getElementById('cad-data').value;
   const dist=document.getElementById('cad-dist').value;
   const obs=document.getElementById('cad-obs').value.trim();
-  if(!nome){toast('Informe o nome do paciente','error');return;}
-  if(!codigo){toast('Informe o código','error');return;}
+  if(!codigo){toast('Informe o código do paciente','error');document.getElementById('cad-codigo').focus();return;}
+  if(!nome){toast('Informe o nome do paciente','error');document.getElementById('cad-nome').focus();return;}
+  // Verificar se o código já existe na base
+  const codStr=String(codigo).trim();
+  const codExiste=state.moldagens.some(m=>String(m.codigo).trim()===codStr);
+  if(codExiste){
+    const existente=state.moldagens.find(m=>String(m.codigo).trim()===codStr);
+    toast('Código '+codStr+' já está sendo utilizado pelo paciente "'+existente.nome+'" ('+existente.tipo+'). Informe outro código.','error');
+    document.getElementById('cad-codigo').focus();
+    document.getElementById('cad-codigo').select();
+    return;
+  }
 
   // Verificar se já existe paciente com o mesmo nome
   const sugestao=proximoCodigoTratamento(nome);
