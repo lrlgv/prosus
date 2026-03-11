@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.34 - BaseProvaArmacao: col F=previsão, col G=data real, col H=obs (padrão Entregas) -->
+<!-- ProSUS v4.35 - fix alinhamento previsão BP na linha do tempo -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -351,7 +351,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.34</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.35</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1280,7 +1280,8 @@ function renderDetailInfo(cod){
   const rb=state.reembase.find(x=>x.codigo===String(cod));
   const prot=state.proteticos.find(p=>p.codigo===m.dist);
   const rems=state.remarcacoes.filter(x=>x.codigo===String(cod));
-  const step=(label,date,color,obs)=>`<div class="timeline-step"><div class="timeline-dot" style="background:${date?color:'var(--border)'}"></div><div style="flex:1"><div style="font-size:13px;font-weight:500">${label}</div><div style="font-size:12px;color:var(--text2)">${date||'Pendente'}</div>${obs?`<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 ${obs}</div>`:''}</div>${date?'<span class="badge badge-green">✓</span>':'<span class="badge badge-gray">–</span>'}</div>`;
+  const bpPrevInfo=state.basePrevista.find(x=>x.codigo===String(cod));
+  const step=(label,date,color,obs,prev)=>`<div class="timeline-step"><div class="timeline-dot" style="background:${date?color:'var(--border)'}"></div><div style="flex:1"><div style="font-size:13px;font-weight:500">${label}</div><div style="font-size:12px;color:var(--text2)">${date||'Pendente'}</div>${!date&&prev?`<div style="font-size:11px;color:#3b82f6;margin-top:2px">📅 Previsão: <strong>${prev}</strong></div>`:''} ${obs?`<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 ${obs}</div>`:''}</div>${date?'<span class="badge badge-green">✓</span>':'<span class="badge badge-gray">–</span>'}</div>`;
   const remHtml=rems.length?`<div style="margin-top:12px"><div style="font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Remarcações</div>${rems.map(r=>`<div style="font-size:12px;padding:6px 10px;background:var(--surface2);border-radius:6px;margin-bottom:4px">🔁 <strong>${r.etapa}</strong> → ${r.data}${r.obs?' — '+r.obs:''}</div>`).join('')}</div>`:'';
   const relacionados=tratamentosRelacionados(cod).filter(x=>x.codigo!==String(cod));
   const relacionadosHtml=relacionados.length?`
@@ -1301,8 +1302,7 @@ function renderDetailInfo(cod){
     </div>
     <div style="font-size:10px;color:var(--text2);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Linha do Tempo</div>
     ${step('Moldagem',m.data,'#4af0a0','')}
-    ${step('Base de Prova / Armação',bp?.data,'#3b82f6',bp?.obs||'')}
-    ${(()=>{const prev=state.basePrevista.find(x=>x.codigo===String(cod));return (!bp?.data&&prev?.previsao)?`<div style="font-size:12px;color:var(--text2);margin-top:-4px;margin-bottom:4px;padding-left:26px">📅 Previsão: <strong style="color:#3b82f6">${prev.previsao}</strong></div>`:''})()}
+    ${step('Base de Prova / Armação',bp?.data,'#3b82f6',bp?.obs||'',bpPrevInfo?.previsao||'')}
     ${step('Prova de Dentes',pd?.data,'#f59e0b',pd?.obs||'')}
     ${step('Entrega',e?.entrega,'#4af0a0',e?.obs||'')}
     ${e?.previsao&&!e?.entrega?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-left:26px">📅 Previsão: <strong style="color:var(--text)">${e.previsao}</strong></div>`:''}
