@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.29 - código moldagem vem em branco, validação e alerta de duplicata -->
+<!-- ProSUS v4.30 - fix data moldagem timezone local -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -351,7 +351,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.29</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.30</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1867,7 +1867,7 @@ function renderCadastroForm(){
   const admin=isAdmin();
   const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(m=>m.dentista).filter(Boolean))].sort();
   const tipos=state.tiposPeca.length?state.tiposPeca.map(t=>t.desc):['PT Dupla','PT Superior','PT Inferior','PPR Dupla','PPR Superior','PPR Inferior'];
-  const today=new Date().toISOString().split('T')[0];
+  const _td=new Date();const today=_td.getFullYear()+'-'+String(_td.getMonth()+1).padStart(2,'0')+'-'+String(_td.getDate()).padStart(2,'0');
   const distOpts=state.proteticos.length
     ?state.proteticos.map(p=>`<option value="${p.codigo}">${p.codigo} — ${p.nome}</option>`).join('')
     :'<option value="">Nenhum protético cadastrado</option>';
