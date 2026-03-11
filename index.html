@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.32 - fix: previsão BP na linha do tempo, ordem campos etapas, cor card pipeline -->
+<!-- ProSUS v4.34 - BaseProvaArmacao: col F=previsão, col G=data real, col H=obs (padrão Entregas) -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -351,7 +351,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.32</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.34</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -872,8 +872,8 @@ async function loadAll(){
     })||state.contratos[state.contratos.length-1]||null;
 
     state.moldagens=mRows.filter(r=>r[0]&&r[0].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),nome:r[1]||'',dentista:r[2]||'',tipo:r[3]||'',data:r[4]||'',dist:r[5]||'',situacao:r[6]||'Pendente',obs:r[7]||''}));
-    state.baseProva=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||'',previsao:r[7]||''}));
-    state.basePrevista=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&(!r[5]||r[5].toString().trim()==='')&&r[7]&&r[7].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[7].toString().trim(),obs:r[6]||''}));
+    state.baseProva=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[6]&&r[6].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',data:r[6].toString().trim(),obs:r[7]||''}));
+    state.basePrevista=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&(!r[6]||r[6].toString().trim()==='')&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5].toString().trim(),obs:r[7]||''}));
     state.provaDentes=dRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
     state.entregas=eRows.filter(r=>r[0]&&r[0].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',entrega:r[6]&&r[6].toString().trim()!==''?r[6].toString().trim():'',obs:r[7]||''}));
     state.reembase=reemRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
@@ -1423,13 +1423,13 @@ async function submitEtapaUnica(cod,tipo){
           const rows=await fetchSheet('BaseProvaArmacao!A:A');
           const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
           if(rowIdx>=0){
-            const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'BaseProvaArmacao',row:rowIdx+1,values:[cod,'','','','',bp,bpObs,bpPrevVal]})});
+            const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'BaseProvaArmacao',row:rowIdx+1,values:[cod,'','','','',bpPrevVal,bp,bpObs]})});
             const res=await r.json();
             if(!res.success) throw new Error(res.error||'Erro ao atualizar');
             return;
           }
         }
-        await postSheet('BaseProvaArmacao',[cod,'','','','',bp,bpObs,bpPrevVal]);
+        await postSheet('BaseProvaArmacao',[cod,'','','','',bpPrevVal,bp,bpObs]);
       };
       await upsertBP();
 
@@ -1963,7 +1963,7 @@ async function submitCadastro(){
         toast('Salvando...','info');
         const bpPrev2=document.getElementById('cad-bp-prev')?fromInput(document.getElementById('cad-bp-prev').value):'';
         await postSheet('Moldagens',[novoCodigo,nome,dentista,tipo,fromInput(dataRaw),dist,'Pendente',obs]);
-        if(bpPrev2) await postSheet('BaseProvaArmacao',[novoCodigo,'','','','','',bpPrev2]);
+        if(bpPrev2) await postSheet('BaseProvaArmacao',[novoCodigo,'','','','',bpPrev2]);
         toast(`Novo tratamento de ${nome} cadastrado! (${novoCodigo})`,'success');
         state.lastSavedCodigo=String(novoCodigo);
         await loadAll();
@@ -1982,7 +1982,7 @@ async function submitCadastro(){
     toast('Salvando...','info');
     const bpPrev=document.getElementById('cad-bp-prev')?fromInput(document.getElementById('cad-bp-prev').value):'';
     await postSheet('Moldagens',[codigo,nome,dentista,tipo,fromInput(dataRaw),dist,'Pendente',obs]);
-    if(bpPrev) await postSheet('BaseProvaArmacao',[codigo,'','','','','',bpPrev]);
+    if(bpPrev) await postSheet('BaseProvaArmacao',[codigo,'','','','',bpPrev]);
     toast(`${nome} cadastrado com sucesso!`,'success');
     state.lastSavedCodigo=String(codigo);
     await loadAll();
