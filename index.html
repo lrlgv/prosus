@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.24 - fix isAdmin separador ponto-virgula, fix editar isAdmin -->
+<!-- ProSUS v4.28 - isAdmin em toda a app, remove senhas de protético -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -204,8 +204,8 @@
   .total-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
   .total-row:last-child{border-bottom:none;font-weight:700;color:var(--accent);}
   /* ── MOBILE BOTTOM NAV ── */
-  .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:200;padding-bottom:env(safe-area-inset-bottom);}
-  .mobile-nav-inner{display:flex;align-items:stretch;}
+  .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:200;padding-bottom:env(safe-area-inset-bottom);width:100%;box-sizing:border-box;}
+  .mobile-nav-inner{display:flex;align-items:stretch;width:100%;overflow:hidden;}
   .mob-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px;border:none;background:transparent;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:9px;font-weight:600;cursor:pointer;transition:color .15s;min-height:54px;}
   .mob-nav-btn .mob-icon{font-size:20px;line-height:1;}
   .mob-nav-btn.active{color:var(--accent);}
@@ -224,17 +224,19 @@
 
   /* ── RESPONSIVE MEDIA QUERIES ── */
   @media(max-width:768px){
+    /* Prevent horizontal overflow on body */
+    body,html{overflow-x:hidden;max-width:100vw;}
+    .main{overflow-x:hidden;}
     /* Hide desktop sidebar, show mobile nav */
     .sidebar{display:none;}
-    .main{margin-left:0;padding-bottom:70px;}
     .mobile-nav{display:flex;flex-direction:column;}
-    /* Topbar mobile */
+    .main{margin-left:0;padding-bottom:70px;}
+    /* Garante que conteúdo não fica escondido atrás do nav inferior */
+    .page-content{padding:14px 14px 90px 14px;}
     .topbar{padding:12px 16px;}
     .topbar h2{font-size:16px;}
     .topbar p{display:none;}
     #connection-status .badge{font-size:10px;padding:2px 7px;}
-    /* Page content */
-    .page-content{padding:14px 14px;}
     /* Dashboard cards 2x2 */
     .cards-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;}
     .stat-card{padding:14px;}
@@ -252,10 +254,13 @@
     td::before{content:attr(data-label);font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;}
     td:empty{display:none;}
     .td-code{font-size:11px;}
-    /* Pipeline horizontal scroll */
-    .pipeline-grid{grid-template-columns:repeat(4,80vw);overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding-bottom:8px;}
-    .pipeline-col{scroll-snap-align:start;min-width:80vw;}
-    .pipeline-cards{max-height:60vh;}
+    /* Pipeline horizontal scroll — contém o scroll dentro da área, não expande a página */
+    .pipeline-grid{grid-template-columns:repeat(5,78vw);overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding-bottom:8px;width:100%;-webkit-overflow-scrolling:touch;}
+    .pipeline-col{scroll-snap-align:start;min-width:78vw;max-width:78vw;}
+    .pipeline-cards{max-height:55vh;}
+    /* Impede que o pipeline expanda a página horizontalmente */
+    #page-pipeline{overflow-x:hidden;}
+    #pipeline-content{overflow-x:auto;width:100%;}
     /* Filters bar */
     .filters-bar{gap:8px;}
     .search-bar{flex:1;min-width:0;}
@@ -346,7 +351,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.24</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.28</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -508,10 +513,10 @@
 <div class="modal-overlay" id="protetico-modal">
   <div class="modal" style="max-width:420px">
     <div class="modal-header"><h3>🧑‍🔧 Novo Protético</h3><button class="modal-close" onclick="closeProtModal()">✕</button></div>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">O nome ficará protegido por senha.</p>
+
     <div class="form-group"><label>Código (sigla)</label><input type="text" id="prot-codigo" placeholder="Ex: E" maxlength="5" style="text-transform:uppercase"></div>
     <div class="form-group"><label>Nome Completo</label><input type="text" id="prot-nome" placeholder="Nome do protético"></div>
-    <div class="form-group"><label>Senha para confirmar</label><input type="password" id="prot-senha" placeholder="Senha de acesso"></div>
+
     <div class="modal-actions"><button class="btn btn-secondary" onclick="closeProtModal()">Cancelar</button><button class="btn btn-primary" onclick="submitNovoProtetico()">💾 Salvar</button></div>
   </div>
 </div>
@@ -884,6 +889,16 @@ async function loadAll(){
     if(document.querySelector('#page-contratos.active')) renderContratos();
   }catch(e){
     state.connected=false;updateStatus();
+    // Se o erro for de scopes insuficientes, força novo login com consentimento
+    if(e.message&&e.message.toLowerCase().includes('insufficient')){
+      localStorage.removeItem('prosus_user_email');
+      localStorage.removeItem('prosus_user_name');
+      state.accessToken=null;
+      document.getElementById('login-screen').style.display='flex';
+      document.getElementById('app').style.display='none';
+      showLoginError('Permissões insuficientes. Por favor, faça login novamente para autorizar o acesso.');
+      return;
+    }
     toast('Erro: '+e.message,'error');
     document.getElementById('dashboard-content').innerHTML=`<div class="not-connected"><div class="icon">❌</div><h3>Erro de conexão</h3><p>${e.message}</p><button class="btn btn-primary" onclick="loadAll()">🔄 Tentar novamente</button></div>`;
   }
@@ -1849,6 +1864,7 @@ function gerarFechamentoArmacao(){
     </div>`;
 }
 function renderCadastroForm(){
+  const admin=isAdmin();
   const lastCod=state.moldagens.length?Math.max(...state.moldagens.map(m=>parseInt(m.codigo)||0))+1:6000;
   const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(m=>m.dentista).filter(Boolean))].sort();
   const tipos=state.tiposPeca.length?state.tiposPeca.map(t=>t.desc):['PT Dupla','PT Superior','PT Inferior','PPR Dupla','PPR Superior','PPR Inferior'];
@@ -1856,38 +1872,40 @@ function renderCadastroForm(){
   const distOpts=state.proteticos.length
     ?state.proteticos.map(p=>`<option value="${p.codigo}">${p.codigo} — ${p.nome}</option>`).join('')
     :'<option value="">Nenhum protético cadastrado</option>';
+  const ro=admin?'':'disabled';
   document.getElementById('cadastro-content').innerHTML=`
     <div class="form-card">
       <h3>➕ Nova Moldagem</h3>
+      ${!admin?'<div class="alert alert-warn">🔒 Modo leitura — sem permissão de edição.</div>':''}
       <div class="form-row">
-        <div class="form-group"><label>Código</label><input type="number" id="cad-codigo" value="${lastCod}"></div>
-        <div class="form-group"><label>Data da Moldagem</label><input type="date" id="cad-data" value="${today}"></div>
+        <div class="form-group"><label>Código</label><input type="number" id="cad-codigo" value="${lastCod}" ${ro}></div>
+        <div class="form-group"><label>Data da Moldagem</label><input type="date" id="cad-data" value="${today}" ${ro}></div>
       </div>
-      <div class="form-group"><label>Nome do Paciente</label><input type="text" id="cad-nome" placeholder="Nome completo do paciente" onblur="verificarNomeCadastro()"></div>
+      <div class="form-group"><label>Nome do Paciente</label><input type="text" id="cad-nome" placeholder="Nome completo do paciente" ${admin?'onblur="verificarNomeCadastro()"':''} ${ro}></div>
       <div id="cad-nome-alerta" style="display:none"></div>
       <div class="form-row">
-        <div class="form-group"><label>Dentista</label><select id="cad-dentista">${dents.map(d=>`<option value="${d}">${cap(d)}</option>`).join('')}<option value="__novo">+ Novo dentista</option></select></div>
-        <div class="form-group"><label>Tipo de Peça</label><select id="cad-tipo">${tipos.map(t=>`<option>${t}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Dentista</label><select id="cad-dentista" ${ro}>${dents.map(d=>`<option value="${d}">${cap(d)}</option>`).join('')}${admin?'<option value="__novo">+ Novo dentista</option>':''}</select></div>
+        <div class="form-group"><label>Tipo de Peça</label><select id="cad-tipo" ${ro}>${tipos.map(t=>`<option>${t}</option>`).join('')}</select></div>
       </div>
       <div class="form-group">
         <label>Distribuição (Protético)</label>
         <div style="display:flex;gap:8px;align-items:center">
-          <select id="cad-dist" style="flex:1">${distOpts}</select>
-          <button class="btn btn-secondary btn-sm" type="button" onclick="openProtModal()">+ Novo</button>
+          <select id="cad-dist" style="flex:1" ${ro}>${distOpts}</select>
+          ${admin?'<button class="btn btn-secondary btn-sm" type="button" onclick="openProtModal()">+ Novo</button>':''}
         </div>
-        <small>O código do protético fica visível. O nome é protegido por senha.</small>
       </div>
-      <div class="form-group"><label>Observação</label><textarea id="cad-obs" rows="2" placeholder="Observações opcionais..."></textarea></div>
-      <div style="display:flex;gap:10px;margin-top:8px">
+      <div class="form-group"><label>Observação</label><textarea id="cad-obs" rows="2" placeholder="Observações opcionais..." ${ro}></textarea></div>
+      ${admin?`<div style="display:flex;gap:10px;margin-top:8px">
         <button class="btn btn-primary" onclick="submitCadastro()">💾 Salvar Moldagem</button>
         <button class="btn btn-secondary" onclick="renderCadastroForm()">✕ Limpar</button>
-      </div>
+      </div>`:''}
     </div>`;
-  document.getElementById('cad-dentista').addEventListener('change',function(){
+  if(admin) document.getElementById('cad-dentista').addEventListener('change',function(){
     if(this.value==='__novo'){navigate('dentistas');renderDentistas(true);this.selectedIndex=0;}
   });
 }
 async function submitCadastro(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   const codigo=document.getElementById('cad-codigo').value;
   const nome=document.getElementById('cad-nome').value.trim();
   const dentista=document.getElementById('cad-dentista').value;
@@ -1961,10 +1979,11 @@ function verificarNomeCadastro(){
 /* ── DENTISTAS ── */
 let editingDentista=null;
 function renderDentistas(focusForm=false){
+  const admin=isAdmin();
   const list=state.dentistas;
   document.getElementById('dentistas-content').innerHTML=`
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-      <div style="flex:1;min-width:280px">
+      ${admin?`<div style="flex:1;min-width:280px">
         <div class="form-card">
           <h3 id="dent-form-title">➕ Novo Dentista</h3>
           <div class="form-group"><label>Nome Completo</label><input type="text" id="nd-nome" placeholder="Nome do dentista"></div>
@@ -1973,18 +1992,19 @@ function renderDentistas(focusForm=false){
             <button class="btn btn-secondary" id="dent-cancel-btn" onclick="cancelEditDentista()" style="display:none">✕ Cancelar</button>
           </div>
         </div>
-      </div>
+      </div>`:''}
       <div style="flex:2;min-width:280px">
         <div class="table-card">
           <div class="table-header"><h3>👨‍⚕️ Dentistas cadastrados</h3><span style="font-size:12px;color:var(--text2)">${list.length} dentistas</span></div>
+          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
           <div style="padding:12px">
-            ${list.length?list.map((d,i)=>`<div class="list-item" onclick="editDentista(${i})"><div class="list-item-info"><div class="name">${cap(d)}</div></div><span style="font-size:11px;color:var(--text3)">✏️ editar</span></div>`).join(''):'<div class="empty-state"><p>Nenhum dentista cadastrado.</p></div>'}
+            ${list.length?list.map((d,i)=>`<div class="list-item" ${admin?`onclick="editDentista(${i})"`:''}><div class="list-item-info"><div class="name">${cap(d)}</div></div>${admin?'<span style="font-size:11px;color:var(--text3)">✏️ editar</span>':''}</div>`).join(''):'<div class="empty-state"><p>Nenhum dentista cadastrado.</p></div>'}
           </div>
         </div>
       </div>
     </div>`;
   editingDentista=null;
-  if(focusForm) setTimeout(()=>document.getElementById('nd-nome')?.focus(),100);
+  if(admin&&focusForm) setTimeout(()=>document.getElementById('nd-nome')?.focus(),100);
 }
 function editDentista(idx){
   editingDentista=idx;
@@ -2000,6 +2020,7 @@ function cancelEditDentista(){
   document.getElementById('dent-cancel-btn').style.display='none';
 }
 async function submitNovoDentistaDireto(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   const nome=document.getElementById('nd-nome').value.trim();
   if(!nome){toast('Informe o nome','error');return;}
   try{
@@ -2029,9 +2050,10 @@ async function submitNovoDentistaDireto(){
 /* ── PROTETICOS ── */
 let editingProtetico=null;
 function renderProteticos(){
+  const admin=isAdmin();
   document.getElementById('proteticos-content').innerHTML=`
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-      <div style="flex:1;min-width:280px">
+      ${admin?`<div style="flex:1;min-width:280px">
         <div class="form-card">
           <h3 id="prot-form-title">➕ Novo Protético</h3>
           <div class="form-group"><label>Código (sigla)</label><input type="text" id="np-cod" placeholder="Ex: E" maxlength="5" style="text-transform:uppercase"></div>
@@ -2043,23 +2065,21 @@ function renderProteticos(){
             </label>
             <small>Ao marcar, este protético será incluído no Fechamento por Armação.</small>
           </div>
-          <div class="form-group"><label>Senha para confirmar</label><input type="password" id="np-senha" placeholder="Senha de acesso"></div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-primary" onclick="submitNovoProteticoDireto()">💾 Salvar</button>
             <button class="btn btn-secondary" id="prot-cancel-btn" onclick="cancelEditProtetico()" style="display:none">✕ Cancelar</button>
           </div>
         </div>
-      </div>
+      </div>`:''}
       <div style="flex:2;min-width:280px">
         <div class="table-card">
           <div class="table-header"><h3>🧑‍🔧 Protéticos cadastrados</h3><span style="font-size:12px;color:var(--text2)">${state.proteticos.length} protéticos</span></div>
+          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
           <div style="padding:12px">
-            ${state.proteticos.length?state.proteticos.map((p,i)=>`<div class="list-item" onclick="editProtetico(${i})">
-              <div class="list-item-info">
+            ${state.proteticos.length?state.proteticos.map((p,i)=>`<div class="list-item" ${admin?`onclick="editProtetico(${i})"`:''}><div class="list-item-info">
                 <div class="code">${p.codigo} ${p.pagaArmacao?'<span style="font-size:10px;background:rgba(59,130,246,.15);color:var(--accent2);padding:1px 5px;border-radius:4px">Armação</span>':''}</div>
                 <div class="name">${p.nome}</div>
-              </div>
-              <span style="font-size:11px;color:var(--text3)">✏️ editar</span>
+              </div>${admin?'<span style="font-size:11px;color:var(--text3)">✏️ editar</span>':''}
             </div>`).join(''):'<div class="empty-state"><p>Nenhum protético cadastrado.</p></div>'}
           </div>
         </div>
@@ -2068,34 +2088,28 @@ function renderProteticos(){
   editingProtetico=null;
 }
 function editProtetico(idx){
-  showPasswordPrompt('🔒 Editar Protético','Digite a senha para editar os dados do protético:',(senha)=>{
-    const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
-    if(senha!==sc){toast('Senha incorreta','error');return;}
-    editingProtetico=idx;
-    const p=state.proteticos[idx];
-    document.getElementById('np-cod').value=p.codigo;
-    document.getElementById('np-nome').value=p.nome;
-    document.getElementById('np-paga-armacao').checked=p.pagaArmacao||false;
-    document.getElementById('np-senha').value='';
-    document.getElementById('prot-form-title').textContent='✏️ Editar Protético';
-    document.getElementById('prot-cancel-btn').style.display='inline-flex';
-    document.getElementById('np-nome').focus();
-  });
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  editingProtetico=idx;
+  const p=state.proteticos[idx];
+  document.getElementById('np-cod').value=p.codigo;
+  document.getElementById('np-nome').value=p.nome;
+  document.getElementById('np-paga-armacao').checked=p.pagaArmacao||false;
+  document.getElementById('prot-form-title').textContent='✏️ Editar Protético';
+  document.getElementById('prot-cancel-btn').style.display='inline-flex';
+  document.getElementById('np-nome').focus();
 }
 function cancelEditProtetico(){
   editingProtetico=null;
-  document.getElementById('np-cod').value='';document.getElementById('np-nome').value='';document.getElementById('np-senha').value='';
+  document.getElementById('np-cod').value='';document.getElementById('np-nome').value='';
   document.getElementById('prot-form-title').textContent='➕ Novo Protético';
   document.getElementById('prot-cancel-btn').style.display='none';
 }
 async function submitNovoProteticoDireto(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   const codigo=document.getElementById('np-cod').value.trim().toUpperCase();
   const nome=document.getElementById('np-nome').value.trim();
   const pagaArmacao=document.getElementById('np-paga-armacao').checked?'S':'N';
-  const senha=document.getElementById('np-senha').value;
   if(!codigo||!nome){toast('Preencha código e nome','error');return;}
-  const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
-  if(senha!==sc){toast('Senha incorreta','error');return;}
   try{
     if(editingProtetico!==null){
       toast('Atualizando...','info');
@@ -2119,14 +2133,12 @@ async function submitNovoProteticoDireto(){
   }catch(e){toast('Erro: '+e.message,'error');}
 }
 function openProtModal(){document.getElementById('protetico-modal').classList.add('open');}
-function closeProtModal(){document.getElementById('protetico-modal').classList.remove('open');document.getElementById('prot-codigo').value='';document.getElementById('prot-nome').value='';document.getElementById('prot-senha').value='';}
+function closeProtModal(){document.getElementById('protetico-modal').classList.remove('open');document.getElementById('prot-codigo').value='';document.getElementById('prot-nome').value='';}
 async function submitNovoProtetico(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   const codigo=document.getElementById('prot-codigo').value.trim().toUpperCase();
   const nome=document.getElementById('prot-nome').value.trim();
-  const senha=document.getElementById('prot-senha').value;
   if(!codigo||!nome){toast('Preencha código e nome','error');return;}
-  const sc=localStorage.getItem('prosus_distsenha')||'prosus2024';
-  if(senha!==sc){toast('Senha incorreta','error');return;}
   if(state.proteticos.find(p=>p.codigo===codigo)){toast('Código já existe','error');return;}
   try{
     toast('Salvando...','info');
@@ -2140,10 +2152,11 @@ async function submitNovoProtetico(){
 /* ── TIPO DE PEÇA ── */
 let editingTipo=null;
 function renderTipoPeca(){
+  const admin=isAdmin();
   const list=state.tiposPeca;
   document.getElementById('tipopeca-content').innerHTML=`
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-      <div style="flex:1;min-width:280px">
+      ${admin?`<div style="flex:1;min-width:280px">
         <div class="form-card">
           <h3 id="tipo-form-title">➕ Novo Tipo de Peça</h3>
           <div class="form-group"><label>Descrição</label><input type="text" id="tp-desc" placeholder="Ex: PT Dupla"></div>
@@ -2156,12 +2169,13 @@ function renderTipoPeca(){
             <button class="btn btn-secondary" id="tipo-cancel-btn" onclick="cancelEditTipo()" style="display:none">✕ Cancelar</button>
           </div>
         </div>
-      </div>
+      </div>`:''}
       <div style="flex:2;min-width:280px">
         <div class="table-card">
           <div class="table-header"><h3>🦷 Tipos de Peça</h3><span style="font-size:12px;color:var(--text2)">${list.length} tipos</span></div>
-          <table><thead><tr><th>Descrição</th><th>Qtde. PT</th><th>Qtde. PPR</th><th></th></tr></thead><tbody>
-            ${list.length?list.map((t,i)=>`<tr><td class="td-name">${t.desc}</td><td>${t.pt}</td><td>${t.ppr}</td><td><button class="icon-btn" onclick="editTipo(${i})">✏️</button></td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3)">Nenhum tipo cadastrado.</td></tr>'}
+          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
+          <table><thead><tr><th>Descrição</th><th>Qtde. PT</th><th>Qtde. PPR</th>${admin?'<th></th>':''}</tr></thead><tbody>
+            ${list.length?list.map((t,i)=>`<tr><td class="td-name">${t.desc}</td><td>${t.pt}</td><td>${t.ppr}</td>${admin?`<td><button class="icon-btn" onclick="editTipo(${i})">✏️</button></td>`:''}</tr>`).join(''):`<tr><td colspan="${admin?4:3}" style="text-align:center;padding:20px;color:var(--text3)">Nenhum tipo cadastrado.</td></tr>`}
           </tbody></table>
         </div>
       </div>
@@ -2185,6 +2199,7 @@ function cancelEditTipo(){
   document.getElementById('tipo-cancel-btn').style.display='none';
 }
 async function submitNovoTipo(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   const desc=document.getElementById('tp-desc').value.trim();
   const pt=document.getElementById('tp-pt').value;
   const ppr=document.getElementById('tp-ppr').value;
