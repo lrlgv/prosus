@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.36 - config modal modo leitura para não-admin -->
+<!-- ProSUS v4.38 - fechamento armação por tipo PPR, remove filtro pagaArmacao -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -351,7 +351,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.36</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.38</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1320,7 +1320,6 @@ function renderDetailInfo(cod){
 function isAdmin(){
   const stored=(state.config.adminEmails||'').trim();
   if(!stored) return true;
-  // Aceita vírgula ou ponto e vírgula como separador
   const emails=stored.toLowerCase().split(/[,;]/).map(e=>e.trim()).filter(Boolean);
   if(!emails.length) return true;
   const rawEmail=state.user?.email || localStorage.getItem('prosus_user_email') || '';
@@ -1815,7 +1814,7 @@ function renderFechamentoArmacao(){
   document.getElementById('fechamento-armacao-content').innerHTML=`
     <div class="form-card" style="max-width:400px;margin-bottom:20px">
       <h3>🔩 Fechamento por Armação</h3>
-      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Exibe as Base de Prova concluídas (com data) de protéticos com pagamento por armação.</p>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Exibe as Base de Prova concluídas (com data) de peças do tipo PPR.</p>
       <div class="form-row">
         <div class="form-group"><label>Ano</label><input type="number" id="fa-ano" value="${today.getFullYear()}" min="2020" max="2099"></div>
         <div class="form-group"><label>Mês</label><select id="fa-mes">${MESES.map((m,i)=>`<option value="${i+1}"${i===today.getMonth()?' selected':''}>${m}</option>`).join('')}</select></div>
@@ -1827,17 +1826,13 @@ function renderFechamentoArmacao(){
 function gerarFechamentoArmacao(){
   const ano=+document.getElementById('fa-ano').value;
   const mes=+document.getElementById('fa-mes').value;
-  // Proteticos que pagam por armação
-  const proteticosPagam=new Set(state.proteticos.filter(p=>p.pagaArmacao).map(p=>p.codigo));
-  if(!proteticosPagam.size){
-    document.getElementById('fechamento-armacao-resultado').innerHTML='<div class="alert alert-warn">⚠️ Nenhum protético com pagamento por armação cadastrado. Configure na tela de Protéticos.</div>';
-    return;
-  }
+  // Considera armação todos os registros com tipo PPR
+  const isPPR=tipo=>/PPR/i.test(tipo||'');
   const bpDoMes=state.baseProva.filter(bp=>{
     const dt=parseDate(bp.data);
     if(!dt||dt.getFullYear()!==ano||dt.getMonth()+1!==mes) return false;
     const m=state.moldagens.find(x=>x.codigo===bp.codigo);
-    return m&&proteticosPagam.has(m.dist);
+    return m&&isPPR(m.tipo);
   });
   if(!bpDoMes.length){document.getElementById('fechamento-armacao-resultado').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>Nenhuma Base de Prova encontrada neste período para protéticos com armação.</p></div>';return;}
 
