@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.38 - fechamento armação por tipo PPR, remove filtro pagaArmacao -->
+<!-- ProSUS v4.39 - cod duplicado protetico, lupa em todas telas, search mobile, Data Armação, só PPR no fechamento -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -123,7 +123,7 @@
   .icon-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,240,160,.08);}
   .filters-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
   .search-bar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;}
-  .search-bar input{background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;width:200px;}
+  .search-bar input{background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;width:200px;min-width:80px;}
   .search-bar input::placeholder{color:var(--text3);}
   .filter-select{padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;cursor:pointer;}
   .pagination{display:flex;align-items:center;gap:6px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap;}
@@ -263,8 +263,9 @@
     #pipeline-content{overflow-x:auto;width:100%;}
     /* Filters bar */
     .filters-bar{gap:8px;}
+    .filters-bar .search-bar{flex:1 1 140px;}
     .search-bar{flex:1;min-width:0;}
-    .search-bar input{width:100%;}
+    .search-bar input{width:100%;min-width:0;flex:1;}
     .filter-select{font-size:12px;padding:6px 8px;}
     /* Modals full screen on mobile */
     .modal-overlay{padding:0;align-items:flex-end;}
@@ -351,7 +352,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.38</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.39</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1121,7 +1122,7 @@ function renderTablePage(){
       :'';
 
     h+=`<tr class="group-header${isNew?' highlight-new':''}">
-      <td class="td-code" data-label="Código">#${primary.codigo}</td>
+      <td class="td-code" data-label="Código"><button class="icon-btn" onclick="showDetail('${primary.codigo}')" title="Ver detalhes" style="margin-right:4px">🔎</button>#${primary.codigo}</td>
       <td class="td-name" data-label="Nome">${primary.nome}${multiBadge}</td>
       <td data-label="Dentista">${cap(primary.dentista)}</td>
       <td data-label="Tipo">${primary.tipo}</td>
@@ -1141,7 +1142,7 @@ function renderTablePage(){
         const cDist=cprot?`${child.dist} — ${cprot.nome}`:child.dist;
         const cNew=String(child.codigo)===String(state.lastSavedCodigo);
         h+=`<tr class="group-child${cNew?' highlight-new':''}">
-          <td class="td-code" data-label="Código">#${child.codigo}</td>
+          <td class="td-code" data-label="Código"><button class="icon-btn" onclick="showDetail('${child.codigo}')" title="Ver detalhes" style="margin-right:4px">🔎</button>#${child.codigo}</td>
           <td class="td-name" data-label="Nome" style="color:var(--text2)">${child.nome}</td>
           <td data-label="Dentista">${cap(child.dentista)}</td>
           <td data-label="Tipo">${child.tipo}</td>
@@ -1781,7 +1782,7 @@ function gerarFechamento(){
   const tableRows=rows.map(r=>{
     const prot=state.proteticos.find(p=>p.codigo===r.dist);
     const distLabel=prot?`${r.dist} — ${prot.nome}`:r.dist||'—';
-    return`<tr><td class="td-code">#${r.codigo||'—'}</td><td class="td-name">${r.nome||'—'}</td><td>${cap(r.dentista||'')}</td><td>${distLabel}</td><td>${r.entrega}</td><td>${r.tipo||'—'}</td><td style="text-align:center">${r.qtPT}</td><td style="text-align:center">${r.qtPPR}</td></tr>`;
+    return`<tr><td class="td-code"><button class="icon-btn" onclick="showDetail('${r.codigo}')" title="Ver detalhes" style="margin-right:4px">🔎</button>#${r.codigo||'—'}</td><td class="td-name">${r.nome||'—'}</td><td>${cap(r.dentista||'')}</td><td>${distLabel}</td><td>${r.entrega}</td><td>${r.tipo||'—'}</td><td style="text-align:center">${r.qtPT}</td><td style="text-align:center">${r.qtPPR}</td></tr>`;
   }).join('');
 
   document.getElementById('fechamento-resultado').innerHTML=`
@@ -1855,7 +1856,7 @@ function gerarFechamentoArmacao(){
   const distRows=Object.entries(distMap).map(([d,v])=>{
     const prot=state.proteticos.find(p=>p.codigo===d);
     const nome=prot?prot.nome:'—';
-    return`<tr><td><strong>${d}</strong> — ${nome}</td><td style="text-align:center">${v.items.length}</td><td style="text-align:center">${v.pt}</td><td style="text-align:center">${v.ppr}</td><td style="text-align:center;font-weight:700;color:var(--accent2)">${v.pt+v.ppr}</td></tr>`;
+    return`<tr><td><strong>${d}</strong> — ${nome}</td><td style="text-align:center">${v.items.length}</td><td style="text-align:center;font-weight:700;color:var(--accent2)">${v.ppr}</td></tr>`;
   }).join('');
 
   const tableRows=bpDoMes.map(bp=>{
@@ -1863,30 +1864,28 @@ function gerarFechamentoArmacao(){
     const prot=state.proteticos.find(p=>p.codigo===m.dist);
     const distLabel=prot?`${m.dist} — ${prot.nome}`:m.dist||'—';
     const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
-    return`<tr><td class="td-code">#${bp.codigo}</td><td class="td-name">${m.nome||'—'}</td><td>${cap(m.dentista||'')}</td><td>${distLabel}</td><td>${bp.data}</td><td>${m.tipo||'—'}</td><td style="text-align:center">${tp.pt||0}</td><td style="text-align:center">${tp.ppr||0}</td></tr>`;
+    return`<tr><td class="td-code"><button class="icon-btn" onclick="showDetail('${bp.codigo}')" title="Ver detalhes" style="margin-right:4px">🔎</button>#${bp.codigo}</td><td class="td-name">${m.nome||'—'}</td><td>${cap(m.dentista||'')}</td><td>${distLabel}</td><td>${bp.data}</td><td>${m.tipo||'—'}</td><td style="text-align:center">${tp.ppr||0}</td></tr>`;
   }).join('');
 
   document.getElementById('fechamento-armacao-resultado').innerHTML=`
-    <h3 style="font-size:16px;margin-bottom:16px">${MESES[mes-1]} ${ano} — ${bpDoMes.length} paciente(s) · ${totPT+totPPR} peça(s)</h3>
+    <h3 style="font-size:16px;margin-bottom:16px">${MESES[mes-1]} ${ano} — ${bpDoMes.length} paciente(s) · ${totPPR} PPR</h3>
     <div class="fechamento-totais">
       <div class="total-card">
         <h4>🔢 Total Geral</h4>
         <div class="total-row"><span>Pacientes</span><span class="tval">${bpDoMes.length}</span></div>
-        <div class="total-row"><span>Total PT</span><span class="tval">${totPT}</span></div>
         <div class="total-row"><span>Total PPR</span><span class="tval">${totPPR}</span></div>
-        <div class="total-row"><span>Total Peças</span><span class="tval">${totPT+totPPR}</span></div>
       </div>
       <div class="total-card">
         <h4>📦 Total por Protético</h4>
         <table style="width:100%;font-size:12px">
-          <thead><tr><th style="text-align:left;padding:4px 6px;color:var(--text2)">Protético</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Pac.</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PT</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PPR</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Total</th></tr></thead>
+          <thead><tr><th style="text-align:left;padding:4px 6px;color:var(--text2)">Protético</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Pac.</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PPR</th></tr></thead>
           <tbody>${distRows}</tbody>
         </table>
       </div>
     </div>
     <div class="table-card">
-      <div class="table-header"><h3>Listagem de Armações</h3><span style="font-size:12px;color:var(--text2)">${bpDoMes.length} pacientes · ${totPT+totPPR} peças</span></div>
-      <table><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Protético</th><th>Data Base Prova</th><th>Tipo Peça</th><th>Qtde. PT</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
+      <div class="table-header"><h3>Listagem de Armações</h3><span style="font-size:12px;color:var(--text2)">${bpDoMes.length} pacientes · ${totPPR} PPR</span></div>
+      <table><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Protético</th><th>Data Armação</th><th>Tipo Peça</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
     </div>`;
 }
 function renderCadastroForm(){
@@ -2152,6 +2151,8 @@ async function submitNovoProteticoDireto(){
   if(!codigo||!nome){toast('Preencha código e nome','error');return;}
   try{
     if(editingProtetico!==null){
+      const dupCod=state.proteticos.find((p,i)=>i!==editingProtetico&&p.codigo===codigo);
+      if(dupCod){toast('Código '+codigo+' já está em uso pelo protético "'+dupCod.nome+'"','error');return;}
       toast('Atualizando...','info');
       const old=state.proteticos[editingProtetico];
       const rows=await fetchSheet('Proteticos!A:A');
@@ -2163,7 +2164,8 @@ async function submitNovoProteticoDireto(){
       state.proteticos[editingProtetico]={codigo,nome,pagaArmacao:pagaArmacao==='S'};
       toast(`Protético ${codigo} atualizado!`,'success');
     }else{
-      if(state.proteticos.find(p=>p.codigo===codigo)){toast('Código já existe','error');return;}
+      const dupNovo=state.proteticos.find(p=>p.codigo===codigo);
+      if(dupNovo){toast('Código '+codigo+' já está em uso pelo protético "'+dupNovo.nome+'"','error');return;}
       toast('Salvando...','info');
       await postSheet('Proteticos',[codigo,nome,pagaArmacao]);
       state.proteticos.push({codigo,nome,pagaArmacao:pagaArmacao==='S'});
