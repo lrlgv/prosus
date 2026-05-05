@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.39 - cod duplicado protetico, lupa em todas telas, search mobile, Data Armação, só PPR no fechamento -->
+<!-- ProSUS v4.40 - fix filtro #N/A em entregas e moldagens, previsão entrega exibida corretamente -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -352,7 +352,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.39</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.40</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -879,16 +879,16 @@ async function loadAll(){
       return ini&&fim&&today>=ini&&today<=fim;
     })||state.contratos[state.contratos.length-1]||null;
 
-    state.moldagens=mRows.filter(r=>r[0]&&r[0].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),nome:r[1]||'',dentista:r[2]||'',tipo:r[3]||'',data:r[4]||'',dist:r[5]||'',situacao:r[6]||'Pendente',obs:r[7]||''}));
-    state.baseProva=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[6]&&r[6].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',data:r[6].toString().trim(),obs:r[7]||''}));
-    state.basePrevista=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&(!r[6]||r[6].toString().trim()==='')&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5].toString().trim(),obs:r[7]||''}));
-    state.provaDentes=dRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
-    state.entregas=eRows.filter(r=>r[0]&&r[0].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',entrega:r[6]&&r[6].toString().trim()!==''?r[6].toString().trim():'',obs:r[7]||''}));
-    state.reembase=reemRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
+    state.moldagens=mRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),nome:r[1]||'',dentista:r[2]||'',tipo:r[3]||'',data:r[4]||'',dist:r[5]||'',situacao:r[6]||'Pendente',obs:r[7]||''}));
+    state.baseProva=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&r[6]&&r[6].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',data:r[6].toString().trim(),obs:r[7]||''}));
+    state.basePrevista=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&(!r[6]||r[6].toString().trim()==='')&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5].toString().trim(),obs:r[7]||''}));
+    state.provaDentes=dRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
+    state.entregas=eRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',entrega:r[6]&&r[6].toString().trim()!==''?r[6].toString().trim():'',obs:r[7]||''}));
+    state.reembase=reemRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
     state.proteticos=pRows.filter(r=>r[0]).map(r=>({codigo:r[0],nome:r[1]||'',pagaArmacao:r[2]==='S'||r[2]==='s'||r[2]==='1'}));
     state.dentistas=dentRows.filter(r=>r[0]).map(r=>r[0]);
     state.tiposPeca=tipoRows.filter(r=>r[0]).map(r=>({desc:r[0],pt:r[1]||'0',ppr:r[2]||'0'}));
-    state.remarcacoes=remRows.filter(r=>r[0]).map(r=>({codigo:r[0].toString().trim(),etapa:r[4]||'',data:r[5]||'',obs:r[6]||''}));
+    state.remarcacoes=remRows.filter(r=>r[0]&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),etapa:r[4]||'',data:r[5]||'',obs:r[6]||''}));
 
     state.connected=true;updateStatus();
     toast('Planilha carregada! '+state.moldagens.length+' registros.','success');
