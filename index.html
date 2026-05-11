@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.40 - fix filtro #N/A em entregas e moldagens, previsão entrega exibida corretamente -->
+<!-- ProSUS v4.41 - fix entregas do dashboard seguem contrato da moldagem, não data de entrega -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -352,7 +352,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.40</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.41</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -942,7 +942,9 @@ function inContrato(dateStr){
 function renderDashboard(){
   const mesesContrato=contratoMeses();
   const moldBase=mesesContrato?state.moldagens.filter(m=>inContrato(m.data)):state.moldagens;
-  const entregasBase=mesesContrato?state.entregas.filter(e=>inContrato(e.entrega||e.previsao)):state.entregas;
+  // Entregas seguem a moldagem: um paciente pertence ao contrato onde foi moldado
+  const moldBaseCods=new Set(moldBase.map(m=>m.codigo));
+  const entregasBase=mesesContrato?state.entregas.filter(e=>moldBaseCods.has(e.codigo)):state.entregas;
 
   const pacientesUnicos=new Set(moldBase.map(m=>baseCod(m.codigo))).size;
   const total=moldBase.length;
