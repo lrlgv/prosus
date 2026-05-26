@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.41 - fix entregas do dashboard seguem contrato da moldagem, não data de entrega -->
+<!-- ProSUS v4.42 - fix upsert sempre busca na planilha, evita duplicatas em Prova de Dentes/BP/Entregas -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -352,7 +352,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.41</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.42</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1405,18 +1405,17 @@ async function submitEtapaUnica(cod,tipo){
 
     // Helper: upsert — atualiza se já existe, insere se não existe
     const upsert=async(sheet,stateArr,values)=>{
-      const existing=stateArr.find(x=>x.codigo===String(cod));
-      if(existing){
-        const rows=await fetchSheet(sheet+'!A:A');
-        const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
-        if(rowIdx>=0){
-          const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet,row:rowIdx+1,values})});
-          const res=await r.json();
-          if(!res.success) throw new Error(res.error||'Erro ao atualizar');
-          return;
-        }
+      // Sempre busca na planilha para evitar duplicatas mesmo quando state não tem o registro
+      const rows=await fetchSheet(sheet+'!A:A');
+      const codStr=String(cod);
+      const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===codStr);
+      if(rowIdx>=0){
+        const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet,row:rowIdx+1,values})});
+        const res=await r.json();
+        if(!res.success) throw new Error(res.error||'Erro ao atualizar');
+      } else {
+        await postSheet(sheet,values);
       }
-      await postSheet(sheet,values);
     };
 
     if(tipo==='bp'){
@@ -1427,18 +1426,15 @@ async function submitEtapaUnica(cod,tipo){
       // Upsert considerando tanto baseProva (data real) quanto basePrevista (só previsão)
       const bpAllRows=[...state.baseProva,...state.basePrevista];
       const upsertBP=async()=>{
-        const existing=bpAllRows.find(x=>x.codigo===String(cod));
-        if(existing){
-          const rows=await fetchSheet('BaseProvaArmacao!A:A');
-          const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
-          if(rowIdx>=0){
-            const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'BaseProvaArmacao',row:rowIdx+1,values:[cod,'','','','',bpPrevVal,bp,bpObs]})});
-            const res=await r.json();
-            if(!res.success) throw new Error(res.error||'Erro ao atualizar');
-            return;
-          }
+        const rows=await fetchSheet('BaseProvaArmacao!A:A');
+        const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
+        if(rowIdx>=0){
+          const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'BaseProvaArmacao',row:rowIdx+1,values:[cod,'','','','',bpPrevVal,bp,bpObs]})});
+          const res=await r.json();
+          if(!res.success) throw new Error(res.error||'Erro ao atualizar');
+        } else {
+          await postSheet('BaseProvaArmacao',[cod,'','','','',bpPrevVal,bp,bpObs]);
         }
-        await postSheet('BaseProvaArmacao',[cod,'','','','',bpPrevVal,bp,bpObs]);
       };
       await upsertBP();
 
@@ -1453,15 +1449,11 @@ async function submitEtapaUnica(cod,tipo){
       const prev=fromInput(document.getElementById('et-prev').value);
       const entObs=document.getElementById('et-ent-obs').value;
       if(!ent&&!prev){toast('Informe ao menos a previsão ou data de entrega','error');return;}
+      const eRows=await fetchSheet('Entregas!A:A');
+      const eRowIdx=eRows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
       const existing=state.entregas.find(x=>x.codigo===String(cod));
-      if(existing){
-        const eRows=await fetchSheet('Entregas!A:A');
-        const rowIdx=eRows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
-        if(rowIdx>=0){
-          await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Entregas',row:rowIdx+1,values:[cod,'','','','',prev||existing.previsao,ent||existing.entrega,entObs||existing.obs]})});
-        } else {
-          await postSheet('Entregas',[cod,'','','','',prev,ent,entObs]);
-        }
+      if(eRowIdx>=0){
+        await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Entregas',row:eRowIdx+1,values:[cod,'','','','',prev||existing?.previsao||'',ent||existing?.entrega||'',entObs||existing?.obs||'']})});
       } else {
         await postSheet('Entregas',[cod,'','','','',prev,ent,entObs]);
       }
