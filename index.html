@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.42 - fix upsert sempre busca na planilha, evita duplicatas em Prova de Dentes/BP/Entregas -->
+<!-- ProSUS v4.43 - exportar tabela fechamentos, seletor tipo data filtro, tela validação dados -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -350,9 +350,10 @@
       <button class="nav-btn" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
       <button class="nav-btn" onclick="navigate('proteticos')"><span class="nav-icon">🧑‍🔧</span> Protéticos</button>
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
+      <button class="nav-btn" onclick="navigate('validacao')"><span class="nav-icon">✅</span> Validação</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.42</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.43</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -391,6 +392,7 @@
       <div class="mob-more-item" onclick="closeMobMore();navigate('dentistas')"><span class="icon">👨‍⚕️</span><span>Dentistas</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('proteticos')"><span class="icon">🧑‍🔧</span><span>Protéticos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tipopeca')"><span class="icon">🦷</span><span>Tipos de Peça</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('validacao')"><span class="icon">✅</span><span>Validação</span></div>
       <div class="mob-more-item" onclick="closeMobMore();recarregarDados()"><span class="icon">🔄</span><span>Atualizar</span></div>
       <div class="mob-more-item" onclick="closeMobMore();openConfig()"><span class="icon">⚙️</span><span>Configurações</span></div>
       <div class="mob-more-item" onclick="closeMobMore();toggleTheme()"><span class="icon" id="mob-theme-icon">☀️</span><span>Tema</span></div>
@@ -437,8 +439,17 @@
             <option value="entregue">Entregue</option>
             <option value="reembase">Reembase</option>
           </select>
-          <input type="date" class="filter-select" id="filter-data-de" onchange="filterTable()" title="Data moldagem DE">
-          <input type="date" class="filter-select" id="filter-data-ate" onchange="filterTable()" title="Data moldagem ATÉ">
+          <select class="filter-select" id="filter-tipo-data" onchange="filterTable()" style="min-width:160px">
+            <option value="moldagem">Data Moldagem</option>
+            <option value="bp">Data Base de Prova</option>
+            <option value="bp_prev">Previsão Base de Prova</option>
+            <option value="pd">Data Prova de Dentes</option>
+            <option value="entrega">Data Entrega</option>
+            <option value="entrega_prev">Previsão Entrega</option>
+            <option value="reembase">Data Reembase</option>
+          </select>
+          <input type="date" class="filter-select" id="filter-data-de" onchange="filterTable()" title="Data DE">
+          <input type="date" class="filter-select" id="filter-data-ate" onchange="filterTable()" title="Data ATÉ">
           <button class="btn btn-secondary btn-sm" onclick="clearFilters()">✕ Limpar</button>
         </div>
         <div class="table-card">
@@ -495,6 +506,12 @@
   </div>
 </div>
 
+<div class="page" id="page-validacao">
+  <div class="page-content" id="validacao-content">
+    <div class="not-connected"><div class="icon">🔍</div><p>Carregando...</p></div>
+  </div>
+</div>
+
 <!-- DETAIL MODAL -->
 <div class="modal-overlay" id="detail-modal">
   <div class="modal modal-lg">
@@ -548,7 +565,7 @@ const state={
   }
 };
 
-const pages=['dashboard','pacientes','pipeline','fechamento','fechamento-armacao','contratos','cadastro','dentistas','proteticos','tipopeca'];
+const pages=['dashboard','pacientes','pipeline','fechamento','fechamento-armacao','contratos','cadastro','dentistas','proteticos','tipopeca','validacao'];
 const pageMeta={
   dashboard:['Dashboard','Visão geral do controle de próteses'],
   pacientes:['Consultar Pacientes','Busque e filtre os registros'],
@@ -559,7 +576,8 @@ const pageMeta={
   cadastro:['Nova Moldagem','Registre uma nova moldagem'],
   dentistas:['Dentistas','Gerencie os dentistas cadastrados'],
   proteticos:['Protéticos','Gerencie os protéticos (acesso restrito)'],
-  tipopeca:['Tipos de Peça','Gerencie os tipos de peça (BaseDados)']
+  tipopeca:['Tipos de Peça','Gerencie os tipos de peça (BaseDados)'],
+  validacao:['Validação de Dados','Cheque integridade dos registros nas planilhas']
 };
 
 window.onload=()=>{
@@ -744,7 +762,7 @@ function navigate(page){
     const btn=document.getElementById('mob-btn-'+p);
     if(btn) btn.classList.toggle('active',p===page);
   });
-  const morePages=['fechamento','dentistas','proteticos','tipopeca'];
+  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao'];
   const mobMore=document.getElementById('mob-btn-more');
   if(mobMore) mobMore.classList.toggle('active',morePages.includes(page));
   document.getElementById('page-'+page).classList.add('active');
@@ -761,6 +779,7 @@ function navigate(page){
   if(page==='fechamento'&&state.connected) renderFechamento();
   if(page==='fechamento-armacao'&&state.connected) renderFechamentoArmacao();
   if(page==='contratos'&&state.connected) renderContratos();
+  if(page==='validacao'&&state.connected) renderValidacao();
   // Scroll to top on mobile
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1252,7 +1271,16 @@ function filterTable(){
     }
     let mde=true,mate=true;
     if(dataDE||dataATE){
-      const dt=parseDate(m.data);
+      const tipoData=document.getElementById('filter-tipo-data')?.value||'moldagem';
+      let dataStr='';
+      if(tipoData==='moldagem') dataStr=m.data;
+      else if(tipoData==='bp'){const r=state.baseProva.find(x=>x.codigo===m.codigo);dataStr=r?.data||'';}
+      else if(tipoData==='bp_prev'){const r=state.baseProva.find(x=>x.codigo===m.codigo)||state.basePrevista.find(x=>x.codigo===m.codigo);dataStr=r?.previsao||'';}
+      else if(tipoData==='pd'){const r=state.provaDentes.find(x=>x.codigo===m.codigo);dataStr=r?.data||'';}
+      else if(tipoData==='entrega'){const r=state.entregas.find(x=>x.codigo===m.codigo);dataStr=r?.entrega||'';}
+      else if(tipoData==='entrega_prev'){const r=state.entregas.find(x=>x.codigo===m.codigo);dataStr=r?.previsao||'';}
+      else if(tipoData==='reembase'){const r=state.reembase.find(x=>x.codigo===m.codigo);dataStr=r?.data||'';}
+      const dt=parseDate(dataStr);
       if(dt){
         if(dataDE){const de=new Date(dataDE+'T00:00:00');mde=dt>=de;}
         if(dataATE){const ate=new Date(dataATE+'T23:59:59');mate=dt<=ate;}
@@ -1743,6 +1771,80 @@ function renderFechamento(){
     </div>
     <div id="fechamento-resultado"></div>`;
 }
+function renderValidacao(){
+  const el=document.getElementById('validacao-content');
+  el.innerHTML='<div class="not-connected"><div class="icon">🔄</div><p>Analisando dados...</p></div>';
+  setTimeout(()=>{
+    const codsMold=new Set(state.moldagens.map(m=>m.codigo));
+    const sheets=[
+      {nome:'Base de Prova',arr:state.baseProva},
+      {nome:'Base de Prova (Previsão)',arr:state.basePrevista},
+      {nome:'Prova de Dentes',arr:state.provaDentes},
+      {nome:'Entregas',arr:state.entregas},
+      {nome:'Reembase',arr:state.reembase},
+    ];
+
+    // 3.1 Duplicatas por aba
+    const dupRows=[];
+    sheets.forEach(({nome,arr})=>{
+      const cnt={};
+      arr.forEach(r=>{cnt[r.codigo]=(cnt[r.codigo]||0)+1;});
+      Object.entries(cnt).filter(([,v])=>v>1).forEach(([cod,v])=>{
+        const m=state.moldagens.find(x=>x.codigo===cod);
+        dupRows.push(`<tr><td class="td-code">#${cod}</td><td>${m?.nome||'—'}</td><td>${nome}</td><td style="color:var(--accent4);font-weight:700">${v} registros</td></tr>`);
+      });
+    });
+
+    // 3.2 Registros sem moldagem
+    const semMoldRows=[];
+    sheets.forEach(({nome,arr})=>{
+      arr.filter(r=>!codsMold.has(r.codigo)).forEach(r=>{
+        semMoldRows.push(`<tr><td class="td-code">#${r.codigo}</td><td style="color:var(--text3)">Sem moldagem</td><td>${nome}</td><td style="color:var(--accent3)">⚠️ Órfão</td></tr>`);
+      });
+    });
+
+    // 3.3 Moldagens sem nenhuma etapa (possível linha "perdida" na sequência)
+    const semEtapaCodsArr=state.moldagens.filter(m=>{
+      const tem=state.baseProva.some(x=>x.codigo===m.codigo)||
+                state.basePrevista.some(x=>x.codigo===m.codigo)||
+                state.provaDentes.some(x=>x.codigo===m.codigo)||
+                state.entregas.some(x=>x.codigo===m.codigo)||
+                state.reembase.some(x=>x.codigo===m.codigo);
+      return !tem;
+    });
+
+    const mkTable=(titulo,icon,rows,headers)=>{
+      if(!rows.length) return `<div class="alert alert-info" style="margin-bottom:12px">${icon} <strong>${titulo}</strong>: nenhum problema encontrado ✅</div>`;
+      return `<div class="table-card" style="margin-bottom:20px">
+        <div class="table-header"><h3>${icon} ${titulo}</h3><span style="font-size:12px;color:var(--text2)">${rows.length} ocorrência(s)</span></div>
+        <div style="overflow-x:auto"><table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>
+      </div>`;
+    };
+
+    const semEtapaRows=semEtapaCodsArr.map(m=>`<tr><td class="td-code">#${m.codigo}</td><td>${m.nome}</td><td>${m.data}</td><td style="color:var(--text3)">Sem etapas registradas</td></tr>`);
+
+    el.innerHTML=`
+      <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <h3 style="margin:0">📊 Resultado da Validação</h3>
+        <button class="btn btn-secondary btn-sm" onclick="renderValidacao()">🔄 Reanalisar</button>
+        <span style="font-size:12px;color:var(--text3)">${state.moldagens.length} moldagens · ${state.entregas.length} entregas</span>
+      </div>
+      ${mkTable('Duplicatas por Aba','🔁',dupRows,['Código','Paciente','Aba','Situação'])}
+      ${mkTable('Registros sem Moldagem (Órfãos)','👻',semMoldRows,['Código','Paciente','Aba','Situação'])}
+      ${mkTable('Moldagens sem nenhuma etapa','📭',semEtapaRows,['Código','Paciente','Data Moldagem','Observação'])}
+    `;
+  },100);
+}
+function exportarTabela(tabelaId,titulo){
+  const tbl=document.getElementById(tabelaId);
+  if(!tbl){toast('Tabela não encontrada','error');return;}
+  const rows=[...tbl.querySelectorAll('tr')];
+  const tsv=rows.map(r=>[...r.querySelectorAll('th,td')].map(c=>c.innerText.replace(/\t/g,' ')).join('\t')).join('\n');
+  navigator.clipboard.writeText(tsv).then(()=>toast('✅ "'+titulo+'" copiada! Cole direto na planilha (Ctrl+V).','success')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=tsv;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    toast('✅ Copiado! Cole direto na planilha (Ctrl+V).','success');
+  });
+}
 function gerarFechamento(){
   const ano=+document.getElementById('fech-ano').value;
   const mes=+document.getElementById('fech-mes').value;
@@ -1798,8 +1900,8 @@ function gerarFechamento(){
       </div>
     </div>
     <div class="table-card">
-      <div class="table-header"><h3>Listagem de Entregas</h3><span style="font-size:12px;color:var(--text2)">${totPac} pacientes · ordem por data</span></div>
-      <table><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Distribuição</th><th>Data Entrega</th><th>Tipo Peça</th><th>Qtde. PT</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
+      <div class="table-header"><h3>Listagem de Entregas</h3><span style="font-size:12px;color:var(--text2)">${totPac} pacientes · ordem por data</span><button class="btn btn-secondary btn-sm" onclick="exportarTabela('tbl-fechamento','Fechamento Mensal')">📋 Copiar tabela</button></div>
+      <table id="tbl-fechamento"><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Distribuição</th><th>Data Entrega</th><th>Tipo Peça</th><th>Qtde. PT</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
     </div>`;
 }
 
@@ -1878,8 +1980,8 @@ function gerarFechamentoArmacao(){
       </div>
     </div>
     <div class="table-card">
-      <div class="table-header"><h3>Listagem de Armações</h3><span style="font-size:12px;color:var(--text2)">${bpDoMes.length} pacientes · ${totPPR} PPR</span></div>
-      <table><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Protético</th><th>Data Armação</th><th>Tipo Peça</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
+      <div class="table-header"><h3>Listagem de Armações</h3><span style="font-size:12px;color:var(--text2)">${bpDoMes.length} pacientes · ${totPPR} PPR</span><button class="btn btn-secondary btn-sm" onclick="exportarTabela('tbl-armacao','Fechamento Armação')">📋 Copiar tabela</button></div>
+      <table id="tbl-armacao"><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Protético</th><th>Data Armação</th><th>Tipo Peça</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
     </div>`;
 }
 function renderCadastroForm(){
