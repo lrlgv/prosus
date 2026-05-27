@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.43 - exportar tabela fechamentos, seletor tipo data filtro, tela validação dados -->
+<!-- ProSUS v4.44 - fix validacao dentro do layout, tela resumo do dia -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -351,9 +351,10 @@
       <button class="nav-btn" onclick="navigate('proteticos')"><span class="nav-icon">🧑‍🔧</span> Protéticos</button>
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
       <button class="nav-btn" onclick="navigate('validacao')"><span class="nav-icon">✅</span> Validação</button>
+      <button class="nav-btn" onclick="navigate('resumo')"><span class="nav-icon">📋</span> Resumo do Dia</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.43</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.44</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -393,6 +394,7 @@
       <div class="mob-more-item" onclick="closeMobMore();navigate('proteticos')"><span class="icon">🧑‍🔧</span><span>Protéticos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tipopeca')"><span class="icon">🦷</span><span>Tipos de Peça</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('validacao')"><span class="icon">✅</span><span>Validação</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('resumo')"><span class="icon">📋</span><span>Resumo do Dia</span></div>
       <div class="mob-more-item" onclick="closeMobMore();recarregarDados()"><span class="icon">🔄</span><span>Atualizar</span></div>
       <div class="mob-more-item" onclick="closeMobMore();openConfig()"><span class="icon">⚙️</span><span>Configurações</span></div>
       <div class="mob-more-item" onclick="closeMobMore();toggleTheme()"><span class="icon" id="mob-theme-icon">☀️</span><span>Tema</span></div>
@@ -491,6 +493,14 @@
         <div id="tipopeca-content"></div>
       </div>
 
+      <div class="page" id="page-validacao">
+        <div id="validacao-content"><div class="not-connected"><div class="icon">🔍</div><p>Carregando...</p></div></div>
+      </div>
+
+      <div class="page" id="page-resumo">
+        <div id="resumo-content"><div class="not-connected"><div class="icon">📋</div><p>Carregando...</p></div></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -503,12 +513,6 @@
     <div id="cfg-readonly-warn" style="display:none" class="alert alert-warn">🔒 Modo leitura — sem permissão de edição.</div>
     <div class="form-group"><label>E-mails dos administradores</label><input type="text" id="cfg-admin-emails" placeholder="email1@gmail.com, email2@gmail.com"><small>Administradores podem editar e excluir registros. Separe por vírgula ou ponto e vírgula. Salvo na planilha (aba Configuracao).</small></div>
     <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Fechar</button><button id="cfg-save-btn" class="btn btn-primary" onclick="saveConfig()">💾 Salvar</button></div>
-  </div>
-</div>
-
-<div class="page" id="page-validacao">
-  <div class="page-content" id="validacao-content">
-    <div class="not-connected"><div class="icon">🔍</div><p>Carregando...</p></div>
   </div>
 </div>
 
@@ -565,7 +569,7 @@ const state={
   }
 };
 
-const pages=['dashboard','pacientes','pipeline','fechamento','fechamento-armacao','contratos','cadastro','dentistas','proteticos','tipopeca','validacao'];
+const pages=['dashboard','pacientes','pipeline','fechamento','fechamento-armacao','contratos','cadastro','dentistas','proteticos','tipopeca','validacao','resumo'];
 const pageMeta={
   dashboard:['Dashboard','Visão geral do controle de próteses'],
   pacientes:['Consultar Pacientes','Busque e filtre os registros'],
@@ -577,7 +581,8 @@ const pageMeta={
   dentistas:['Dentistas','Gerencie os dentistas cadastrados'],
   proteticos:['Protéticos','Gerencie os protéticos (acesso restrito)'],
   tipopeca:['Tipos de Peça','Gerencie os tipos de peça (BaseDados)'],
-  validacao:['Validação de Dados','Cheque integridade dos registros nas planilhas']
+  validacao:['Validação de Dados','Cheque integridade dos registros nas planilhas'],
+  resumo:['Resumo do Dia','Movimentações registradas hoje']
 };
 
 window.onload=()=>{
@@ -762,7 +767,7 @@ function navigate(page){
     const btn=document.getElementById('mob-btn-'+p);
     if(btn) btn.classList.toggle('active',p===page);
   });
-  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao'];
+  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao','resumo'];
   const mobMore=document.getElementById('mob-btn-more');
   if(mobMore) mobMore.classList.toggle('active',morePages.includes(page));
   document.getElementById('page-'+page).classList.add('active');
@@ -780,6 +785,7 @@ function navigate(page){
   if(page==='fechamento-armacao'&&state.connected) renderFechamentoArmacao();
   if(page==='contratos'&&state.connected) renderContratos();
   if(page==='validacao'&&state.connected) renderValidacao();
+  if(page==='resumo'&&state.connected) renderResumo();
   // Scroll to top on mobile
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1770,6 +1776,72 @@ function renderFechamento(){
       <button class="btn btn-primary" onclick="gerarFechamento()">🔍 Gerar Fechamento</button>
     </div>
     <div id="fechamento-resultado"></div>`;
+}
+function renderResumo(){
+  const el=document.getElementById('resumo-content');
+  const hoje=new Date();
+  const _td=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const hojeStr=_td(hoje);
+  const toInputLocal=d=>{if(!d)return'';const p=d.split('/');return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:'';}
+  const isHoje=dateStr=>toInputLocal(dateStr)===hojeStr;
+
+  const moldHoje=state.moldagens.filter(m=>isHoje(m.data));
+  const bpHoje=state.baseProva.filter(b=>isHoje(b.data));
+  const pdHoje=state.provaDentes.filter(p=>isHoje(p.data));
+  const entHoje=state.entregas.filter(e=>isHoje(e.entrega));
+  const rbHoje=state.reembase.filter(r=>isHoje(r.data));
+
+  const mkSecao=(titulo,icon,cor,items,campos)=>{
+    if(!items.length) return `<div class="table-card" style="margin-bottom:16px;opacity:.6">
+      <div class="table-header"><h3>${icon} ${titulo}</h3><span style="font-size:12px;color:var(--text3)">Nenhum registro hoje</span></div></div>`;
+    const rows=items.map(item=>{
+      const m=state.moldagens.find(x=>x.codigo===item.codigo)||{};
+      const cols=campos.map(f=>`<td>${f(item,m)}</td>`).join('');
+      return`<tr><td class="td-code"><button class="icon-btn" onclick="showDetail('${item.codigo}')" style="margin-right:4px">🔎</button>#${item.codigo}</td><td class="td-name">${m.nome||item.nome||'—'}</td>${cols}</tr>`;
+    }).join('');
+    return`<div class="table-card" style="margin-bottom:16px;border-left:3px solid ${cor}">
+      <div class="table-header"><h3>${icon} ${titulo}</h3><span style="font-size:12px;color:var(--text2);font-weight:700">${items.length} registro(s)</span></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Código</th><th>Paciente</th>${campos.map((_,i)=>`<th>${['Dentista','Tipo','Protético','Obs.'][i]||''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+  };
+
+  const dStr=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const total=moldHoje.length+bpHoje.length+pdHoje.length+entHoje.length+rbHoje.length;
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <div>
+        <h3 style="margin:0;font-size:18px">📋 Resumo do Dia</h3>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px;text-transform:capitalize">${dStr}</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="renderResumo()">🔄 Atualizar</button>
+      ${total===0?'<span style="font-size:13px;color:var(--text3)">Nenhuma movimentação registrada hoje.</span>':'<span style="font-size:13px;color:var(--accent);font-weight:700">'+total+' movimentação(ões)</span>'}
+    </div>
+    ${mkSecao('Moldagens','🦷','var(--text2)',moldHoje,[
+      (it,m)=>`${cap(m.dentista||it.dentista||'—')}`,
+      (it,m)=>`${m.tipo||it.tipo||'—'}`,
+      (it,m)=>`${it.dist||m.dist||'—'}`,
+    ])}
+    ${mkSecao('Base de Prova / Armação','🔵','#3b82f6',bpHoje,[
+      (it,m)=>`${cap(m.dentista||'—')}`,
+      (it,m)=>`${m.tipo||'—'}`,
+      (it)=>`${it.obs||'—'}`,
+    ])}
+    ${mkSecao('Prova de Dentes','🟡','#f59e0b',pdHoje,[
+      (it,m)=>`${cap(m.dentista||'—')}`,
+      (it,m)=>`${m.tipo||'—'}`,
+      (it)=>`${it.obs||'—'}`,
+    ])}
+    ${mkSecao('Entregas','✅','#22c55e',entHoje,[
+      (it,m)=>`${cap(m.dentista||'—')}`,
+      (it,m)=>`${m.tipo||'—'}`,
+      (it)=>`${it.obs||'—'}`,
+    ])}
+    ${mkSecao('Reembase','🔧','#8b5cf6',rbHoje,[
+      (it,m)=>`${cap(m.dentista||'—')}`,
+      (it,m)=>`${m.tipo||'—'}`,
+      (it)=>`${it.obs||'—'}`,
+    ])}`;
 }
 function renderValidacao(){
   const el=document.getElementById('validacao-content');
