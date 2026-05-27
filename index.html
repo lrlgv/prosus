@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.44 - fix validacao dentro do layout, tela resumo do dia -->
+<!-- ProSUS v4.45 - resumo do dia com seletor de data, Validação no footer, Resumo no Geral -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -340,6 +340,7 @@
     <div class="sidebar-nav">
       <div class="nav-section">Geral</div>
       <button class="nav-btn active" onclick="navigate('dashboard')"><span class="nav-icon">📊</span> Dashboard</button>
+      <button class="nav-btn" onclick="navigate('resumo')"><span class="nav-icon">📋</span> Resumo do Dia</button>
       <button class="nav-btn" onclick="navigate('pacientes')"><span class="nav-icon">🔍</span> Consultar</button>
       <button class="nav-btn" onclick="navigate('pipeline')"><span class="nav-icon">⚡</span> Etapas</button>
       <button class="nav-btn" onclick="navigate('fechamento')"><span class="nav-icon">📅</span> Fechamento</button>
@@ -350,12 +351,11 @@
       <button class="nav-btn" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
       <button class="nav-btn" onclick="navigate('proteticos')"><span class="nav-icon">🧑‍🔧</span> Protéticos</button>
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
-      <button class="nav-btn" onclick="navigate('validacao')"><span class="nav-icon">✅</span> Validação</button>
-      <button class="nav-btn" onclick="navigate('resumo')"><span class="nav-icon">📋</span> Resumo do Dia</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.44</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.45</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
+      <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
     </div>
@@ -920,6 +920,7 @@ async function loadAll(){
     renderDashboard();renderTable();renderPipeline();renderCadastroForm();
     renderFechamento();renderFechamentoArmacao();
     refreshDetailIfOpen();
+    if(document.querySelector('#page-resumo.active')) renderResumo();
     if(document.querySelector('#page-contratos.active')) renderContratos();
   }catch(e){
     state.connected=false;updateStatus();
@@ -1777,11 +1778,11 @@ function renderFechamento(){
     </div>
     <div id="fechamento-resultado"></div>`;
 }
-function renderResumo(){
+function renderResumo(dataSel){
   const el=document.getElementById('resumo-content');
   const hoje=new Date();
   const _td=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  const hojeStr=_td(hoje);
+  const hojeStr=dataSel||_td(hoje);
   const toInputLocal=d=>{if(!d)return'';const p=d.split('/');return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:'';}
   const isHoje=dateStr=>toInputLocal(dateStr)===hojeStr;
 
@@ -1805,7 +1806,8 @@ function renderResumo(){
     </div>`;
   };
 
-  const dStr=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const selDate=new Date(hojeStr+'T12:00:00');
+  const dStr=selDate.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   const total=moldHoje.length+bpHoje.length+pdHoje.length+entHoje.length+rbHoje.length;
 
   el.innerHTML=`
@@ -1814,8 +1816,9 @@ function renderResumo(){
         <h3 style="margin:0;font-size:18px">📋 Resumo do Dia</h3>
         <div style="font-size:12px;color:var(--text2);margin-top:2px;text-transform:capitalize">${dStr}</div>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="renderResumo()">🔄 Atualizar</button>
-      ${total===0?'<span style="font-size:13px;color:var(--text3)">Nenhuma movimentação registrada hoje.</span>':'<span style="font-size:13px;color:var(--accent);font-weight:700">'+total+' movimentação(ões)</span>'}
+      <input type="date" class="filter-select" value="${hojeStr}" onchange="renderResumo(this.value)" style="width:auto">
+      <button class="btn btn-secondary btn-sm" onclick="renderResumo(document.querySelector('#resumo-content input[type=date]')?.value||'')">🔄 Atualizar</button>
+      ${total===0?'<span style="font-size:13px;color:var(--text3)">Nenhuma movimentação nesta data.</span>':'<span style="font-size:13px;color:var(--accent);font-weight:700">'+total+' movimentação(ões)</span>'}
     </div>
     ${mkSecao('Moldagens','🦷','var(--text2)',moldHoje,[
       (it,m)=>`${cap(m.dentista||it.dentista||'—')}`,
