@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.45 - resumo do dia com seletor de data, Validação no footer, Resumo no Geral -->
+<!-- ProSUS v4.46 - fix delay pós-save antes do loadAll para garantir atualização da tela -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -353,7 +353,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.45</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.46</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -1507,6 +1507,7 @@ async function submitEtapaUnica(cod,tipo){
       await postSheet('Remarcacao',[cod,'','','',remEtapa,remData,remObs]);
     }
     toast('Salvo com sucesso!','success');
+    await new Promise(r=>setTimeout(r,600));
     await loadAll();showDetail(cod);switchDetailTab('etapas');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
