@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.46 - fix delay pós-save antes do loadAll para garantir atualização da tela -->
+<!-- ProSUS v4.47 - remove lupa dupla, previsão PD col F/G, botão hoje em todas etapas -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -353,7 +353,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.46</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.47</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -1408,7 +1408,7 @@ function renderDetailEtapas(cod){
     <div class="etapa-block ent">
       <div class="section-divider ent">✅ Entrega</div>
       <div class="form-row">
-        <div class="form-group"><label>Data de Entrega</label><input type="date" id="et-ent" value="${toInput(e.entrega)}" ${ro}></div>
+        <div class="form-group"><label>Data de Entrega</label><div style="display:flex;gap:6px;align-items:center"><input type="date" id="et-ent" value="${toInput(e.entrega)}" ${ro} style="flex:1">${admin?`<button class="btn btn-secondary btn-sm" onclick="setHoje('et-ent')" ${ro}>📅 Hoje</button>`:''}</div></div>
         <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="et-prev" value="${toInput(e.previsao)}" ${ro}></div>
       </div>
       <div class="form-group"><label>Observação da Entrega</label><input type="text" id="et-ent-obs" value="${e.obs||''}" placeholder="Obs. opcional" ${ro}></div>
@@ -1428,7 +1428,7 @@ function renderDetailEtapas(cod){
     <div class="etapa-block rb">
       <div class="section-divider rb">🔧 Reembase</div>
       <div class="form-row">
-        <div class="form-group"><label>Data do Reembase</label><input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro}></div>
+        <div class="form-group"><label>Data do Reembase</label><div style="display:flex;gap:6px;align-items:center"><input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro} style="flex:1">${admin?`<button class="btn btn-secondary btn-sm" onclick="setHoje('et-rb')" ${ro}>📅 Hoje</button>`:''}</div></div>
         <div class="form-group"><label>Observação</label><input type="text" id="et-rb-obs" value="${rb.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       </div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rb')">💾 Salvar Reembase</button>`:''}
