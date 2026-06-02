@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.47 - remove lupa dupla, previsão PD col F/G, botão hoje em todas etapas -->
+<!-- ProSUS v4.48 - fix definitivo lupa dupla na consulta -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -353,7 +353,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.47</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.48</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -1124,7 +1124,7 @@ function renderTablePage(){
   let h=`<table><thead><tr>
     <th>Código</th><th>Nome</th><th>Dentista</th><th>Tipo</th><th>Data Moldagem</th>
     <th>Distribuição</th>
-    <th>Entrega / Previsão</th><th>Situação</th><th></th>
+    <th>Entrega / Previsão</th><th>Situação</th>
   </tr></thead><tbody>`;
 
   pageKeys.forEach(base=>{
@@ -1158,7 +1158,6 @@ function renderTablePage(){
       <td data-label="Dist.">${distDisplay}</td>
       <td data-label="Entrega">${entregaCell(primary.codigo)}</td>
       <td data-label="Situação"><span class="badge ${bc}">${sit}</span></td>
-      <td><button class="icon-btn" onclick="showDetail('${primary.codigo}')">🔎</button></td>
     </tr>`;
 
     // Render child rows when expanded
@@ -1178,7 +1177,6 @@ function renderTablePage(){
           <td data-label="Dist.">${cDist}</td>
           <td data-label="Entrega">${entregaCell(child.codigo)}</td>
           <td data-label="Situação"><span class="badge ${cbc}">${csit}</span></td>
-          <td><button class="icon-btn" onclick="showDetail('${child.codigo}')">🔎</button></td>
         </tr>`;
       });
     }
