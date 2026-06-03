@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.48 - fix definitivo lupa dupla na consulta -->
+<!-- ProSUS v4.49 - previsão em prova de dentes e registro automático hoje -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -353,7 +353,7 @@
       <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.48</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.49</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -446,6 +446,7 @@
             <option value="bp">Data Base de Prova</option>
             <option value="bp_prev">Previsão Base de Prova</option>
             <option value="pd">Data Prova de Dentes</option>
+            <option value="pd_prev">Previsão Prova de Dentes</option>
             <option value="entrega">Data Entrega</option>
             <option value="entrega_prev">Previsão Entrega</option>
             <option value="reembase">Data Reembase</option>
@@ -819,6 +820,20 @@ function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
 function parseDate(d){if(!d)return null;const p=d.split('/');if(p.length!==3)return null;return new Date(+p[2],+p[1]-1,+p[0]);}
 function toInput(d){if(!d)return'';const p=d.split('/');return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:''}
 function fromInput(v){if(!v)return'';const p=v.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:''}
+function setHoje(inputId){
+  const input=document.getElementById(inputId);
+  if(input){
+    const today=new Date();
+    const yyyy=today.getFullYear();
+    const mm=String(today.getMonth()+1).padStart(2,'0');
+    const dd=String(today.getDate()).padStart(2,'0');
+    input.value=`${yyyy}-${mm}-${dd}`;
+  }
+}
+async function salvarHoje(cod,tipo,inputId){
+  setHoje(inputId);
+  await submitEtapaUnica(cod,tipo);
+}
 /* ── MULTI-TRATAMENTO HELPERS ── */
 // Extrai o código base (ex: "7457/1" → "7457", "7457" → "7457")
 function baseCod(cod){return String(cod).split('/')[0];}
@@ -869,7 +884,7 @@ async function loadAll(){
     const[mRows,bRows,dRows,eRows]=await Promise.all([
       fetchSheet('Moldagens!A2:H5000'),
       fetchSheet('BaseProvaArmacao!A2:H2000'),
-      fetchSheet('Prova de Dentes!A2:G2000'),
+      fetchSheet('Prova de Dentes!A2:H2000'),
       fetchSheet('Entregas!A2:J2000')
     ]);
     let pRows=[],dentRows=[],tipoRows=[],remRows=[],reemRows=[],cfgRows=[];
@@ -907,7 +922,7 @@ async function loadAll(){
     state.moldagens=mRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),nome:r[1]||'',dentista:r[2]||'',tipo:r[3]||'',data:r[4]||'',dist:r[5]||'',situacao:r[6]||'Pendente',obs:r[7]||''}));
     state.baseProva=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&r[6]&&r[6].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',data:r[6].toString().trim(),obs:r[7]||''}));
     state.basePrevista=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&(!r[6]||r[6].toString().trim()==='')&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5].toString().trim(),obs:r[7]||''}));
-    state.provaDentes=dRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
+    state.provaDentes=dRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&((r[5]&&r[5].toString().trim()!=='')||(r[6]&&r[6].toString().trim()!==''))).map(r=>({codigo:r[0].toString().trim(),previsao:r[5]?r[5].toString().trim():'',data:r[6]?r[6].toString().trim():'',obs:r[7]||''}));
     state.entregas=eRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',entrega:r[6]&&r[6].toString().trim()!==''?r[6].toString().trim():'',obs:r[7]||''}));
     state.reembase=reemRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
     state.proteticos=pRows.filter(r=>r[0]).map(r=>({codigo:r[0],nome:r[1]||'',pagaArmacao:r[2]==='S'||r[2]==='s'||r[2]==='1'}));
@@ -1256,7 +1271,7 @@ function filterTable(){
 
   // Build sets for etapa filtering
   const bpSet=new Set(state.baseProva.map(x=>x.codigo));
-  const pdSet=new Set(state.provaDentes.map(x=>x.codigo));
+  const pdSet=new Set(state.provaDentes.filter(x=>x.data&&x.data.trim()!=='').map(x=>x.codigo));
   const entSet=new Set(state.entregas.filter(e=>e.entrega).map(e=>e.codigo));
   const rbSet=new Set(state.reembase.map(x=>x.codigo));
 
@@ -1282,6 +1297,7 @@ function filterTable(){
       else if(tipoData==='bp'){const r=state.baseProva.find(x=>x.codigo===m.codigo);dataStr=r?.data||'';}
       else if(tipoData==='bp_prev'){const r=state.baseProva.find(x=>x.codigo===m.codigo)||state.basePrevista.find(x=>x.codigo===m.codigo);dataStr=r?.previsao||'';}
       else if(tipoData==='pd'){const r=state.provaDentes.find(x=>x.codigo===m.codigo);dataStr=r?.data||'';}
+      else if(tipoData==='pd_prev'){const r=state.provaDentes.find(x=>x.codigo===m.codigo);dataStr=r?.previsao||'';}
       else if(tipoData==='entrega'){const r=state.entregas.find(x=>x.codigo===m.codigo);dataStr=r?.entrega||'';}
       else if(tipoData==='entrega_prev'){const r=state.entregas.find(x=>x.codigo===m.codigo);dataStr=r?.previsao||'';}
       else if(tipoData==='reembase'){const r=state.reembase.find(x=>x.codigo===m.codigo);dataStr=r?.data||'';}
@@ -1346,7 +1362,7 @@ function renderDetailInfo(cod){
     <div style="font-size:10px;color:var(--text2);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Linha do Tempo</div>
     ${step('Moldagem',m.data,'#4af0a0','')}
     ${step('Base de Prova / Armação',bp?.data,'#3b82f6',bp?.obs||'',bpPrevInfo?.previsao||'')}
-    ${step('Prova de Dentes',pd?.data,'#f59e0b',pd?.obs||'')}
+    ${step('Prova de Dentes',pd?.data,'#f59e0b',pd?.obs||'',pd?.previsao||'')}
     ${step('Entrega',e?.entrega,'#4af0a0',e?.obs||'')}
     ${e?.previsao&&!e?.entrega?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-left:26px">📅 Previsão: <strong style="color:var(--text)">${e.previsao}</strong></div>`:''}
     ${remHtml}
@@ -1387,7 +1403,13 @@ function renderDetailEtapas(cod){
     <div class="etapa-block bp">
       <div class="section-divider bp">🔵 Base de Prova / Armação</div>
       <div class="form-row">
-        <div class="form-group"><label>Data</label><input type="date" id="et-bp" value="${toInput(bp.data)}" ${ro}></div>
+        <div class="form-group">
+          <label>Data</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="et-bp" value="${toInput(bp.data)}" ${ro} style="flex:1">
+            ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','bp','et-bp')" ${ro}>⚡ Registrar Hoje</button>`:''}
+          </div>
+        </div>
         <div class="form-group"><label>Previsão</label><input type="date" id="et-bp-prev" value="${toInput(bp.previsao||bpPrev?.previsao||'')}" ${ro}></div>
       </div>
       <div class="form-group"><label>Observação</label><input type="text" id="et-bp-obs" value="${bp.obs||bpPrev?.obs||''}" placeholder="Obs. opcional" ${ro}></div>
@@ -1397,16 +1419,29 @@ function renderDetailEtapas(cod){
     <div class="etapa-block pd">
       <div class="section-divider pd">🟡 Prova de Dentes</div>
       <div class="form-row">
-        <div class="form-group"><label>Data</label><input type="date" id="et-pd" value="${toInput(pd.data)}" ${ro}></div>
-        <div class="form-group"><label>Observação</label><input type="text" id="et-pd-obs" value="${pd.obs||''}" placeholder="Obs. opcional" ${ro}></div>
+        <div class="form-group">
+          <label>Data</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="et-pd" value="${toInput(pd.data)}" ${ro} style="flex:1">
+            ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','pd','et-pd')" ${ro}>⚡ Registrar Hoje</button>`:''}
+          </div>
+        </div>
+        <div class="form-group"><label>Previsão</label><input type="date" id="et-pd-prev" value="${toInput(pd.previsao)}" ${ro}></div>
       </div>
+      <div class="form-group"><label>Observação</label><input type="text" id="et-pd-obs" value="${pd.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','pd')">💾 Salvar Prova de Dentes</button>`:''}
     </div>
 
     <div class="etapa-block ent">
       <div class="section-divider ent">✅ Entrega</div>
       <div class="form-row">
-        <div class="form-group"><label>Data de Entrega</label><div style="display:flex;gap:6px;align-items:center"><input type="date" id="et-ent" value="${toInput(e.entrega)}" ${ro} style="flex:1">${admin?`<button class="btn btn-secondary btn-sm" onclick="setHoje('et-ent')" ${ro}>📅 Hoje</button>`:''}</div></div>
+        <div class="form-group">
+          <label>Data de Entrega</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="et-ent" value="${toInput(e.entrega)}" ${ro} style="flex:1">
+            ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','ent','et-ent')" ${ro}>⚡ Registrar Hoje</button>`:''}
+          </div>
+        </div>
         <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="et-prev" value="${toInput(e.previsao)}" ${ro}></div>
       </div>
       <div class="form-group"><label>Observação da Entrega</label><input type="text" id="et-ent-obs" value="${e.obs||''}" placeholder="Obs. opcional" ${ro}></div>
@@ -1426,7 +1461,13 @@ function renderDetailEtapas(cod){
     <div class="etapa-block rb">
       <div class="section-divider rb">🔧 Reembase</div>
       <div class="form-row">
-        <div class="form-group"><label>Data do Reembase</label><div style="display:flex;gap:6px;align-items:center"><input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro} style="flex:1">${admin?`<button class="btn btn-secondary btn-sm" onclick="setHoje('et-rb')" ${ro}>📅 Hoje</button>`:''}</div></div>
+        <div class="form-group">
+          <label>Data do Reembase</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro} style="flex:1">
+            ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','rb','et-rb')" ${ro}>⚡ Registrar Hoje</button>`:''}
+          </div>
+        </div>
         <div class="form-group"><label>Observação</label><input type="text" id="et-rb-obs" value="${rb.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       </div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rb')">💾 Salvar Reembase</button>`:''}
@@ -1473,9 +1514,21 @@ async function submitEtapaUnica(cod,tipo){
 
     } else if(tipo==='pd'){
       const pd=fromInput(document.getElementById('et-pd').value);
+      const pdPrev=fromInput(document.getElementById('et-pd-prev').value);
       const pdObs=document.getElementById('et-pd-obs').value;
-      if(!pd){toast('Informe a data da Prova de Dentes','error');return;}
-      await upsert('Prova de Dentes',state.provaDentes,[cod,'','','','',pd,pdObs]);
+      if(!pd&&!pdPrev){toast('Informe ao menos a previsão ou data real da Prova de Dentes','error');return;}
+      const upsertPD=async()=>{
+        const rows=await fetchSheet('Prova de Dentes!A:A');
+        const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
+        if(rowIdx>=0){
+          const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Prova de Dentes',row:rowIdx+1,values:[cod,'','','','',pdPrev,pd,pdObs]})});
+          const res=await r.json();
+          if(!res.success) throw new Error(res.error||'Erro ao atualizar');
+        } else {
+          await postSheet('Prova de Dentes',[cod,'','','','',pdPrev,pd,pdObs]);
+        }
+      };
+      await upsertPD();
 
     } else if(tipo==='ent'){
       const ent=fromInput(document.getElementById('et-ent').value);
@@ -1567,7 +1620,7 @@ function navegarComFiltroEtapa(etapa){
 /* ── PIPELINE ── */
 function renderPipeline(){
   const bpSet=new Set(state.baseProva.map(m=>m.codigo));
-  const pdSet=new Set(state.provaDentes.map(m=>m.codigo));
+  const pdSet=new Set(state.provaDentes.filter(m=>m.data&&m.data.trim()!=='').map(m=>m.codigo));
   const entSet=new Set(state.entregas.filter(e=>e.entrega).map(e=>e.codigo));
   const rbSet=new Set(state.reembase.map(r=>r.codigo));
   const totalMold=state.moldagens.length;
@@ -1621,7 +1674,11 @@ function renderPipeline(){
   };
   const card2=m=>{
     const bp=state.baseProva.find(b=>b.codigo===m.codigo);
-    return mkCard(m,bp?.data?`<div style="font-size:10px;color:var(--accent2);margin-top:3px;font-weight:600">🔵 Base: ${bp.data}</div>`:'');
+    const pd=state.provaDentes.find(p=>p.codigo===m.codigo);
+    return mkCard(m,
+      (bp?.data?`<div style="font-size:10px;color:var(--accent2);margin-top:3px;font-weight:600">🔵 Base: ${bp.data}</div>`:'') +
+      (pd?.previsao?`<div style="font-size:10px;color:var(--accent3);margin-top:2px;font-weight:600">📅 Prev. Dentes: ${pd.previsao}</div>`:'')
+    );
   };
   const card3=m=>{
     const bp=state.baseProva.find(b=>b.codigo===m.codigo);
