@@ -1,4 +1,4 @@
-# Documentação Técnica do ProSUS v4.49
+# Documentação Técnica do ProSUS v5.0
 ## Sistema de Controle de Próteses Dentárias do SUS
 
 O **ProSUS** é uma aplicação do tipo *Single Page Application* (SPA) com capacidades de *Progressive Web App* (PWA) desenvolvida para gerenciar de ponta a ponta o fluxo de confecção, acompanhamento, remarcações e fechamentos financeiros de próteses dentárias (Prótese Total - PT e Prótese Parcial Removível - PPR) fornecidas pelo SUS.
@@ -193,3 +193,60 @@ function doOptions(e) {
     .setMimeType(ContentService.MimeType.TEXT);
 }
 ```
+
+
+---
+
+## 8. Identidade Visual (a partir da v5.0)
+
+A partir da versão 5.0 o ProSUS adota uma identidade visual própria — moderna, clara e voltada ao uso diário em ambiente clínico.
+
+### 8.1 Logomarca
+- **Símbolo:** "Arco de Progresso" — um anel quase completo com um nó na extremidade, representando o acompanhamento e a conclusão das etapas (o coração do sistema). Símbolo abstrato e geométrico, **sem dente literal**.
+- **Logotipo:** "ProSUS" em *Space Grotesk* 600, com "SUS" em teal.
+- **Aplicação:** o símbolo aparece em caixa com gradiente teal→petróleo no login, na sidebar e na topbar mobile, e nos ícones do PWA (192/512 e apple-touch).
+- O emoji de dente foi removido da marca; emojis remanescentes são apenas ícones funcionais de conteúdo (ex.: menu "Tipos de Peça").
+
+### 8.2 Paleta de cores
+| Papel | Token | Claro | Escuro |
+| :--- | :--- | :--- | :--- |
+| Primária (ações/sucesso) | `--accent` | #0D7D6E | #27A08E |
+| Secundária (info/previsto) | `--accent2` | #13456A | #6FB0D6 |
+| Atenção | `--accent3` | #B9791A | #DCA64B |
+| Atrasado | `--accent4` | #C2542E | #E7825C |
+| Fundo | `--bg` | #FBFDFC | #06202F |
+| Superfície | `--surface` | #FFFFFF | #0C2C3B |
+| Tinta (texto) | `--text` | #0B2A2C | #E7F1EF |
+
+As cores são definidas em variáveis CSS (`:root` para o tema escuro e `body.light` para o claro), o que permite re-tematizar todo o app a partir de um único ponto.
+
+### 8.3 Tipografia
+- **Space Grotesk** — títulos, marca e números de destaque (KPIs).
+- **Hanken Grotesk** — corpo, formulários, tabelas e botões.
+- **Space Mono** — disponível para códigos de tratamento, IDs e datas.
+
+### 8.4 Tema
+- **Tema claro é o padrão** (recomendado para uso clínico); a alternância para o escuro permanece disponível e é persistida em `localStorage` (`prosus_theme`).
+- A troca de tema desativa transições momentaneamente (classe `theme-switching`) para repintar as superfícies instantaneamente, evitando estados "presos".
+
+---
+
+## 9. Otimização para Tablet (Android)
+
+A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo retrato** (orientação travada em `portrait-primary` no manifest).
+
+- **Layout sem sidebar fixa:** em telas até 1024px em retrato, a barra lateral dá lugar à **barra de navegação inferior** + topbar mobile (melhor alcance do polegar e melhor aproveitamento da largura).
+- **Aproveitamento de espaço:** grids mais largos (4 KPIs por linha, gráficos em 2 colunas, colunas do pipeline com ~46vw), modais centralizados como cartão, barra inferior mais alta.
+- **Alvos de toque:** botões, campos, seletores e itens de navegação com altura mínima de 44–48px via `@media (pointer:coarse)` — válido em qualquer orientação.
+- Em **paisagem** (ex.: 1280×800) a sidebar tradicional é mantida, com alvos de toque ampliados.
+
+---
+
+## 10. Histórico de Versões
+
+| Versão | Mudanças |
+| :--- | :--- |
+| **v5.0** | Nova identidade visual (paleta teal/petróleo, logomarca "Arco de Progresso", tipografia Space Grotesk + Hanken Grotesk). Tema claro como padrão. Otimização para tablet Android (retrato). Correção de bug de inicialização do OAuth (`tokenClient` em TDZ). |
+| v4.50 | Redesign visual "SaaS Moderno" (paleta azul-índigo). |
+| v4.49 | Versão base documentada. |
+
