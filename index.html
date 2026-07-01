@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v4.49 - previsão em prova de dentes e registro automático hoje -->
+<!-- ProSUS v4.50 - correção do destaque do menu lateral (data-page em vez de índice) -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -339,21 +339,21 @@
     </div>
     <div class="sidebar-nav">
       <div class="nav-section">Geral</div>
-      <button class="nav-btn active" onclick="navigate('dashboard')"><span class="nav-icon">📊</span> Dashboard</button>
-      <button class="nav-btn" onclick="navigate('resumo')"><span class="nav-icon">📋</span> Resumo do Dia</button>
-      <button class="nav-btn" onclick="navigate('pacientes')"><span class="nav-icon">🔍</span> Consultar</button>
-      <button class="nav-btn" onclick="navigate('pipeline')"><span class="nav-icon">⚡</span> Etapas</button>
-      <button class="nav-btn" onclick="navigate('fechamento')"><span class="nav-icon">📅</span> Fechamento</button>
-      <button class="nav-btn" onclick="navigate('fechamento-armacao')"><span class="nav-icon">🔩</span> Fecham. Armação</button>
-      <button class="nav-btn" onclick="navigate('contratos')"><span class="nav-icon">📃</span> Contratos</button>
+      <button class="nav-btn active" data-page="dashboard" onclick="navigate('dashboard')"><span class="nav-icon">📊</span> Dashboard</button>
+      <button class="nav-btn" data-page="resumo" onclick="navigate('resumo')"><span class="nav-icon">📋</span> Resumo do Dia</button>
+      <button class="nav-btn" data-page="pacientes" onclick="navigate('pacientes')"><span class="nav-icon">🔍</span> Consultar</button>
+      <button class="nav-btn" data-page="pipeline" onclick="navigate('pipeline')"><span class="nav-icon">⚡</span> Etapas</button>
+      <button class="nav-btn" data-page="fechamento" onclick="navigate('fechamento')"><span class="nav-icon">📅</span> Fechamento</button>
+      <button class="nav-btn" data-page="fechamento-armacao" onclick="navigate('fechamento-armacao')"><span class="nav-icon">🔩</span> Fecham. Armação</button>
+      <button class="nav-btn" data-page="contratos" onclick="navigate('contratos')"><span class="nav-icon">📃</span> Contratos</button>
       <div class="nav-section">Cadastros</div>
-      <button class="nav-btn" onclick="navigate('cadastro')"><span class="nav-icon">➕</span> Nova Moldagem</button>
-      <button class="nav-btn" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
-      <button class="nav-btn" onclick="navigate('proteticos')"><span class="nav-icon">🧑‍🔧</span> Protéticos</button>
-      <button class="nav-btn" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
+      <button class="nav-btn" data-page="cadastro" onclick="navigate('cadastro')"><span class="nav-icon">➕</span> Nova Moldagem</button>
+      <button class="nav-btn" data-page="dentistas" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
+      <button class="nav-btn" data-page="proteticos" onclick="navigate('proteticos')"><span class="nav-icon">🧑‍🔧</span> Protéticos</button>
+      <button class="nav-btn" data-page="tipopeca" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.49</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v4.50</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -570,7 +570,6 @@ const state={
   }
 };
 
-const pages=['dashboard','pacientes','pipeline','fechamento','fechamento-armacao','contratos','cadastro','dentistas','proteticos','tipopeca','validacao','resumo'];
 const pageMeta={
   dashboard:['Dashboard','Visão geral do controle de próteses'],
   pacientes:['Consultar Pacientes','Busque e filtre os registros'],
@@ -762,7 +761,7 @@ function toggleTheme(){
 
 function navigate(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',pages[i]===page));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
   // Sync mobile nav
   ['dashboard','pacientes','pipeline','cadastro'].forEach(p=>{
     const btn=document.getElementById('mob-btn-'+p);
