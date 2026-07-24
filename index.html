@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v5.1 - reaplica identidade visual v5.0 (teal/petróleo) sobre a correção do destaque do menu -->
+<!-- ProSUS v5.2 - auto-save das datas na aba Etapas (sem precisar clicar em Salvar) -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -480,7 +480,7 @@
       <button class="nav-btn" data-page="tipopeca" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v5.1</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v5.2</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -964,6 +964,17 @@ function setHoje(inputId){
 async function salvarHoje(cod,tipo,inputId){
   setHoje(inputId);
   await submitEtapaUnica(cod,tipo);
+}
+const autoSaveTimers={};
+function autoSaveEtapa(cod,tipo){
+  if(tipo==='rem'){
+    const etapa=document.getElementById('et-rem-etapa').value;
+    const data=document.getElementById('et-rem-data').value;
+    if(!etapa||!data) return;
+  }
+  const key=cod+'-'+tipo;
+  clearTimeout(autoSaveTimers[key]);
+  autoSaveTimers[key]=setTimeout(()=>submitEtapaUnica(cod,tipo),400);
 }
 /* ── MULTI-TRATAMENTO HELPERS ── */
 // Extrai o código base (ex: "7457/1" → "7457", "7457" → "7457")
@@ -1537,11 +1548,11 @@ function renderDetailEtapas(cod){
         <div class="form-group">
           <label>Data</label>
           <div style="display:flex;gap:6px;align-items:center">
-            <input type="date" id="et-bp" value="${toInput(bp.data)}" ${ro} style="flex:1">
+            <input type="date" id="et-bp" value="${toInput(bp.data)}" ${ro} style="flex:1" onchange="autoSaveEtapa('${cod}','bp')">
             ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','bp','et-bp')" ${ro}>⚡ Registrar Hoje</button>`:''}
           </div>
         </div>
-        <div class="form-group"><label>Previsão</label><input type="date" id="et-bp-prev" value="${toInput(bp.previsao||bpPrev?.previsao||'')}" ${ro}></div>
+        <div class="form-group"><label>Previsão</label><input type="date" id="et-bp-prev" value="${toInput(bp.previsao||bpPrev?.previsao||'')}" ${ro} onchange="autoSaveEtapa('${cod}','bp')"></div>
       </div>
       <div class="form-group"><label>Observação</label><input type="text" id="et-bp-obs" value="${bp.obs||bpPrev?.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','bp')">💾 Salvar Base de Prova</button>`:''}
@@ -1553,11 +1564,11 @@ function renderDetailEtapas(cod){
         <div class="form-group">
           <label>Data</label>
           <div style="display:flex;gap:6px;align-items:center">
-            <input type="date" id="et-pd" value="${toInput(pd.data)}" ${ro} style="flex:1">
+            <input type="date" id="et-pd" value="${toInput(pd.data)}" ${ro} style="flex:1" onchange="autoSaveEtapa('${cod}','pd')">
             ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','pd','et-pd')" ${ro}>⚡ Registrar Hoje</button>`:''}
           </div>
         </div>
-        <div class="form-group"><label>Previsão</label><input type="date" id="et-pd-prev" value="${toInput(pd.previsao)}" ${ro}></div>
+        <div class="form-group"><label>Previsão</label><input type="date" id="et-pd-prev" value="${toInput(pd.previsao)}" ${ro} onchange="autoSaveEtapa('${cod}','pd')"></div>
       </div>
       <div class="form-group"><label>Observação</label><input type="text" id="et-pd-obs" value="${pd.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','pd')">💾 Salvar Prova de Dentes</button>`:''}
@@ -1569,11 +1580,11 @@ function renderDetailEtapas(cod){
         <div class="form-group">
           <label>Data de Entrega</label>
           <div style="display:flex;gap:6px;align-items:center">
-            <input type="date" id="et-ent" value="${toInput(e.entrega)}" ${ro} style="flex:1">
+            <input type="date" id="et-ent" value="${toInput(e.entrega)}" ${ro} style="flex:1" onchange="autoSaveEtapa('${cod}','ent')">
             ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','ent','et-ent')" ${ro}>⚡ Registrar Hoje</button>`:''}
           </div>
         </div>
-        <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="et-prev" value="${toInput(e.previsao)}" ${ro}></div>
+        <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="et-prev" value="${toInput(e.previsao)}" ${ro} onchange="autoSaveEtapa('${cod}','ent')"></div>
       </div>
       <div class="form-group"><label>Observação da Entrega</label><input type="text" id="et-ent-obs" value="${e.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','ent')">💾 Salvar Entrega</button>`:''}
@@ -1582,8 +1593,8 @@ function renderDetailEtapas(cod){
     <div class="etapa-block rem">
       <div class="section-divider rem">🔁 Remarcação</div>
       <div class="form-row">
-        <div class="form-group"><label>Etapa Remarcada</label><select id="et-rem-etapa" ${ro}><option value="">— Não remarcar —</option><option>Etapa 1</option><option>Etapa 2</option><option>Etapa 3</option></select></div>
-        <div class="form-group"><label>Nova Data</label><input type="date" id="et-rem-data" ${ro}></div>
+        <div class="form-group"><label>Etapa Remarcada</label><select id="et-rem-etapa" ${ro} onchange="autoSaveEtapa('${cod}','rem')"><option value="">— Não remarcar —</option><option>Etapa 1</option><option>Etapa 2</option><option>Etapa 3</option></select></div>
+        <div class="form-group"><label>Nova Data</label><input type="date" id="et-rem-data" ${ro} onchange="autoSaveEtapa('${cod}','rem')"></div>
       </div>
       <div class="form-group"><label>Obs. da Remarcação</label><input type="text" id="et-rem-obs" placeholder="Motivo ou obs." ${ro}></div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rem')">💾 Salvar Remarcação</button>`:''}
@@ -1595,7 +1606,7 @@ function renderDetailEtapas(cod){
         <div class="form-group">
           <label>Data do Reembase</label>
           <div style="display:flex;gap:6px;align-items:center">
-            <input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro} style="flex:1">
+            <input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro} style="flex:1" onchange="autoSaveEtapa('${cod}','rb')">
             ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','rb','et-rb')" ${ro}>⚡ Registrar Hoje</button>`:''}
           </div>
         </div>
