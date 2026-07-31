@@ -1,0 +1,2803 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<!-- ProSUS v6.0-beta - migração para Supabase (Postgres/Auth/RLS), gravação dupla temporária no Sheets -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ProSUS">
+<meta name="theme-color" content="#0d7d6e">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230d7d6e'/><g transform='translate(11 11) scale(.78)'><circle cx='50' cy='50' r='33' fill='none' stroke='%23ffffff' stroke-width='13' stroke-linecap='round' stroke-dasharray='170 207' transform='rotate(-90 50 50)'/><circle cx='50' cy='17' r='8.5' fill='%23bdeee3'/></g></svg>">
+<title>ProSUS — Controle de Próteses</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    /* ── Superfícies ── */
+    --bg:#06202f;--surface:#0c2c3b;--surface2:#0a3243;--surface3:#0e3a44;
+    --border:rgba(255,255,255,.08);--border-hi:rgba(255,255,255,.16);
+    /* ── Cores ── */
+    --accent:#27a08e;--accent-hi:#5cbcad;--accent-soft:rgba(39,160,142,.14);--accent-glow:rgba(39,160,142,.26);
+    --accent2:#6fb0d6;--accent3:#dca64b;--accent4:#e7825c;--emerald:#27a08e;
+    /* ── Texto ── */
+    --text:#e7f1ef;--text2:#a7c0c0;--text3:#456066;
+    /* ── Sombras (3 níveis) ── */
+    --sh1:0 1px 2px rgba(0,0,0,.5);
+    --sh2:0 4px 16px rgba(0,0,0,.5),0 1px 3px rgba(0,0,0,.4);
+    --sh3:0 12px 40px rgba(0,0,0,.65),0 4px 12px rgba(0,0,0,.4);
+    --sh-acc:0 4px 20px rgba(39,160,142,.32);
+    --shadow:var(--sh2);
+    /* ── Raios ── */
+    --radius:16px;--radius-lg:22px;--radius-sm:10px;
+    /* ── Gradientes ── */
+    --g-accent:linear-gradient(135deg,#0d7d6e 0%,#0a3d62 100%);
+    --g-blue:linear-gradient(135deg,#13456a 0%,#0d7d6e 100%);
+    --g-surface:linear-gradient(160deg,rgba(255,255,255,.03) 0%,transparent 70%);
+    /* ── Layout ── */
+    --sidebar-w:244px;--rail-w:72px;
+    /* compat aliases */
+    --grad-accent:var(--g-accent);
+  }
+  body.light{
+    --bg:#fbfdfc;--surface:#ffffff;--surface2:#f1f7f5;--surface3:#e8f3f1;
+    --border:rgba(10,61,98,.10);--border-hi:rgba(10,61,98,.18);
+    --accent:#0d7d6e;--accent-hi:#0a6a5d;--accent-soft:rgba(13,125,110,.09);--accent-glow:rgba(13,125,110,.2);
+    --accent2:#13456a;--accent3:#b9791a;--accent4:#c2542e;--emerald:#0d7d6e;
+    --text:#0b2a2c;--text2:#4a5e60;--text3:#b9cfcc;
+    --sh1:0 1px 2px rgba(0,0,0,.06);
+    --sh2:0 4px 16px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.05);
+    --sh3:0 12px 40px rgba(0,0,0,.12),0 4px 12px rgba(0,0,0,.07);
+    --sh-acc:0 4px 20px rgba(13,125,110,.22);
+    --shadow:var(--sh2);
+    --g-surface:linear-gradient(160deg,rgba(0,0,0,.015) 0%,transparent 70%);
+    --g-accent:linear-gradient(135deg,#0d7d6e 0%,#0a3d62 100%);
+    --grad-accent:var(--g-accent);
+  }
+
+  /* ── RESET ── */
+  *{box-sizing:border-box;margin:0;padding:0;}
+  .logo-icon svg,.login-logo svg,.mob-topbar-logo svg{width:60%;height:60%;display:block}
+  html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+  body{font-family:'Hanken Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;line-height:1.5;}
+  html.theme-switching *,html.theme-switching *::before,html.theme-switching *::after{transition:none!important;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 55% 35% at 12% 8%,rgba(13,125,110,.09) 0%,transparent 60%),
+               radial-gradient(ellipse 40% 25% at 88% 92%,rgba(19,69,106,.06) 0%,transparent 55%);}
+  body.light::before{background:radial-gradient(ellipse 60% 40% at 10% 0%,rgba(13,125,110,.05) 0%,transparent 65%);}
+  h1,h2,h3,h4,h5{font-family:'Space Grotesk',sans-serif;letter-spacing:-.02em;}
+  .app{display:flex;min-height:100vh;position:relative;z-index:1;}
+
+  /* ── SIDEBAR ── */
+  .sidebar{width:232px;min-height:100vh;background:linear-gradient(180deg,#0c2c3b 0%,#082431 100%);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:background .3s,border-color .3s;}
+  body.light .sidebar{background:linear-gradient(180deg,#ffffff 0%,#f1f7f5 100%);}
+  .sidebar::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(13,125,110,.4),transparent);}
+  .sidebar-logo{padding:22px 18px 16px;border-bottom:1px solid var(--border);}
+  .sidebar-logo .logo-icon{width:40px;height:40px;background:var(--grad-accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;box-shadow:0 4px 16px rgba(13,125,110,.4);}
+  .sidebar-logo h1{font-size:16px;color:var(--text);letter-spacing:-.5px;font-weight:800;}
+  .sidebar-logo p{font-size:11px;color:var(--text2);margin-top:2px;letter-spacing:.1px;}
+  .sidebar-nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;}
+  .nav-section{font-size:9px;color:var(--text3);font-weight:800;letter-spacing:1.2px;text-transform:uppercase;padding:12px 10px 5px;}
+  .nav-btn{display:flex;align-items:center;gap:10px;padding:8px 12px;border:none;background:transparent;color:var(--text2);font-family:'Hanken Grotesk',sans-serif;font-size:13px;font-weight:500;border-radius:10px;cursor:pointer;transition:all .2s ease;text-align:left;width:100%;position:relative;}
+  .nav-btn:hover{background:rgba(13,125,110,.08);color:var(--text);}
+  .nav-btn.active{background:var(--accent-soft);color:var(--accent);font-weight:600;}
+  .nav-btn.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:var(--grad-accent);border-radius:0 2px 2px 0;}
+  body.light .nav-btn.active{background:rgba(13,125,110,.08);}
+  .nav-btn .nav-icon{font-size:14px;width:20px;text-align:center;opacity:.85;}
+  .sidebar-footer{padding:10px 10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:5px;}
+  .config-btn,.theme-btn{display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'Hanken Grotesk',sans-serif;font-size:12px;border-radius:9px;cursor:pointer;width:100%;transition:all .2s;}
+  .config-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+  .theme-btn:hover{border-color:var(--accent2);color:var(--accent2);background:rgba(19,69,106,.08);}
+  .main{margin-left:232px;flex:1;min-height:100vh;}
+
+  /* ── TOPBAR ── */
+  .topbar{padding:16px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(6,32,47,.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);position:sticky;top:0;z-index:50;transition:background .3s,border-color .3s;}
+  body.light .topbar{background:rgba(255,255,255,.85);}
+  .topbar h2{font-size:19px;font-weight:800;letter-spacing:-.3px;}
+  .topbar p{font-size:12px;color:var(--text2);margin-top:2px;}
+  .page-content{padding:26px 32px;}
+  .page{display:none;animation:pageIn .2s ease;}.page.active{display:block;}
+  @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ── MODALS ── */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;width:560px;max-width:100%;max-height:90vh;overflow-y:auto;animation:modalIn .22s cubic-bezier(.22,1,.36,1);box-shadow:var(--shadow),0 0 0 1px rgba(13,125,110,.1);}
+  .modal.modal-lg{width:720px;}
+  @keyframes modalIn{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .modal-header h3{font-size:17px;font-weight:700;}
+  .modal-close{background:none;border:1px solid var(--border);color:var(--text3);font-size:16px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:all .15s;line-height:1;}
+  .modal-close:hover{color:var(--text);border-color:var(--text2);}
+  .modal-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--surface2);border-radius:12px;padding:4px;}
+  .modal-tab{flex:1;padding:8px;border:none;background:transparent;color:var(--text2);font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:600;border-radius:9px;cursor:pointer;transition:all .18s;}
+  .modal-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.2),0 0 0 1px var(--border);}
+
+  /* ── FORMS ── */
+  .form-group{margin-bottom:14px;}
+  .form-group label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Hanken Grotesk',sans-serif;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .form-group input:disabled,.form-group select:disabled{opacity:.45;cursor:not-allowed;}
+  .form-group select option{background:var(--surface2);}
+  .form-group small{display:block;font-size:11px;color:var(--text2);margin-top:5px;line-height:1.5;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+
+  /* ── BUTTONS ── */
+  .btn{padding:9px 18px;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s ease;display:inline-flex;align-items:center;gap:6px;letter-spacing:-.1px;}
+  .btn-primary{background:var(--grad-accent);color:#fff;box-shadow:0 2px 12px var(--accent-glow);}
+  .btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 20px var(--accent-glow);}
+  .btn-primary:active{transform:translateY(0);}
+  body.light .btn-primary{color:#fff;}
+  .section-divider.rb{background:rgba(6,182,212,.1);color:#06b6d4;border-left:3px solid #06b6d4;}
+  .etapa-block.rb{border-color:rgba(6,182,212,.25);background:rgba(6,182,212,.03);}
+  .btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+  .btn-secondary:hover{color:var(--text);border-color:rgba(13,125,110,.4);background:var(--accent-soft);}
+  .btn-danger{background:var(--accent4);color:#fff;box-shadow:0 2px 12px rgba(244,63,94,.25);}
+  .btn-danger:hover{filter:brightness(1.1);transform:translateY(-1px);}
+  .btn-sm{padding:5px 10px;font-size:12px;border-radius:8px;}
+
+  /* ── BADGES ── */
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;letter-spacing:.1px;}
+  .badge::before{content:'●';font-size:7px;}
+  .badge-green{background:rgba(13,125,110,.12);color:var(--accent);}
+  .badge-blue{background:rgba(19,69,106,.12);color:var(--accent2);}
+  .badge-yellow{background:rgba(245,158,11,.12);color:var(--accent3);}
+  .badge-red{background:rgba(244,63,94,.12);color:var(--accent4);}
+  .badge-gray{background:rgba(100,116,139,.12);color:var(--text2);}
+
+  /* ── TABLE ── */
+  tr.highlight-new td{background:rgba(13,125,110,.07)!important;transition:background 2s;}
+  .patient-group{}
+  tr.group-header td{background:var(--surface2);border-top:2px solid var(--border);}
+  tr.group-header:first-child td{border-top:1px solid var(--border);}
+  tr.group-child td{background:rgba(19,69,106,.025);border-left:3px solid var(--accent2);}
+  tr.group-child td:first-child{padding-left:22px;}
+  .multi-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(13,125,110,.15);color:var(--accent);margin-left:6px;cursor:pointer;}
+  .group-toggle{background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:2px 4px;border-radius:4px;transition:color .15s;}
+  .group-toggle:hover{color:var(--accent2);}
+  .trat-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:7px;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all .15s;}
+  .trat-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+  .related-tratamentos{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding:10px;background:var(--surface2);border-radius:10px;}
+
+  /* ── STAT CARDS ── */
+  .cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:all .25s ease;box-shadow:var(--shadow-card);}
+  .stat-card:hover{border-color:rgba(13,125,110,.35);transform:translateY(-2px);box-shadow:var(--shadow-card),0 8px 32px rgba(13,125,110,.1);}
+  .stat-card .label{font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;}
+  .stat-card .value{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;line-height:1;letter-spacing:-1px;}
+  .stat-card .sublabel{font-size:12px;color:var(--text2);margin-top:6px;}
+  .stat-card.accent{border-color:rgba(13,125,110,.3);background:linear-gradient(135deg,rgba(13,125,110,.08) 0%,rgba(10,61,98,.04) 100%);}
+  .stat-card.accent .value{background:var(--grad-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+  /* ── CHARTS & TABLES ── */
+  .charts-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:20px;}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-card);}
+  .chart-card h3{font-size:11px;color:var(--text2);font-weight:700;margin-bottom:14px;text-transform:uppercase;letter-spacing:.6px;}
+  .chart-container{position:relative;height:190px;}
+  .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card);}
+  .table-header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;}
+  .table-header h3{font-size:14px;font-weight:700;letter-spacing:-.2px;}
+  table{width:100%;border-collapse:collapse;}
+  thead tr{background:var(--surface2);}
+  th{padding:9px 14px;text-align:left;font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap;}
+  td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);transition:background .15s;}
+  tr:hover td{background:rgba(13,125,110,.04);}
+  body.light tr:hover td{background:rgba(13,125,110,.03);}
+  .td-code{font-family:monospace;color:var(--text2);font-size:12px;}
+  .td-name{font-weight:500;}
+  .icon-btn{padding:5px 8px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;transition:all .18s;}
+  .icon-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+
+  /* ── FILTERS ── */
+  .filters-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .search-bar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:7px 12px;transition:border-color .2s,box-shadow .2s;}
+  .search-bar:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .search-bar input{background:transparent;border:none;outline:none;color:var(--text);font-family:'Hanken Grotesk',sans-serif;font-size:13px;width:200px;min-width:80px;}
+  .search-bar input::placeholder{color:var(--text2);}
+  .filter-select{padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:'Hanken Grotesk',sans-serif;font-size:13px;outline:none;cursor:pointer;transition:border-color .2s;}
+  .filter-select:focus{border-color:var(--accent);}
+
+  /* ── PAGINATION ── */
+  .pagination{display:flex;align-items:center;gap:6px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap;}
+  .page-btn{padding:5px 10px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;transition:all .18s;}
+  .page-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .page-btn.active{background:var(--grad-accent);color:#fff;border-color:transparent;box-shadow:0 2px 10px var(--accent-glow);}
+  .page-info{font-size:12px;color:var(--text2);margin-left:auto;}
+
+  /* ── PIPELINE ── */
+  .pipeline-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .pipeline-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card);}
+  .pipeline-col-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .pipeline-col-header h4{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;}
+  .pipeline-count{background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;}
+  .pipeline-cards{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:180px;max-height:520px;overflow-y:auto;}
+  .pipeline-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px;cursor:pointer;transition:all .2s ease;}
+  .pipeline-card:hover{border-color:rgba(13,125,110,.4);background:linear-gradient(135deg,rgba(13,125,110,.06),transparent);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.2);}
+  .pipeline-card .pc-code{font-size:10px;color:var(--text2);font-family:monospace;margin-bottom:3px;}
+  .pipeline-card .pc-name{font-size:12px;font-weight:600;margin-bottom:2px;}
+  .pipeline-card .pc-type{font-size:11px;color:var(--text2);}
+  .pipeline-card .pc-date{font-size:10px;color:var(--text2);margin-top:5px;opacity:.7;}
+  .step1 .pipeline-col-header{border-top:3px solid var(--accent3);}
+  .step2 .pipeline-col-header{border-top:3px solid var(--accent2);}
+  .step3 .pipeline-col-header{border-top:3px solid var(--accent);}
+  .step4 .pipeline-col-header{border-top:3px solid var(--accent4);}
+
+  /* ── FORM CARD ── */
+  .form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px;max-width:700px;box-shadow:var(--shadow-card);}
+  .form-card h3{font-size:15px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);font-weight:700;}
+
+  /* ── SECTION DIVIDERS & ETAPA BLOCKS ── */
+  .section-divider{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px;padding:8px 12px;border-radius:8px;display:flex;align-items:center;gap:8px;}
+  .section-divider.bp{background:rgba(19,69,106,.1);color:var(--accent2);border-left:3px solid var(--accent2);}
+  .section-divider.pd{background:rgba(245,158,11,.1);color:var(--accent3);border-left:3px solid var(--accent3);}
+  .section-divider.ent{background:var(--accent-soft);color:var(--accent);border-left:3px solid var(--accent);}
+  .section-divider.rem{background:rgba(168,85,247,.1);color:#a855f7;border-left:3px solid #a855f7;}
+  .etapa-block{border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;}
+  .etapa-block.bp{border-color:rgba(19,69,106,.25);background:rgba(19,69,106,.03);}
+  .etapa-block.pd{border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.03);}
+  .etapa-block.ent{border-color:rgba(13,125,110,.25);background:rgba(13,125,110,.03);}
+  .etapa-block.rem{border-color:rgba(168,85,247,.25);background:rgba(168,85,247,.03);}
+
+  /* ── EMPTY / LOADING STATES ── */
+  .not-connected{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;text-align:center;gap:14px;}
+  .not-connected .icon{font-size:52px;filter:drop-shadow(0 4px 12px rgba(13,125,110,.3));}
+  .not-connected h3{font-size:20px;font-weight:700;}
+  .not-connected p{font-size:13px;color:var(--text2);max-width:380px;line-height:1.6;}
+  .loading-state,.empty-state{padding:48px;text-align:center;color:var(--text2);font-size:14px;}
+  .empty-state .empty-icon{font-size:38px;margin-bottom:10px;}
+  .loading-spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── TOASTS ── */
+  .toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:10px;min-width:240px;animation:toastIn .25s cubic-bezier(.22,1,.36,1);box-shadow:var(--shadow),0 0 0 1px rgba(255,255,255,.04);}
+  .toast-success{border-left:3px solid var(--accent);}
+  .toast-error{border-left:3px solid var(--accent4);}
+  .toast-info{border-left:3px solid var(--accent2);}
+  @keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+
+  /* ── LOGIN ── */
+  .login-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;}
+  .login-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 50%,rgba(13,125,110,.12) 0%,transparent 70%);}
+  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:48px 40px;width:390px;max-width:95vw;text-align:center;box-shadow:var(--shadow),0 0 80px rgba(13,125,110,.12);position:relative;}
+  .login-logo{width:60px;height:60px;background:var(--grad-accent);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px;box-shadow:0 8px 24px rgba(13,125,110,.4);}
+  .login-card h2{font-size:26px;margin-bottom:6px;font-weight:800;letter-spacing:-.5px;}
+  .login-card p{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.6;}
+  .google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 20px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;font-family:'Hanken Grotesk',sans-serif;font-size:14px;font-weight:500;color:#374151;cursor:pointer;transition:all .2s;}
+  .google-btn:hover{box-shadow:0 2px 16px rgba(0,0,0,.12);transform:translateY(-1px);}
+  .google-btn svg{width:20px;height:20px;flex-shrink:0;}
+  .login-error{font-size:12px;color:var(--accent4);margin-top:12px;}
+
+  /* ── USER CHIP ── */
+  .user-chip{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:all .2s;text-decoration:none;}
+  .user-chip:hover{border-color:var(--accent4);background:rgba(244,63,94,.06);}
+  .user-chip img{width:26px;height:26px;border-radius:50%;object-fit:cover;}
+  .user-chip-info{display:flex;flex-direction:column;line-height:1.2;}
+  .user-chip-name{font-size:11px;font-weight:600;color:var(--text);}
+  .user-chip-out{font-size:10px;color:var(--accent4);}
+
+  /* ── ALERTS ── */
+  .alert{padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .alert-info{background:rgba(19,69,106,.08);border:1px solid rgba(19,69,106,.2);color:#93c5fd;}
+  .alert-warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:#fcd34d;}
+  body.light .alert-info{color:#1d4ed8;}body.light .alert-warn{color:#92400e;}
+
+  /* ── MISC ── */
+  .timeline-step{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .timeline-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .list-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;cursor:pointer;transition:all .2s;}
+  .list-item:hover{border-color:var(--accent);background:var(--accent-soft);}
+  .list-item-info .code{font-size:11px;color:var(--text2);font-family:monospace;}
+  .list-item-info .name{font-size:13px;font-weight:500;margin-top:1px;}
+  .fechamento-totais{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+  .total-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-card);}
+  .total-card h4{font-size:12px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+  .total-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .total-row:last-child{border-bottom:none;font-weight:700;color:var(--accent);}
+
+  /* ── MOBILE BOTTOM NAV ── */
+  .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(6,32,47,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);z-index:200;padding-bottom:env(safe-area-inset-bottom);width:100%;box-sizing:border-box;}
+  body.light .mobile-nav{background:rgba(255,255,255,.9);}
+  .mobile-nav-inner{display:flex;align-items:stretch;width:100%;overflow:hidden;}
+  .mob-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px;border:none;background:transparent;color:var(--text2);font-family:'Hanken Grotesk',sans-serif;font-size:9px;font-weight:700;cursor:pointer;transition:color .15s;min-height:54px;}
+  .mob-nav-btn .mob-icon{font-size:20px;line-height:1;}
+  .mob-nav-btn.active{color:var(--accent);}
+  .mob-nav-btn span:last-child{font-size:9px;}
+  .mob-more-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:300;display:none;}
+  .mob-more-overlay.open{display:block;}
+  .mob-more-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;padding:12px 16px calc(16px + env(safe-area-inset-bottom));z-index:301;transform:translateY(100%);transition:transform .3s cubic-bezier(.22,1,.36,1);border-top:1px solid var(--border);}
+  .mob-more-sheet.open{transform:translateY(0);}
+  .mob-more-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+  .mob-more-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .mob-more-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all .18s;}
+  .mob-more-item:active{border-color:var(--accent);background:var(--accent-soft);}
+  .mob-more-item .icon{font-size:22px;}
+  .mob-more-item span{font-size:10px;color:var(--text2);text-align:center;font-weight:600;}
+
+  /* ── RESPONSIVE ── */
+  @media (max-width:768px),(min-width:769px) and (max-width:1024px) and (orientation:portrait){
+    body,html{overflow-x:hidden;max-width:100vw;}
+    .main{overflow-x:hidden;}
+    .sidebar{display:none;}
+    .mobile-nav{display:flex;flex-direction:column;}
+    .main{margin-left:0;padding-bottom:70px;}
+    .page-content{padding:14px 14px 90px 14px;}
+    .topbar{padding:12px 16px;}
+    .topbar h2{font-size:16px;}
+    .topbar p{display:none;}
+    #connection-status .badge{font-size:10px;padding:2px 7px;}
+    .cards-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;}
+    .stat-card{padding:14px;}
+    .stat-card .value{font-size:24px;}
+    .charts-grid{grid-template-columns:1fr;gap:10px;}
+    .chart-container{height:160px;}
+    .table-card{border-radius:var(--radius);overflow:visible;}
+    table,thead,tbody,th,td,tr{display:block;}
+    thead{display:none;}
+    tr.group-header,tr.group-child{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;padding:12px;display:flex;flex-direction:column;gap:6px;}
+    tr.group-child{border-left:3px solid var(--accent2);margin-left:12px;margin-top:-4px;border-radius:0 12px 12px 0;}
+    td{padding:0!important;border:none!important;font-size:13px;}
+    td::before{content:attr(data-label);font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;}
+    td:empty{display:none;}
+    .td-code{font-size:11px;}
+    .pipeline-grid{grid-template-columns:repeat(5,78vw);overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding-bottom:8px;width:100%;-webkit-overflow-scrolling:touch;}
+    .pipeline-col{scroll-snap-align:start;min-width:78vw;max-width:78vw;}
+    .pipeline-cards{max-height:55vh;}
+    #page-pipeline{overflow-x:hidden;}
+    #pipeline-content{overflow-x:auto;width:100%;}
+    .filters-bar{gap:8px;}
+    .filters-bar .search-bar{flex:1 1 140px;}
+    .search-bar{flex:1;min-width:0;}
+    .search-bar input{width:100%;min-width:0;flex:1;}
+    .filter-select{font-size:12px;padding:6px 8px;}
+    .modal-overlay{padding:0;align-items:flex-end;}
+    .modal,.modal.modal-lg{width:100%;max-width:100%;border-radius:20px 20px 0 0;max-height:92vh;padding:20px 18px calc(20px + env(safe-area-inset-bottom));}
+    .form-row{grid-template-columns:1fr;}
+    .form-card{padding:16px;max-width:100%;}
+    .fechamento-totais{grid-template-columns:1fr;}
+    .toast-container{bottom:80px;right:12px;left:12px;}
+    .toast{min-width:0;}
+    .pipeline-debug{flex-wrap:wrap;gap:6px;}
+    .login-card{padding:36px 24px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;position:fixed;bottom:0;left:0;right:0;width:100%;max-width:100%;}
+    .login-screen{align-items:flex-end;}
+    .user-chip-info .user-chip-name{font-size:10px;}
+    .modal-actions{flex-wrap:wrap;}
+    .modal-actions .btn{flex:1;}
+    .etapa-block{padding:10px;}
+    .stat-card:hover{transform:none;}
+    .pipeline-card:hover{transform:none;}
+  }
+
+  /* ── MOBILE TOPBAR ── */
+  .mob-topbar{display:none;align-items:center;justify-content:space-between;
+    padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));
+    background:rgba(6,32,47,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;}
+  body.light .mob-topbar{background:rgba(255,255,255,.9);}
+  .mob-topbar-left{display:flex;align-items:center;gap:10px;}
+  .mob-topbar-logo{width:32px;height:32px;background:var(--grad-accent);border-radius:9px;
+    display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+    box-shadow:0 2px 10px var(--accent-glow);}
+  .mob-topbar-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;line-height:1.2;letter-spacing:-.2px;}
+  .mob-topbar-sub{font-size:10px;color:var(--text2);}
+  .mob-topbar-right{display:flex;align-items:center;gap:8px;}
+  @media (max-width:768px),(min-width:769px) and (max-width:1024px) and (orientation:portrait){
+    .mob-topbar{display:flex;}
+    .topbar{display:none;}
+    .main{padding-bottom:0;}
+  }
+
+  /* ── TABLET (Android, retrato) ── */
+  @media (min-width:600px) and (max-width:1024px) and (orientation:portrait){
+    body{font-size:15px;}
+    .page-content{padding:22px 26px 100px;}
+    .cards-grid{grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+    .stat-card{padding:18px;}
+    .stat-card .value{font-size:30px;}
+    .charts-grid{grid-template-columns:2fr 1fr;gap:14px;}
+    .chart-container{height:220px;}
+    .fechamento-totais{grid-template-columns:1fr 1fr;}
+    .form-row{grid-template-columns:1fr 1fr;}
+    .pipeline-grid{grid-template-columns:repeat(5,46vw);gap:12px;}
+    .pipeline-col{min-width:46vw;max-width:46vw;}
+    .pipeline-cards{max-height:62vh;}
+    .modal-overlay{align-items:center;padding:28px;}
+    .modal,.modal.modal-lg{width:640px;max-width:92vw;border-radius:var(--radius-lg);max-height:88vh;padding:28px;}
+    .mob-nav-btn{padding:12px 4px;}
+    .mob-nav-btn .mob-icon{font-size:24px;}
+    .mob-nav-btn span:last-child{font-size:11px;}
+    .main{padding-bottom:88px;}
+    .mob-more-grid{grid-template-columns:repeat(5,1fr);}
+    .mob-topbar-logo{width:38px;height:38px;}
+    .mob-topbar-title{font-size:17px;}
+  }
+  /* ── ALVOS DE TOQUE (qualquer dispositivo touch) ── */
+  @media (pointer:coarse){
+    .btn{min-height:46px;padding:11px 20px;}
+    .nav-btn{padding:12px 14px;font-size:14px;}
+    .config-btn,.theme-btn{padding:11px 12px;font-size:13px;}
+    .form-group input,.form-group select,.form-group textarea{min-height:48px;font-size:16px;padding:11px 14px;}
+    .search-bar{padding:9px 14px;} .search-bar input{font-size:15px;}
+    .filter-select{min-height:44px;font-size:15px;}
+    .google-btn{min-height:50px;font-size:15px;}
+    .mob-nav-btn{min-height:58px;}
+    .mob-more-item{padding:16px 8px;}
+    .modal-tab{padding:11px;}
+    .modal-close{padding:8px 12px;font-size:18px;}
+    .page-btn{min-width:42px;min-height:42px;}
+    .group-toggle{padding:6px 8px;}
+  }
+</style>
+</head>
+<body class="light">
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><svg viewBox="0 0 100 100" fill="none" aria-hidden="true"><circle cx="50" cy="50" r="33" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-dasharray="170 207" transform="rotate(-90 50 50)"></circle><circle cx="50" cy="17" r="8.5" fill="#bdeee3"></circle></svg></div>
+    <h2>ProSUS</h2>
+    <p>Sistema de Controle de Próteses Dentárias.<br>Entre com sua conta Google para continuar.</p>
+    <button class="google-btn" onclick="signIn()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Entrar com Google
+    </button>
+    <p class="login-error" id="login-error"></p>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none">
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><svg viewBox="0 0 100 100" fill="none" aria-hidden="true"><circle cx="50" cy="50" r="33" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-dasharray="170 207" transform="rotate(-90 50 50)"></circle><circle cx="50" cy="17" r="8.5" fill="#bdeee3"></circle></svg></div>
+      <h1>ProSUS</h1>
+      <p>Controle de Próteses</p>
+      <div id="sidebar-user" style="display:none"></div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Geral</div>
+      <button class="nav-btn active" data-page="dashboard" onclick="navigate('dashboard')"><span class="nav-icon">📊</span> Dashboard</button>
+      <button class="nav-btn" data-page="resumo" onclick="navigate('resumo')"><span class="nav-icon">📋</span> Resumo do Dia</button>
+      <button class="nav-btn" data-page="pacientes" onclick="navigate('pacientes')"><span class="nav-icon">🔍</span> Consultar</button>
+      <button class="nav-btn" data-page="pipeline" onclick="navigate('pipeline')"><span class="nav-icon">⚡</span> Etapas</button>
+      <button class="nav-btn" data-page="fechamento" onclick="navigate('fechamento')"><span class="nav-icon">📅</span> Fechamento</button>
+      <button class="nav-btn" data-page="fechamento-armacao" onclick="navigate('fechamento-armacao')"><span class="nav-icon">🔩</span> Fecham. Armação</button>
+      <button class="nav-btn" data-page="contratos" onclick="navigate('contratos')"><span class="nav-icon">📃</span> Contratos</button>
+      <div class="nav-section">Cadastros</div>
+      <button class="nav-btn" data-page="cadastro" onclick="navigate('cadastro')"><span class="nav-icon">➕</span> Nova Moldagem</button>
+      <button class="nav-btn" data-page="dentistas" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
+      <button class="nav-btn" data-page="proteticos" onclick="navigate('proteticos')"><span class="nav-icon">🧑‍🔧</span> Protéticos</button>
+      <button class="nav-btn" data-page="tipopeca" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
+    </div>
+    <div class="sidebar-footer">
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v6.0-beta (Supabase)</div>
+      <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
+      <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
+      <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
+      <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
+    </div>
+  </nav>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-nav" id="mobile-nav">
+    <div class="mobile-nav-inner">
+      <button class="mob-nav-btn active" onclick="navigate('dashboard')" id="mob-btn-dashboard">
+        <span class="mob-icon">📊</span><span>Início</span>
+      </button>
+      <button class="mob-nav-btn" onclick="navigate('pacientes')" id="mob-btn-pacientes">
+        <span class="mob-icon">🔍</span><span>Consultar</span>
+      </button>
+      <button class="mob-nav-btn" onclick="navigate('pipeline')" id="mob-btn-pipeline">
+        <span class="mob-icon">⚡</span><span>Etapas</span>
+      </button>
+      <button class="mob-nav-btn" onclick="navigate('cadastro')" id="mob-btn-cadastro">
+        <span class="mob-icon">➕</span><span>Novo</span>
+      </button>
+      <button class="mob-nav-btn" onclick="openMobMore()" id="mob-btn-more">
+        <span class="mob-icon">☰</span><span>Mais</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MOBILE MORE SHEET -->
+  <div class="mob-more-overlay" id="mob-more-overlay" onclick="closeMobMore()"></div>
+  <div class="mob-more-sheet" id="mob-more-sheet">
+    <div class="mob-more-handle"></div>
+    <div class="mob-more-grid">
+      <div class="mob-more-item" onclick="closeMobMore();navigate('fechamento')"><span class="icon">📅</span><span>Fechamento</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('fechamento-armacao')"><span class="icon">🔩</span><span>Armação</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('contratos')"><span class="icon">📃</span><span>Contratos</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('dentistas')"><span class="icon">👨‍⚕️</span><span>Dentistas</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('proteticos')"><span class="icon">🧑‍🔧</span><span>Protéticos</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('tipopeca')"><span class="icon">🦷</span><span>Tipos de Peça</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('validacao')"><span class="icon">✅</span><span>Validação</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('resumo')"><span class="icon">📋</span><span>Resumo do Dia</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();recarregarDados()"><span class="icon">🔄</span><span>Atualizar</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();openConfig()"><span class="icon">⚙️</span><span>Configurações</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();toggleTheme()"><span class="icon" id="mob-theme-icon">☀️</span><span>Tema</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();signOut()"><span class="icon">🚪</span><span>Sair</span></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- MOBILE TOP BAR (only visible on mobile) -->
+    <div class="mob-topbar" id="mob-topbar">
+      <div class="mob-topbar-left">
+        <div class="mob-topbar-logo"><svg viewBox="0 0 100 100" fill="none" aria-hidden="true"><circle cx="50" cy="50" r="33" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-dasharray="170 207" transform="rotate(-90 50 50)"></circle><circle cx="50" cy="17" r="8.5" fill="#bdeee3"></circle></svg></div>
+        <div>
+          <div class="mob-topbar-title" id="mob-page-title">Dashboard</div>
+          <div class="mob-topbar-sub" id="mob-page-sub">Visão geral</div>
+        </div>
+      </div>
+      <div class="mob-topbar-right">
+        <div id="mob-user-status"></div>
+      </div>
+    </div>
+    <div class="topbar">
+      <div><h2 id="page-title">Dashboard</h2><p id="page-subtitle">Visão geral do controle de próteses</p></div>
+      <div id="connection-status"></div>
+      <div id="user-status"></div>
+    </div>
+    <div class="page-content">
+
+      <div class="page active" id="page-dashboard">
+        <div id="dashboard-content"><div class="not-connected"><div class="icon">🔌</div><h3>Conecte sua planilha</h3><p>Faça login com sua conta Google para começar.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
+      </div>
+
+      <div class="page" id="page-pacientes">
+        <div class="filters-bar">
+          <div class="search-bar"><span style="color:var(--text3)">🔍</span><input type="text" id="search-input" placeholder="Nome, código ou dentista..." oninput="filterTable()"></div>
+          <select class="filter-select" id="filter-dentista" onchange="filterTable()"><option value="">Todos os dentistas</option></select>
+          <select class="filter-select" id="filter-tipo" onchange="filterTable()"><option value="">Todos os tipos</option></select>
+          <select class="filter-select" id="filter-status" onchange="filterTable()"><option value="">Todas situações</option><option>Entregue</option><option>Pendente</option></select>
+          <select class="filter-select" id="filter-etapa" onchange="filterTable()">
+            <option value="">Todas as etapas</option>
+            <option value="moldagem">Moldagem</option>
+            <option value="base_prova">Base de Prova / Armação</option>
+            <option value="prova_dentes">Prova de Dentes</option>
+            <option value="entregue">Entregue</option>
+            <option value="reembase">Reembase</option>
+          </select>
+          <select class="filter-select" id="filter-tipo-data" onchange="filterTable()" style="min-width:160px">
+            <option value="moldagem">Data Moldagem</option>
+            <option value="bp">Data Base de Prova</option>
+            <option value="bp_prev">Previsão Base de Prova</option>
+            <option value="pd">Data Prova de Dentes</option>
+            <option value="pd_prev">Previsão Prova de Dentes</option>
+            <option value="entrega">Data Entrega</option>
+            <option value="entrega_prev">Previsão Entrega</option>
+            <option value="reembase">Data Reembase</option>
+          </select>
+          <input type="date" class="filter-select" id="filter-data-de" onchange="filterTable()" title="Data DE">
+          <input type="date" class="filter-select" id="filter-data-ate" onchange="filterTable()" title="Data ATÉ">
+          <button class="btn btn-secondary btn-sm" onclick="clearFilters()">✕ Limpar</button>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Pacientes</h3><span id="table-count" style="font-size:12px;color:var(--text2)"></span></div>
+          <div id="table-body"></div>
+          <div class="pagination" id="pagination" style="display:none"></div>
+        </div>
+      </div>
+
+      <div class="page" id="page-pipeline">
+        <div id="pipeline-content"><div class="not-connected"><div class="icon">⚡</div><h3>Pipeline de Etapas</h3><p>Faça login para visualizar o fluxo.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
+      </div>
+
+      <div class="page" id="page-contratos">
+        <div id="contratos-content"></div>
+      </div>
+
+      <div class="page" id="page-fechamento-armacao">
+        <div id="fechamento-armacao-content"><div class="not-connected"><div class="icon">🔩</div><h3>Fechamento por Armação</h3><p>Faça login para acessar.</p></div></div>
+      </div>
+
+      <div class="page" id="page-fechamento">
+        <div id="fechamento-content"><div class="not-connected"><div class="icon">📅</div><h3>Fechamento Mensal</h3><p>Carregando...</p></div></div>
+      </div>
+
+      <div class="page" id="page-cadastro">
+        <div id="cadastro-content"><div class="not-connected"><div class="icon">➕</div><h3>Cadastrar Moldagem</h3><p>Faça login para habilitar o cadastro.</p><button class="btn btn-primary" onclick="loadAll()">🔄 Recarregar</button></div></div>
+      </div>
+
+      <div class="page" id="page-dentistas">
+        <div id="dentistas-content"></div>
+      </div>
+
+      <div class="page" id="page-proteticos">
+        <div id="proteticos-content"></div>
+      </div>
+
+      <div class="page" id="page-tipopeca">
+        <div id="tipopeca-content"></div>
+      </div>
+
+      <div class="page" id="page-validacao">
+        <div id="validacao-content"><div class="not-connected"><div class="icon">🔍</div><p>Carregando...</p></div></div>
+      </div>
+
+      <div class="page" id="page-resumo">
+        <div id="resumo-content"><div class="not-connected"><div class="icon">📋</div><p>Carregando...</p></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- CONFIG MODAL -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal">
+    <div class="modal-header"><h3>⚙️ Configurações</h3><button class="modal-close" onclick="closeConfig()">✕</button></div>
+    <div class="section-divider ent">🔒 Usuários com acesso</div>
+    <div id="cfg-readonly-warn" style="display:none" class="alert alert-warn">🔒 Modo leitura — sem permissão de edição.</div>
+    <small>Só quem está nesta lista consegue logar e ver os dados. "Admin" também pode editar/excluir.</small>
+    <div id="cfg-users-list" style="margin-top:10px"></div>
+    <div id="cfg-add-row" class="form-row" style="margin-top:14px">
+      <div class="form-group"><label>E-mail</label><input type="text" id="cfg-new-email" placeholder="pessoa@gmail.com"></div>
+      <div class="form-group"><label>Nome</label><input type="text" id="cfg-new-nome" placeholder="Opcional"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-admin"> É admin (pode editar/excluir)</label>
+
+    <div id="cfg-migracao-section" class="section-divider rb" style="margin-top:20px">🚀 Migração de dados (Sheets → Supabase)</div>
+    <div id="cfg-migracao-body" style="display:none">
+      <small>Lê os dados direto do Sheets (via Apps Script) e grava no Supabase. Pode rodar mais de uma vez sem duplicar — exceto a Remarcação, que é histórico e sempre insere de novo.</small>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-primary btn-sm" onclick="migrarDadosDoSheets()">🚀 Migrar dados</button>
+        <button class="btn btn-secondary btn-sm" onclick="conferirContagens()">📊 Conferir contagens</button>
+      </div>
+      <div id="migracao-log" style="margin-top:10px;max-height:180px;overflow-y:auto;font-size:12px;font-family:'Space Mono',monospace;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px"></div>
+    </div>
+
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Fechar</button><button id="cfg-save-btn" class="btn btn-primary" onclick="addAllowedUser()">➕ Adicionar</button></div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h3 id="detail-title">Detalhes</h3><button class="modal-close" onclick="closeDetail()">✕</button></div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchDetailTab('info')">📋 Informações</button>
+      <button class="modal-tab" onclick="switchDetailTab('etapas')">📅 Etapas</button>
+      <button class="modal-tab" onclick="switchDetailTab('editar')">✏️ Editar</button>
+    </div>
+    <div id="detail-tab-info"></div>
+    <div id="detail-tab-etapas" style="display:none"></div>
+    <div id="detail-tab-editar" style="display:none"></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeDetail()">Fechar</button></div>
+  </div>
+</div>
+
+<!-- PROTETICO MODAL (add via button) -->
+<div class="modal-overlay" id="protetico-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h3>🧑‍🔧 Novo Protético</h3><button class="modal-close" onclick="closeProtModal()">✕</button></div>
+
+    <div class="form-group"><label>Código (sigla)</label><input type="text" id="prot-codigo" placeholder="Ex: E" maxlength="5" style="text-transform:uppercase"></div>
+    <div class="form-group"><label>Nome Completo</label><input type="text" id="prot-nome" placeholder="Nome do protético"></div>
+
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeProtModal()">Cancelar</button><button class="btn btn-primary" onclick="submitNovoProtetico()">💾 Salvar</button></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const CLIENT_ID='29814188441-tk6mg6ni8r63u5jmncog34ijv719cff0.apps.googleusercontent.com';
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbyT3XF5rauK9vOZxPMlzHy4gsGLyhkko_XzI2j2XqQIsU5FSCjnETtWf0Tb462YBvmhyw/exec';
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// ── SUPABASE (beta de migração) ──
+const SUPABASE_URL='https://cqepzwqmlpgdttuzgihx.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZXB6d3FtbHBnZHR0dXpnaWh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NTY5NDgsImV4cCI6MjEwMTAzMjk0OH0.iV8UUAQKLTigD_wMpOhfLueuTnj7RpLdJ1GW_aCk1tE';
+// Gravação dupla temporária: também escreve (best-effort) na planilha antiga durante a transição.
+// Desligar (false) depois do período de validação de 2-4 semanas.
+const DUAL_WRITE_SHEETS=true;
+const supabase=(SUPABASE_URL.startsWith('http'))?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
+
+const state={
+  user:null,
+  allowedUser:null, // { email, isAdmin, nome } — carregado de allowed_users após login
+  connected:false,
+  dbStatus:'checking', // 'checking'|'ok'|'error' — badge de conexão com o Supabase
+  sheetsStatus:'checking', // idem, pra gravação dupla no Sheets (só usado enquanto DUAL_WRITE_SHEETS=true)
+  moldagens:[],baseProva:[],basePrevista:[],provaDentes:[],entregas:[],remarcacoes:[],reembase:[],
+  proteticos:[],dentistas:[],tiposPeca:[],contratos:[],
+  filtered:[],currentPage:1,perPage:15,
+  distVisible:true,currentDetailCod:null,
+  lastSavedCodigo:null,
+  contratoAtivo:null, // { id, inicio, fim, reembaseMes }
+};
+
+const pageMeta={
+  dashboard:['Dashboard','Visão geral do controle de próteses'],
+  pacientes:['Consultar Pacientes','Busque e filtre os registros'],
+  pipeline:['Etapas de Produção','Acompanhe o fluxo de cada prótese'],
+  fechamento:['Fechamento Mensal','Relatório de entregas por período'],
+  'fechamento-armacao':['Fechamento por Armação','Base de Prova concluída por período'],
+  contratos:['Contratos','Gerencie os contratos vigentes e histórico'],
+  cadastro:['Nova Moldagem','Registre uma nova moldagem'],
+  dentistas:['Dentistas','Gerencie os dentistas cadastrados'],
+  proteticos:['Protéticos','Gerencie os protéticos (acesso restrito)'],
+  tipopeca:['Tipos de Peça','Gerencie os tipos de peça (BaseDados)'],
+  validacao:['Validação de Dados','Cheque integridade dos registros nas planilhas'],
+  resumo:['Resumo do Dia','Movimentações registradas hoje']
+};
+
+window.onload=async ()=>{
+  const theme=localStorage.getItem('prosus_theme')||'light';
+  if(theme==='light'){document.body.classList.add('light');document.getElementById('theme-icon').textContent='🌙';document.getElementById('theme-label').textContent='Tema escuro';}
+  else{document.body.classList.remove('light');document.getElementById('theme-icon').textContent='☀️';document.getElementById('theme-label').textContent='Tema claro';}
+
+  if(!supabase){
+    showLoginError('SUPABASE_URL/SUPABASE_ANON_KEY ainda não configurados neste beta. Veja supabase/schema.sql.');
+    return;
+  }
+  // Sessão Supabase persiste sozinha em localStorage — se já existir, pula o prompt do Google
+  const{data:{session}}=await supabase.auth.getSession();
+  if(session?.user){
+    await afterSupabaseLogin(session.user);
+  }else{
+    waitForGSI();
+  }
+};
+
+// Nonce OIDC: gera um valor aleatório (_authNonce), manda o HASH dele pro Google (embutido
+// no ID Token) e manda o valor cru pro Supabase, que re-hasheia e confere — evita replay attack.
+// Exige contexto seguro (https:// ou http://localhost); não funciona abrindo o arquivo direto (file://).
+let _authNonce=null;
+function randomNonce(){
+  return Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function sha256Hex(str){
+  const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// Aguarda a lib GSI (Google Identity Services) carregar e inicializa o fluxo de ID Token
+async function waitForGSI(){
+  if(window.google?.accounts?.id){
+    _authNonce=randomNonce();
+    const hashedNonce=await sha256Hex(_authNonce);
+    google.accounts.id.initialize({client_id:CLIENT_ID,callback:onGoogleCredential,auto_select:true,nonce:hashedNonce});
+    google.accounts.id.prompt(); // tenta login silencioso (One Tap) se já houve login antes
+  } else {
+    setTimeout(waitForGSI, 100);
+  }
+}
+
+async function onGoogleCredential(resp){
+  try{
+    const{data,error}=await supabase.auth.signInWithIdToken({provider:'google',token:resp.credential,nonce:_authNonce});
+    if(error) throw error;
+    await afterSupabaseLogin(data.user);
+  }catch(e){
+    showLoginError('Erro ao autenticar: '+e.message);
+  }
+}
+
+function signIn(){
+  if(!window.google?.accounts?.id){toast('Aguarde a inicialização do Google...','info');return;}
+  google.accounts.id.prompt();
+}
+
+async function signOut(){
+  await supabase.auth.signOut();
+  state.user=null;state.allowedUser=null;state.connected=false;
+  localStorage.removeItem('prosus_user_email');
+  localStorage.removeItem('prosus_user_name');
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('user-status').innerHTML='';
+}
+
+// Login Google validado → cria/renova sessão Supabase → checa allowed_users antes de liberar qualquer dado
+async function afterSupabaseLogin(supaUser){
+  try{
+    const email=supaUser.email;
+    const meta=supaUser.user_metadata||{};
+    const u={email,name:meta.full_name||meta.name||email,picture:meta.avatar_url||meta.picture||''};
+
+    const{data:allowedRow,error:allowedErr}=await supabase.from('allowed_users').select('*').eq('email',email).maybeSingle();
+    if(allowedErr||!allowedRow){
+      showUnauthorizedScreen(email);
+      await supabase.auth.signOut();
+      return;
+    }
+
+    state.user=u;
+    state.allowedUser={email,isAdmin:!!allowedRow.is_admin,nome:allowedRow.nome||u.name};
+    localStorage.setItem('prosus_user_email',email);
+    localStorage.setItem('prosus_user_name',u.name);
+
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    renderUserChip(u);
+    await loadAll();
+    await checkConnections();
+  }catch(e){showLoginError('Erro ao obter dados do usuário.');}
+}
+
+function renderUserChip(u){
+  const userChipHtml=`
+    <div class="user-chip" onclick="signOut()" title="Clique para sair">
+      <img src="${u.picture}" alt="${u.name}" onerror="this.style.display='none'">
+      <div class="user-chip-info">
+        <span class="user-chip-name">${u.name.split(' ')[0]}</span>
+        <span class="user-chip-out">Sair</span>
+      </div>
+    </div>`;
+  document.getElementById('user-status').innerHTML=userChipHtml;
+  const mobUs=document.getElementById('mob-user-status');
+  if(mobUs) mobUs.innerHTML=userChipHtml;
+  const su=document.getElementById('sidebar-user');
+  if(su){
+    su.innerHTML=`
+      <img src="${u.picture}" width="32" height="32" style="border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'">
+      <div style="min-width:0;flex:1;overflow:hidden">
+        <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name}</div>
+        <div style="font-size:10px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.email}</div>
+      </div>`;
+    su.setAttribute('style','display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #2a3048');
+  }
+}
+
+function showUnauthorizedScreen(email){
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  showLoginError(`Acesso não autorizado para ${email}. Fale com o administrador do sistema.`);
+}
+
+function showLoginError(msg){
+  const el=document.getElementById('login-error');
+  if(el){el.textContent=msg;el.style.display='block';}
+}
+
+// NOTA (migração Supabase): sob Supabase não há mais token de acesso do Google a
+// gerenciar (a sessão é do supabase-js, que renova sozinha) — ensureToken() e o
+// antigo tokenClient de access-token foram removidos; ver onGoogleCredential().
+
+async function openConfig(){
+  const admin=isAdmin();
+  document.getElementById('cfg-save-btn').style.display=admin?'':'none';
+  document.getElementById('cfg-add-row').style.display=admin?'':'none';
+  document.getElementById('cfg-readonly-warn').style.display=admin?'none':'block';
+  document.getElementById('cfg-migracao-section').style.display=admin?'':'none';
+  document.getElementById('cfg-migracao-body').style.display=admin?'':'none';
+  document.getElementById('config-modal').classList.add('open');
+  await renderAllowedUsers();
+}
+function closeConfig(){document.getElementById('config-modal').classList.remove('open');}
+
+async function renderAllowedUsers(){
+  const admin=isAdmin();
+  const list=document.getElementById('cfg-users-list');
+  const{data,error}=await supabase.from('allowed_users').select('*').order('criado_em');
+  if(error){list.innerHTML=`<div class="alert alert-error">Erro ao carregar: ${error.message}</div>`;return;}
+  list.innerHTML=(data&&data.length)?data.map(u=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0;overflow:hidden">
+        <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome||u.email}</div>
+        <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.email}</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap">
+        <input type="checkbox" ${u.is_admin?'checked':''} ${admin?'':'disabled'} onchange="toggleAllowedAdmin('${u.email}',this.checked)"> Admin
+      </label>
+      ${admin?`<button class="btn btn-secondary btn-sm" onclick="removeAllowedUser('${u.email}')">🗑️</button>`:''}
+    </div>`).join(''):'<div class="empty-state"><p>Nenhum usuário cadastrado.</p></div>';
+}
+async function addAllowedUser(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const email=document.getElementById('cfg-new-email').value.trim().toLowerCase();
+  const nome=document.getElementById('cfg-new-nome').value.trim();
+  const admin=document.getElementById('cfg-new-admin').checked;
+  if(!email){toast('Informe o e-mail','error');return;}
+  try{
+    toast('Salvando...','info');
+    const{error}=await supabase.from('allowed_users').insert({email,nome,is_admin:admin});
+    if(error) throw error;
+    document.getElementById('cfg-new-email').value='';
+    document.getElementById('cfg-new-nome').value='';
+    document.getElementById('cfg-new-admin').checked=false;
+    toast('Usuário adicionado!','success');
+    await renderAllowedUsers();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function toggleAllowedAdmin(email,novoIsAdmin){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  try{
+    const{error}=await supabase.from('allowed_users').update({is_admin:novoIsAdmin}).eq('email',email);
+    if(error) throw error;
+    if(email===state.allowedUser?.email) state.allowedUser.isAdmin=novoIsAdmin;
+    toast('Atualizado!','success');
+  }catch(e){toast('Erro: '+e.message,'error');await renderAllowedUsers();}
+}
+async function removeAllowedUser(email){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  if(!confirm('Remover o acesso de '+email+'?')) return;
+  try{
+    const{error}=await supabase.from('allowed_users').delete().eq('email',email);
+    if(error) throw error;
+    toast('Acesso removido!','success');
+    await renderAllowedUsers();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+// Badges de status: Banco (Supabase) sempre visível; Planilha (Sheets/Apps Script)
+// só aparece enquanto DUAL_WRITE_SHEETS estiver ligado — quando a gravação dupla for
+// desligada ao final da migração, essa badge some sozinha e fica só o Banco.
+function statusBadge(status,label){
+  const cls={ok:'badge-green',error:'badge-red',checking:'badge-yellow'}[status]||'badge-gray';
+  const txt={ok:'Conectado',error:'Erro',checking:'Verificando...'}[status]||'—';
+  return `<span class="badge ${cls}">● ${label}: ${txt}</span>`;
+}
+function updateStatus(){
+  const el=document.getElementById('connection-status');
+  if(!el)return;
+  let html=statusBadge(state.dbStatus,'Banco');
+  if(DUAL_WRITE_SHEETS) html+=' '+statusBadge(state.sheetsStatus,'Planilha');
+  el.innerHTML=html;
+}
+async function checkConnections(){
+  state.dbStatus='checking';
+  if(DUAL_WRITE_SHEETS) state.sheetsStatus='checking';
+  updateStatus();
+  try{
+    const{error}=await supabase.from('allowed_users').select('email').limit(1);
+    state.dbStatus=error?'error':'ok';
+  }catch(e){ state.dbStatus='error'; }
+  if(DUAL_WRITE_SHEETS){
+    try{
+      const r=await fetch(`${APPS_SCRIPT_URL}?ping=1`);
+      const result=await r.json();
+      state.sheetsStatus=result.success?'ok':'error';
+    }catch(e){ state.sheetsStatus='error'; }
+  }
+  updateStatus();
+}
+
+async function recarregarDados(){
+  const btn=document.getElementById('refresh-btn');
+  if(btn){btn.textContent='⏳ Atualizando...';btn.disabled=true;}
+  await loadAll();
+  await checkConnections();
+  if(btn){btn.textContent='🔄 Atualizar dados';btn.disabled=false;}
+}
+
+function toggleTheme(){
+  const de=document.documentElement;
+  de.classList.add('theme-switching');
+  const isLight=document.body.classList.toggle('light');
+  document.getElementById('theme-icon').textContent=isLight?'🌙':'☀️';
+  document.getElementById('theme-label').textContent=isLight?'Tema escuro':'Tema claro';
+  const mobIcon=document.getElementById('mob-theme-icon');
+  if(mobIcon) mobIcon.textContent=isLight?'🌙':'☀️';
+  localStorage.setItem('prosus_theme',isLight?'light':'dark');
+  void de.offsetWidth;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>de.classList.remove('theme-switching')));
+}
+
+function navigate(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+  // Sync mobile nav
+  ['dashboard','pacientes','pipeline','cadastro'].forEach(p=>{
+    const btn=document.getElementById('mob-btn-'+p);
+    if(btn) btn.classList.toggle('active',p===page);
+  });
+  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao','resumo'];
+  const mobMore=document.getElementById('mob-btn-more');
+  if(mobMore) mobMore.classList.toggle('active',morePages.includes(page));
+  document.getElementById('page-'+page).classList.add('active');
+  const[t,s]=pageMeta[page];
+  document.getElementById('page-title').textContent=t;
+  document.getElementById('page-subtitle').textContent=s;
+  const mobTitle=document.getElementById('mob-page-title');
+  const mobSub=document.getElementById('mob-page-sub');
+  if(mobTitle) mobTitle.textContent=t;
+  if(mobSub) mobSub.textContent=s;
+  if(page==='dentistas'&&state.connected) renderDentistas();
+  if(page==='proteticos'&&state.connected) renderProteticos();
+  if(page==='tipopeca'&&state.connected) renderTipoPeca();
+  if(page==='fechamento'&&state.connected) renderFechamento();
+  if(page==='fechamento-armacao'&&state.connected) renderFechamentoArmacao();
+  if(page==='contratos'&&state.connected) renderContratos();
+  if(page==='validacao'&&state.connected) renderValidacao();
+  if(page==='resumo'&&state.connected) renderResumo();
+  // Scroll to top on mobile
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function openMobMore(){
+  document.getElementById('mob-more-overlay').classList.add('open');
+  document.getElementById('mob-more-sheet').classList.add('open');
+}
+function closeMobMore(){
+  document.getElementById('mob-more-overlay').classList.remove('open');
+  document.getElementById('mob-more-sheet').classList.remove('open');
+}
+
+/* ── FETCH / POST (adapters Supabase — beta de migração) ──
+   Mantém as assinaturas antigas de fetchSheet(range)/postSheet(sheet,row) — que já
+   são usadas em ~30 pontos do app — para minimizar mudanças no resto do código.
+   `range`/`sheet` continuam sendo o nome da aba antiga (ex: 'Moldagens!A2:H5000' ou
+   'Moldagens'); só a parte antes do '!' é usada para achar a tabela correspondente.
+   Cada linha (array posicional, no formato antigo de colunas do Sheets) é convertida
+   de/para um objeto nomeado da tabela do Postgres. */
+const SHEET_MAP={
+  'Moldagens':{table:'moldagens',pk:'codigo',fields:['codigo','nome','dentista','tipo','data','dist','situacao','obs'],dates:['data'],numeric:true},
+  'BaseProvaArmacao':{table:'base_prova_armacao',pk:'codigo',fields:['codigo',null,null,null,null,'previsao','data','obs'],dates:['previsao','data'],numeric:true},
+  'Prova de Dentes':{table:'prova_dentes',pk:'codigo',fields:['codigo',null,null,null,null,'previsao','data','obs'],dates:['previsao','data'],numeric:true},
+  'Entregas':{table:'entregas',pk:'codigo',fields:['codigo',null,null,null,null,'previsao','entrega','obs'],dates:['previsao','entrega'],numeric:true},
+  'Reembase':{table:'reembase',pk:'codigo',fields:['codigo',null,null,null,null,'data','obs'],dates:['data'],numeric:true},
+  'Remarcacao':{table:'remarcacao',fields:['codigo',null,null,null,'etapa','data','obs'],dates:['data'],numeric:true}, // sem pk — sempre insert (histórico)
+  'Proteticos':{table:'proteticos',pk:'codigo',fields:['codigo','nome','paga_armacao'],bools:['paga_armacao']},
+  'Dentistas':{table:'dentistas',pk:'nome',fields:['nome']},
+  'BaseDados':{table:'tipos_peca',pk:'descricao',fields:['descricao','qtd_pt','qtd_ppr']},
+  'Contratos':{table:'contratos',pk:'id',fields:['id','inicio','fim','reembase_mes','pecas_contratadas'],dates:['inicio','fim']},
+};
+// Ordem de migração: Moldagens primeiro (as tabelas de etapas têm FK pra moldagens.codigo).
+const MIGRATION_ORDER=['Moldagens','Dentistas','Proteticos','BaseDados','Contratos','BaseProvaArmacao','Prova de Dentes','Entregas','Reembase','Remarcacao'];
+function rowToObj(map,row){
+  const obj={};
+  map.fields.forEach((f,i)=>{
+    if(!f||row[i]===undefined) return;
+    let v=row[i];
+    if(map.dates?.includes(f)) v=v?toInput(v):null; // dd/mm/aaaa -> aaaa-mm-dd (coluna date do Postgres)
+    else if(map.bools?.includes(f)) v=(v==='S'||v===true);
+    obj[f]=v;
+  });
+  return obj;
+}
+function objToRow(map,obj){
+  return map.fields.map(f=>{
+    if(!f) return '';
+    let v=obj[f];
+    if(map.dates?.includes(f)) return v?fromInput(v):''; // aaaa-mm-dd (Postgres) -> dd/mm/aaaa
+    if(map.bools?.includes(f)) return v?'S':'N';
+    return v??'';
+  });
+}
+async function fetchSheet(range){
+  const sheetName=range.split('!')[0];
+  const map=SHEET_MAP[sheetName];
+  if(!map) return [];
+  const{data,error}=await supabase.from(map.table).select('*');
+  if(error) throw new Error(error.message);
+  return(data||[]).map(row=>objToRow(map,row));
+}
+async function postSheet(sheet,row){
+  const map=SHEET_MAP[sheet];
+  if(!map) throw new Error('Tabela não mapeada: '+sheet);
+  const obj=rowToObj(map,row);
+  const{error}=await supabase.from(map.table).insert(obj);
+  if(error) throw new Error(error.message||'Erro ao salvar em '+sheet);
+  dualWriteSheets(sheet,row);
+  return{success:true};
+}
+// Update-ou-insert real via Postgres, substitui o padrão antigo de "buscar a coluna A
+// pra achar o número da linha, depois atualizar por índice" — elimina a race condition
+// documentada no CLAUDE.md (não há mais esse passo intermediário). `matchKey` é o valor
+// atual da chave (útil para os poucos casos em que a própria chave pode ser editada,
+// como o "id" de Contratos — o `row` já traz o valor novo, `matchKey` é só pra achar
+// a linha existente).
+async function upsertRow(sheet,matchKey,row){
+  const map=SHEET_MAP[sheet];
+  if(!map||!map.pk) throw new Error('Tabela sem chave de upsert: '+sheet);
+  const obj=rowToObj(map,row);
+  const{data,error}=await supabase.from(map.table).update(obj).eq(map.pk,String(matchKey)).select();
+  if(error) throw new Error(error.message||'Erro ao salvar em '+sheet);
+  if(!data||data.length===0){
+    const{error:insErr}=await supabase.from(map.table).insert(obj);
+    if(insErr) throw new Error(insErr.message||'Erro ao salvar em '+sheet);
+  }
+  dualWriteSheets(sheet,row,matchKey);
+  return{success:true};
+}
+// Gravação dupla temporária (best-effort): mantém a planilha antiga como backup vivo
+// durante o período de validação. Nunca deve travar a UI — falhas são só logadas.
+function dualWriteSheets(sheet,row,keyVal){
+  if(!DUAL_WRITE_SHEETS) return;
+  const body=(keyVal!==undefined)?{action:'upsert_by_key',sheet,key:String(keyVal),values:row}:{sheet,row};
+  fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(body)})
+    .then(r=>r.json())
+    .then(res=>{ state.sheetsStatus=res.success?'ok':'error'; updateStatus(); })
+    .catch(e=>{ console.warn('[dual-write] falhou em '+sheet+':',e); state.sheetsStatus='error'; updateStatus(); });
+}
+
+/* ── MIGRAÇÃO DE DADOS (Sheets → Supabase, ferramenta de uso único) ──
+   Lê o conteúdo bruto de cada aba direto do Apps Script (doGet, sem precisar de OAuth
+   de Sheets no navegador) e grava em lote no Supabase, reaproveitando o mesmo SHEET_MAP/
+   rowToObj usado pelas gravações normais do app — evita todo o processo manual de
+   exportar/importar CSV e o risco de errar formato de data no meio do caminho. */
+async function fetchRawSheetFromGoogle(sheetName){
+  const r=await fetch(`${APPS_SCRIPT_URL}?sheet=${encodeURIComponent(sheetName)}`);
+  const result=await r.json();
+  if(!result.success) throw new Error(result.error||'Erro ao ler '+sheetName);
+  return result.values||[]; // inclui a linha de cabeçalho no índice 0
+}
+function linhaValidaMigracao(map,row){
+  if(!row[0]||row[0].toString().trim()===''||row[0].toString().includes('#')) return false;
+  if(map.numeric&&!/^\d/.test(row[0].toString().trim())) return false;
+  return true;
+}
+async function upsertEmLotes(table,objs,pk,batchSize=500){
+  for(let i=0;i<objs.length;i+=batchSize){
+    const chunk=objs.slice(i,i+batchSize);
+    const{error}=pk?await supabase.from(table).upsert(chunk,{onConflict:pk}):await supabase.from(table).insert(chunk);
+    if(error) throw error;
+  }
+}
+async function migrarDadosDoSheets(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  if(!confirm('Isso vai importar os dados do Sheets pro Supabase (pode rodar mais de uma vez sem duplicar, exceto Remarcação — que é histórico e sempre insere de novo). Continuar?')) return;
+  const log=document.getElementById('migracao-log');
+  const append=(msg)=>{ if(log){log.innerHTML+=msg+'<br>';log.scrollTop=log.scrollHeight;} };
+  log.innerHTML='';
+  for(const sheetName of MIGRATION_ORDER){
+    const map=SHEET_MAP[sheetName];
+    try{
+      append(`⏳ Lendo "${sheetName}" do Sheets...`);
+      const rawRows=await fetchRawSheetFromGoogle(sheetName);
+      const dataRows=rawRows.slice(1); // pula cabeçalho
+      const validRows=dataRows.filter(r=>linhaValidaMigracao(map,r));
+      if(!validRows.length){ append(`— "${sheetName}": nenhuma linha válida encontrada.`); continue; }
+      const objs=validRows.map(r=>rowToObj(map,r));
+      await upsertEmLotes(map.table,objs,map.pk);
+      append(`✅ "${sheetName}": ${objs.length} linhas migradas para "${map.table}".`);
+    }catch(e){
+      append(`❌ Erro em "${sheetName}": ${e.message}`);
+    }
+  }
+  append('🏁 Migração concluída.');
+  await conferirContagens();
+}
+async function conferirContagens(){
+  const log=document.getElementById('migracao-log');
+  const append=(msg)=>{ if(log){log.innerHTML+=msg+'<br>';log.scrollTop=log.scrollHeight;} };
+  append('📊 Conferindo contagens no Supabase...');
+  for(const sheetName of MIGRATION_ORDER){
+    const map=SHEET_MAP[sheetName];
+    const{count,error}=await supabase.from(map.table).select('*',{count:'exact',head:true});
+    append(error?`❌ ${map.table}: ${error.message}`:`📊 ${map.table}: ${count} linhas`);
+  }
+}
+
+/* ── UTILS ── */
+function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
+function parseDate(d){if(!d)return null;const p=d.split('/');if(p.length!==3)return null;return new Date(+p[2],+p[1]-1,+p[0]);}
+function toInput(d){if(!d)return'';const p=d.split('/');return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:''}
+function fromInput(v){if(!v)return'';const p=v.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:''}
+function setHoje(inputId){
+  const input=document.getElementById(inputId);
+  if(input){
+    const today=new Date();
+    const yyyy=today.getFullYear();
+    const mm=String(today.getMonth()+1).padStart(2,'0');
+    const dd=String(today.getDate()).padStart(2,'0');
+    input.value=`${yyyy}-${mm}-${dd}`;
+  }
+}
+async function salvarHoje(cod,tipo,inputId){
+  setHoje(inputId);
+  await submitEtapaUnica(cod,tipo);
+}
+const autoSaveTimers={};
+function autoSaveEtapa(cod,tipo){
+  if(tipo==='rem'){
+    const etapa=document.getElementById('et-rem-etapa').value;
+    const data=document.getElementById('et-rem-data').value;
+    if(!etapa||!data) return;
+  }
+  const key=cod+'-'+tipo;
+  clearTimeout(autoSaveTimers[key]);
+  autoSaveTimers[key]=setTimeout(()=>submitEtapaUnica(cod,tipo),400);
+}
+/* ── MULTI-TRATAMENTO HELPERS ── */
+// Extrai o código base (ex: "7457/1" → "7457", "7457" → "7457")
+function baseCod(cod){return String(cod).split('/')[0];}
+
+// Retorna todos os tratamentos do mesmo paciente (mesmo código base)
+function tratamentosRelacionados(cod){
+  const base=baseCod(cod);
+  return state.moldagens.filter(m=>baseCod(m.codigo)===base);
+}
+
+// Sugere o próximo código para um novo tratamento do mesmo paciente
+function proximoCodigoTratamento(nome){
+  const existentes=state.moldagens.filter(m=>m.nome.toLowerCase()===nome.toLowerCase());
+  if(!existentes.length) return null;
+  // Pega todos os códigos base únicos e todos os sufixos /N
+  const bases=[...new Set(existentes.map(m=>baseCod(m.codigo)))];
+  const base=bases[0]; // usa o primeiro código base encontrado
+  const suffixes=existentes
+    .map(m=>{const p=String(m.codigo).split('/');return p.length>1?parseInt(p[1]):0;})
+    .sort((a,b)=>b-a);
+  const nextSuffix=suffixes[0]+1;
+  return{base,proximo:nextSuffix===1?`${base}/1`:`${base}/${nextSuffix}`,existentes};
+}
+
+// Agrupa moldagens por código base para exibição agrupada
+function agruparPorPaciente(lista){
+  const map=new Map();
+  lista.forEach(m=>{
+    const base=baseCod(m.codigo);
+    if(!map.has(base)) map.set(base,[]);
+    map.get(base).push(m);
+  });
+  return map;
+}
+
+function toast(msg,type='info'){
+  const c=document.getElementById('toast-container');
+  const d=document.createElement('div');d.className=`toast toast-${type}`;
+  d.innerHTML=`<span>${{success:'✅',error:'❌',info:'ℹ️'}[type]||'ℹ️'}</span><span>${msg}</span>`;
+  c.appendChild(d);setTimeout(()=>{d.style.cssText='opacity:0;transition:opacity .3s';setTimeout(()=>d.remove(),300);},3500);
+}
+
+/* ── LOAD ── */
+async function loadAll(){
+  state.connected=false;state.dbStatus='checking';updateStatus();
+  document.getElementById('dashboard-content').innerHTML='<div class="loading-state"><div class="loading-spinner"></div>Carregando dados...</div>';
+  try{
+    const[mRows,bRows,dRows,eRows]=await Promise.all([
+      fetchSheet('Moldagens!A2:H5000'),
+      fetchSheet('BaseProvaArmacao!A2:H2000'),
+      fetchSheet('Prova de Dentes!A2:H2000'),
+      fetchSheet('Entregas!A2:J2000')
+    ]);
+    let pRows=[],dentRows=[],tipoRows=[],remRows=[],reemRows=[];
+    try{pRows=await fetchSheet('Proteticos!A2:C200');}catch(e){}
+    try{dentRows=await fetchSheet('Dentistas!A2:A500');}catch(e){}
+    try{tipoRows=await fetchSheet('BaseDados!A3:C200');}catch(e){}
+    try{remRows=await fetchSheet('Remarcacao!A2:G500');}catch(e){}
+    try{reemRows=await fetchSheet('Reembase!A2:G2000');}catch(e){}
+    let contratoRows=[];
+    try{contratoRows=await fetchSheet('Contratos!A2:D100');}catch(e){}
+
+    // NOTA (migração Supabase): admin_emails/Configuracao foi substituído por allowed_users,
+    // checado no login (ver afterSupabaseLogin/checkAllowedUser) — não faz mais parte do loadAll.
+
+    // Parse contratos: A=id, B=inicio(dd/mm/aaaa), C=fim(dd/mm/aaaa), D=reembase_mes, E=pecas_contratadas
+    state.contratos=contratoRows.filter(r=>r[0]&&r[1]&&r[2]).map(r=>({
+      id:r[0].toString().trim(),
+      inicio:r[1].toString().trim(),
+      fim:r[2].toString().trim(),
+      reembaseMes:+(r[3]||0),
+      pecasContratadas:+(r[4]||0)
+    }));
+
+    // Detect active contract (today within period)
+    const today=new Date(); today.setHours(0,0,0,0);
+    state.contratoAtivo=state.contratos.find(c=>{
+      const ini=parseDate(c.inicio);
+      const fim=parseDate(c.fim);
+      return ini&&fim&&today>=ini&&today<=fim;
+    })||state.contratos[state.contratos.length-1]||null;
+
+    state.moldagens=mRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),nome:r[1]||'',dentista:r[2]||'',tipo:r[3]||'',data:r[4]||'',dist:r[5]||'',situacao:r[6]||'Pendente',obs:r[7]||''}));
+    state.baseProva=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&r[6]&&r[6].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',data:r[6].toString().trim(),obs:r[7]||''}));
+    state.basePrevista=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&(!r[6]||r[6].toString().trim()==='')&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5].toString().trim(),obs:r[7]||''}));
+    state.provaDentes=dRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&((r[5]&&r[5].toString().trim()!=='')||(r[6]&&r[6].toString().trim()!==''))).map(r=>({codigo:r[0].toString().trim(),previsao:r[5]?r[5].toString().trim():'',data:r[6]?r[6].toString().trim():'',obs:r[7]||''}));
+    state.entregas=eRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',entrega:r[6]&&r[6].toString().trim()!==''?r[6].toString().trim():'',obs:r[7]||''}));
+    state.reembase=reemRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),data:r[5].toString().trim(),obs:r[6]||''}));
+    state.proteticos=pRows.filter(r=>r[0]).map(r=>({codigo:r[0],nome:r[1]||'',pagaArmacao:r[2]==='S'||r[2]==='s'||r[2]==='1'}));
+    state.dentistas=dentRows.filter(r=>r[0]).map(r=>r[0]);
+    state.tiposPeca=tipoRows.filter(r=>r[0]).map(r=>({desc:r[0],pt:r[1]||'0',ppr:r[2]||'0'}));
+    state.remarcacoes=remRows.filter(r=>r[0]&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),etapa:r[4]||'',data:r[5]||'',obs:r[6]||''}));
+
+    state.connected=true;state.dbStatus='ok';updateStatus();
+    toast('Dados carregados do banco! '+state.moldagens.length+' registros.','success');
+    renderDashboard();renderTable();renderPipeline();renderCadastroForm();
+    renderFechamento();renderFechamentoArmacao();
+    refreshDetailIfOpen();
+    if(document.querySelector('#page-resumo.active')) renderResumo();
+    if(document.querySelector('#page-contratos.active')) renderContratos();
+  }catch(e){
+    state.connected=false;state.dbStatus='error';updateStatus();
+    toast('Erro: '+e.message,'error');
+    document.getElementById('dashboard-content').innerHTML=`<div class="not-connected"><div class="icon">❌</div><h3>Erro de conexão</h3><p>${e.message}</p><button class="btn btn-primary" onclick="loadAll()">🔄 Tentar novamente</button></div>`;
+  }
+}
+
+/* ── DASHBOARD ── */
+function selecionarContrato(id){
+  state.contratoAtivo=state.contratos.find(c=>c.id===id)||null;
+  renderDashboard();
+}
+
+function contratoMeses(){
+  const c=state.contratoAtivo;
+  if(!c) return null;
+  const ini=parseDate(c.inicio);
+  const fim=parseDate(c.fim);
+  if(!ini||!fim) return null;
+  const meses=[];
+  const cur=new Date(ini.getFullYear(),ini.getMonth(),1);
+  const end=new Date(fim.getFullYear(),fim.getMonth(),1);
+  while(cur<=end){meses.push({ano:cur.getFullYear(),mes:cur.getMonth()+1});cur.setMonth(cur.getMonth()+1);}
+  return meses;
+}
+function inContrato(dateStr){
+  const c=state.contratoAtivo;
+  if(!c) return true;
+  const dt=parseDate(dateStr);if(!dt)return false;
+  const ini=parseDate(c.inicio);
+  const fim=parseDate(c.fim);
+  return dt>=ini&&dt<=fim;
+}
+function renderDashboard(){
+  const mesesContrato=contratoMeses();
+  const moldBase=mesesContrato?state.moldagens.filter(m=>inContrato(m.data)):state.moldagens;
+  // Entregas seguem a moldagem: um paciente pertence ao contrato onde foi moldado
+  const moldBaseCods=new Set(moldBase.map(m=>m.codigo));
+  const entregasBase=mesesContrato?state.entregas.filter(e=>moldBaseCods.has(e.codigo)):state.entregas;
+
+  const pacientesUnicos=new Set(moldBase.map(m=>baseCod(m.codigo))).size;
+  const total=moldBase.length;
+  const entregues=entregasBase.filter(e=>e.entrega).length;
+  const pendentes=total-entregues;
+
+  let totalPecas=0,totalPecasPend=0,pecasEntregues=0;
+  moldBase.forEach(m=>{
+    const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
+    const pecas=(+tp.pt||0)+(+tp.ppr||0);
+    totalPecas+=pecas;
+    const entregue=state.entregas.find(e=>e.codigo===m.codigo&&e.entrega);
+    if(entregue) pecasEntregues+=pecas;
+    else totalPecasPend+=pecas;
+  });
+  const pecasContratadas=state.contratoAtivo?.pecasContratadas||0;
+
+  const today=new Date();
+  const reembaseMes=state.reembase.filter(r=>{const dt=parseDate(r.data);return dt&&dt.getFullYear()===today.getFullYear()&&dt.getMonth()===today.getMonth();}).length;
+  const reembaseContratado=state.contratoAtivo?.reembaseMes||0;
+
+  const mesC={};
+  state.entregas.filter(e=>e.entrega).forEach(e=>{
+    const dt=parseDate(e.entrega);
+    if(dt){const k=`${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}`;mesC[k]=(mesC[k]||0)+1;}
+  });
+  let mesKeys;
+  if(mesesContrato){
+    mesKeys=mesesContrato.map(({ano,mes})=>`${ano}/${String(mes).padStart(2,'0')}`);
+  }else{
+    mesKeys=Object.keys(mesC).sort().slice(-7);
+  }
+  const mesLabels=mesKeys.map(k=>{const[y,m]=k.split('/');return MESES[+m-1].slice(0,3)+' '+y;});
+
+  const tipoC={},dentC={};
+  moldBase.forEach(m=>{tipoC[m.tipo||'Não Preenchido']=(tipoC[m.tipo||'Não Preenchido']||0)+1;dentC[m.dentista]=(dentC[m.dentista]||0)+1;});
+
+  // Seletor de contrato
+  const contratoOpts=state.contratos.length
+    ?state.contratos.map(c=>{
+        const today2=new Date();today2.setHours(0,0,0,0);
+        const ini=parseDate(c.inicio),fim=parseDate(c.fim);
+        const sit=!ini||!fim?'':today2<ini?' (Futuro)':today2>fim?' (Encerrado)':' ✅ Ativo';
+        const sel=state.contratoAtivo?.id===c.id?' selected':'';
+        return`<option value="${c.id}"${sel}>${c.id}${sit}</option>`;
+      }).join('')
+    :'<option value="">Nenhum contrato cadastrado</option>';
+
+  const contratoSelectHtml=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--text2);font-weight:600;white-space:nowrap">📋 Contrato:</span>
+      <select onchange="selecionarContrato(this.value)" style="padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Hanken Grotesk',sans-serif;font-size:13px;outline:none;cursor:pointer;flex:1;max-width:420px">
+        <option value="" ${!state.contratoAtivo?' selected':''}>— Todos os registros (sem filtro) —</option>
+        ${contratoOpts}
+      </select>
+      ${state.contratoAtivo?`<span style="font-size:11px;color:var(--text2)">${state.contratoAtivo.inicio} a ${state.contratoAtivo.fim}</span>`:''}
+    </div>`;
+
+  document.getElementById('dashboard-content').innerHTML=`
+    ${contratoSelectHtml}
+    <div class="cards-grid">
+      <div class="stat-card accent">
+        <div class="label">Pacientes</div>
+        <div class="value">${pacientesUnicos}</div>
+        <div class="sublabel">${total} próteses cadastradas</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Entregues</div>
+        <div class="value" style="color:var(--accent)">${pecasEntregues}${pecasContratadas>0?`<span style="color:var(--text3);font-size:16px;font-weight:400"> / ${pecasContratadas}</span>`:''}</div>
+        <div class="sublabel">${pecasContratadas>0?`${Math.round(pecasEntregues/pecasContratadas*100)}% do contratado · `:``}${entregues} paciente(s) entregue(s)</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Pendentes</div>
+        <div class="value" style="color:var(--accent3)">${totalPecasPend}</div>
+        <div class="sublabel">${pendentes} paciente(s) pendente(s)</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Peças Total</div>
+        <div class="value" style="font-size:22px">${totalPecas}</div>
+        <div class="sublabel">PT + PPR cadastradas</div>
+      </div>
+      ${reembaseContratado>0?`<div class="stat-card" onclick="navegarComFiltroEtapa('reembase')" style="cursor:pointer" title="Clique para ver pacientes com reembase">
+        <div class="label">Reembase</div>
+        <div class="value" style="font-size:22px;color:var(--accent2)">${reembaseMes}<span style="color:var(--text3);font-size:16px"> / ${reembaseContratado}</span></div>
+        <div class="sublabel">realizados / contratados este mês · 🔍 ver registros</div>
+      </div>`:''}
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><h3>📈 Entregas por mês</h3><div class="chart-container"><canvas id="ch-meses"></canvas></div></div>
+      <div class="chart-card"><h3>🍩 Por tipo de peça</h3><div class="chart-container"><canvas id="ch-tipos"></canvas></div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><h3>👨‍⚕️ Por dentista (top 6)</h3><div class="chart-container"><canvas id="ch-dents"></canvas></div></div>
+      <div class="chart-card"><h3>📊 Situação geral</h3><div style="display:flex;align-items:center;justify-content:center;height:190px"><canvas id="ch-sit" style="max-height:170px;max-width:170px"></canvas></div></div>
+    </div>`;
+
+  const pal=['#4af0a0','#13456a','#f59e0b','#f43f5e','#a78bfa','#34d399','#fb923c','#94a3b8'];
+  const gOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#7c85a2',font:{size:11}},grid:{color:'#2a3048'}},y:{ticks:{color:'#7c85a2',font:{size:11}},grid:{color:'#2a3048'}}}};
+  if(mesKeys.length) new Chart(document.getElementById('ch-meses'),{type:'bar',data:{labels:mesLabels,datasets:[{data:mesKeys.map(k=>mesC[k]||0),backgroundColor:'rgba(74,240,160,.2)',borderColor:'#4af0a0',borderWidth:2,borderRadius:5}]},options:gOpts});
+  const tLabels=Object.keys(tipoC);
+  if(tLabels.length) new Chart(document.getElementById('ch-tipos'),{type:'doughnut',data:{labels:tLabels,datasets:[{data:tLabels.map(k=>tipoC[k]),backgroundColor:pal,borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7c85a2',font:{size:11},boxWidth:10,padding:8}}}}});
+  const dLabels=Object.keys(dentC).filter(Boolean).sort((a,b)=>dentC[b]-dentC[a]).slice(0,6);
+  if(dLabels.length) new Chart(document.getElementById('ch-dents'),{type:'bar',data:{labels:dLabels.map(cap),datasets:[{data:dLabels.map(k=>dentC[k]),backgroundColor:pal,borderRadius:5}]},options:{...gOpts,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#7c85a2',font:{size:11}},grid:{color:'#2a3048'}},y:{ticks:{color:'#7c85a2',font:{size:11}},grid:{display:false}}}}});
+  new Chart(document.getElementById('ch-sit'),{type:'doughnut',data:{labels:['Entregues','Pendentes'],datasets:[{data:[entregues,pendentes],backgroundColor:['#4af0a0','#f59e0b'],borderWidth:0,hoverOffset:4}]},options:{responsive:false,plugins:{legend:{position:'bottom',labels:{color:'#7c85a2',font:{size:11},boxWidth:10,padding:10}}}}});
+}
+
+/* ── TABLE ── */
+function renderTable(){
+  state.filtered=[...state.moldagens];state.currentPage=1;
+  const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(m=>m.dentista).filter(Boolean))].sort();
+  document.getElementById('filter-dentista').innerHTML='<option value="">Todos os dentistas</option>'+dents.map(d=>`<option>${d}</option>`).join('');
+  const tipos=state.tiposPeca.length?state.tiposPeca.map(t=>t.desc):[...new Set(state.moldagens.map(m=>m.tipo).filter(Boolean))].sort();
+  document.getElementById('filter-tipo').innerHTML='<option value="">Todos os tipos</option>'+tipos.map(t=>`<option>${t}</option>`).join('');
+  renderTablePage();
+}
+
+// State for which groups are expanded (shows children)
+if(!window.expandedGroups) window.expandedGroups=new Set();
+function toggleGroup(base){
+  if(expandedGroups.has(base)) expandedGroups.delete(base);
+  else expandedGroups.add(base);
+  renderTablePage();
+}
+
+function entregaCell(cod){
+  const today=new Date();today.setHours(0,0,0,0);
+  const ent=state.entregas.find(x=>x.codigo===cod);
+  if(ent?.entrega) return`<span style="color:var(--accent);font-weight:600">✓ ${ent.entrega}</span>`;
+  if(ent?.previsao){
+    const prev=parseDate(ent.previsao);
+    const vencido=prev&&prev<today;
+    return`<span style="color:${vencido?'var(--accent4)':'var(--text)'};font-weight:${vencido?'600':'400'}">📅 ${ent.previsao}${vencido?' ⚠️':''}</span>`;
+  }
+  return'<span style="color:var(--text3)">—</span>';
+}
+
+function renderTablePage(){
+  const{filtered,currentPage,perPage}=state;
+
+  // Build groups from filtered list
+  const groupMap=agruparPorPaciente(filtered);
+  // Each group = one "slot" for pagination; single-treatment groups = 1 slot, multi = 1 slot (expandable)
+  const groupKeys=[...groupMap.keys()];
+  const total=groupKeys.length;
+  const start=(currentPage-1)*perPage;
+  const pageKeys=groupKeys.slice(start,start+perPage);
+
+  document.getElementById('table-count').textContent=`${filtered.length} registro${filtered.length!==1?'s':''} · ${total} paciente${total!==1?'s':''}`;
+  if(!total){document.getElementById('table-body').innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><p>Nenhum resultado encontrado.</p></div>';document.getElementById('pagination').style.display='none';return;}
+
+  let h=`<table><thead><tr>
+    <th>Código</th><th>Nome</th><th>Dentista</th><th>Tipo</th><th>Data Moldagem</th>
+    <th>Distribuição</th>
+    <th>Entrega / Previsão</th><th>Situação</th>
+  </tr></thead><tbody>`;
+
+  pageKeys.forEach(base=>{
+    const group=groupMap.get(base);
+    const isMulti=group.length>1;
+    const expanded=expandedGroups.has(base);
+    // Sort group: base code first, then /1, /2...
+    group.sort((a,b)=>{
+      const sa=String(a.codigo).split('/');const sb=String(b.codigo).split('/');
+      return (parseInt(sa[1]||0))-(parseInt(sb[1]||0));
+    });
+    const primary=group[0];
+
+    const sit=(primary.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente';
+    const bc=sit==='Entregue'?'badge-green':'badge-yellow';
+    const prot=state.proteticos.find(p=>p.codigo===primary.dist);
+    const distDisplay=prot?`${primary.dist} — ${prot.nome}`:primary.dist;
+    const isNew=String(primary.codigo)===String(state.lastSavedCodigo)||group.some(g=>String(g.codigo)===String(state.lastSavedCodigo));
+
+    // Multi-treatment toggle badge
+    const multiBadge=isMulti
+      ?`<button class="multi-badge" onclick="toggleGroup('${base}')" title="${expanded?'Recolher':'Expandir'} tratamentos">${group.length} tratamentos ${expanded?'▲':'▼'}</button>`
+      :'';
+
+    h+=`<tr class="group-header${isNew?' highlight-new':''}">
+      <td class="td-code" data-label="Código"><button class="icon-btn" onclick="showDetail('${primary.codigo}')" title="Ver detalhes" style="margin-right:4px">🔎</button>#${primary.codigo}</td>
+      <td class="td-name" data-label="Nome">${primary.nome}${multiBadge}</td>
+      <td data-label="Dentista">${cap(primary.dentista)}</td>
+      <td data-label="Tipo">${primary.tipo}</td>
+      <td data-label="Moldagem">${primary.data}</td>
+      <td data-label="Dist.">${distDisplay}</td>
+      <td data-label="Entrega">${entregaCell(primary.codigo)}</td>
+      <td data-label="Situação"><span class="badge ${bc}">${sit}</span></td>
+    </tr>`;
+
+    // Render child rows when expanded
+    if(isMulti&&expanded){
+      group.slice(1).forEach(child=>{
+        const csit=(child.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente';
+        const cbc=csit==='Entregue'?'badge-green':'badge-yellow';
+        const cprot=state.proteticos.find(p=>p.codigo===child.dist);
+        const cDist=cprot?`${child.dist} — ${cprot.nome}`:child.dist;
+        const cNew=String(child.codigo)===String(state.lastSavedCodigo);
+        h+=`<tr class="group-child${cNew?' highlight-new':''}">
+          <td class="td-code" data-label="Código"><button class="icon-btn" onclick="showDetail('${child.codigo}')" title="Ver detalhes" style="margin-right:4px">🔎</button>#${child.codigo}</td>
+          <td class="td-name" data-label="Nome" style="color:var(--text2)">${child.nome}</td>
+          <td data-label="Dentista">${cap(child.dentista)}</td>
+          <td data-label="Tipo">${child.tipo}</td>
+          <td data-label="Moldagem">${child.data}</td>
+          <td data-label="Dist.">${cDist}</td>
+          <td data-label="Entrega">${entregaCell(child.codigo)}</td>
+          <td data-label="Situação"><span class="badge ${cbc}">${csit}</span></td>
+        </tr>`;
+      });
+    }
+  });
+
+  h+='</tbody></table>';
+  document.getElementById('table-body').innerHTML=h;
+  if(state.lastSavedCodigo){
+    setTimeout(()=>{document.querySelectorAll('tr.highlight-new').forEach(r=>r.classList.remove('highlight-new'));state.lastSavedCodigo=null;},3000);
+  }
+  const pages=Math.ceil(total/perPage);
+  if(pages<=1){document.getElementById('pagination').style.display='none';return;}
+  document.getElementById('pagination').style.display='flex';
+  let p='';
+  if(currentPage>1)p+=`<button class="page-btn" onclick="goPage(${currentPage-1})">‹</button>`;
+  for(let i=Math.max(1,currentPage-2);i<=Math.min(pages,currentPage+2);i++)p+=`<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  if(currentPage<pages)p+=`<button class="page-btn" onclick="goPage(${currentPage+1})">›</button>`;
+  p+=`<span class="page-info">${start+1}–${Math.min(start+perPage,total)} de ${total} pacientes</span>`;
+  document.getElementById('pagination').innerHTML=p;
+}
+
+function goPage(n){state.currentPage=n;renderTablePage();}
+
+function clearFilters(){
+  document.getElementById('search-input').value='';
+  document.getElementById('filter-dentista').value='';
+  document.getElementById('filter-tipo').value='';
+  document.getElementById('filter-status').value='';
+  document.getElementById('filter-etapa').value='';
+  document.getElementById('filter-data-de').value='';
+  document.getElementById('filter-data-ate').value='';
+  filterTable();
+}
+
+// toggleDistVisibility removed — proteticos sempre visíveis
+
+let _pwCallback=null;
+function showPasswordPrompt(title,msg,cb){
+  _pwCallback=cb;
+  let overlay=document.getElementById('pw-overlay');
+  if(!overlay){
+    overlay=document.createElement('div');overlay.id='pw-overlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;width:380px;max-width:95vw;box-shadow:var(--shadow)">
+      <h3 id="pw-title" style="font-family:Syne,sans-serif;font-size:16px;margin-bottom:8px"></h3>
+      <p id="pw-msg" style="font-size:13px;color:var(--text2);margin-bottom:16px"></p>
+      <input type="password" id="pw-input" style="width:100%;padding:9px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:DM Sans,sans-serif;font-size:13px;outline:none;margin-bottom:16px" placeholder="Senha...">
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closePwPrompt()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmPwPrompt()">Confirmar</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+  }
+  document.getElementById('pw-title').textContent=title;
+  document.getElementById('pw-msg').textContent=msg;
+  document.getElementById('pw-input').value='';
+  overlay.style.display='flex';
+  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+  document.getElementById('pw-input').onkeydown=e=>{if(e.key==='Enter')confirmPwPrompt();if(e.key==='Escape')closePwPrompt();};
+}
+function closePwPrompt(){const o=document.getElementById('pw-overlay');if(o)o.style.display='none';}
+function confirmPwPrompt(){
+  const val=document.getElementById('pw-input').value;
+  closePwPrompt();
+  if(_pwCallback){_pwCallback(val);_pwCallback=null;}
+}
+
+function filterTable(){
+  const q=(document.getElementById('search-input').value||'').toLowerCase();
+  const dent=document.getElementById('filter-dentista').value;
+  const tipo=document.getElementById('filter-tipo').value;
+  const sit=document.getElementById('filter-status').value;
+  const etapa=document.getElementById('filter-etapa').value;
+  const dataDE=document.getElementById('filter-data-de').value;
+  const dataATE=document.getElementById('filter-data-ate').value;
+
+  // Build sets for etapa filtering
+  const bpSet=new Set(state.baseProva.map(x=>x.codigo));
+  const pdSet=new Set(state.provaDentes.filter(x=>x.data&&x.data.trim()!=='').map(x=>x.codigo));
+  const entSet=new Set(state.entregas.filter(e=>e.entrega).map(e=>e.codigo));
+  const rbSet=new Set(state.reembase.map(x=>x.codigo));
+
+  state.filtered=state.moldagens.filter(m=>{
+    const mq=!q||m.nome.toLowerCase().includes(q)||String(m.codigo).includes(q)||m.dentista.toLowerCase().includes(q);
+    const md=!dent||m.dentista===dent;
+    const mt=!tipo||m.tipo===tipo;
+    const ms=!sit||((m.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente')===sit;
+    let me=true;
+    if(etapa){
+      const cod=m.codigo;
+      if(etapa==='moldagem')      me=!bpSet.has(cod)&&!entSet.has(cod);
+      else if(etapa==='base_prova')   me=bpSet.has(cod)&&!pdSet.has(cod)&&!entSet.has(cod);
+      else if(etapa==='prova_dentes') me=pdSet.has(cod)&&!entSet.has(cod);
+      else if(etapa==='entregue')     me=entSet.has(cod);
+      else if(etapa==='reembase')     me=rbSet.has(cod);
+    }
+    let mde=true,mate=true;
+    if(dataDE||dataATE){
+      const tipoData=document.getElementById('filter-tipo-data')?.value||'moldagem';
+      let dataStr='';
+      if(tipoData==='moldagem') dataStr=m.data;
+      else if(tipoData==='bp'){const r=state.baseProva.find(x=>x.codigo===m.codigo);dataStr=r?.data||'';}
+      else if(tipoData==='bp_prev'){const r=state.baseProva.find(x=>x.codigo===m.codigo)||state.basePrevista.find(x=>x.codigo===m.codigo);dataStr=r?.previsao||'';}
+      else if(tipoData==='pd'){const r=state.provaDentes.find(x=>x.codigo===m.codigo);dataStr=r?.data||'';}
+      else if(tipoData==='pd_prev'){const r=state.provaDentes.find(x=>x.codigo===m.codigo);dataStr=r?.previsao||'';}
+      else if(tipoData==='entrega'){const r=state.entregas.find(x=>x.codigo===m.codigo);dataStr=r?.entrega||'';}
+      else if(tipoData==='entrega_prev'){const r=state.entregas.find(x=>x.codigo===m.codigo);dataStr=r?.previsao||'';}
+      else if(tipoData==='reembase'){const r=state.reembase.find(x=>x.codigo===m.codigo);dataStr=r?.data||'';}
+      const dt=parseDate(dataStr);
+      if(dt){
+        if(dataDE){const de=new Date(dataDE+'T00:00:00');mde=dt>=de;}
+        if(dataATE){const ate=new Date(dataATE+'T23:59:59');mate=dt<=ate;}
+      }else{mde=false;mate=false;}
+    }
+    return mq&&md&&mt&&ms&&me&&mde&&mate;
+  });
+  state.currentPage=1;renderTablePage();
+}
+
+/* ── DETAIL ── */
+function showDetail(cod){
+  const m=state.moldagens.find(x=>x.codigo===String(cod));if(!m)return;
+  state.currentDetailCod=cod;
+  document.getElementById('detail-title').textContent=`#${m.codigo} — ${m.nome}`;
+  document.querySelectorAll('.modal-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  ['info','etapas','editar'].forEach((t,i)=>document.getElementById('detail-tab-'+t).style.display=i===0?'block':'none');
+  renderDetailInfo(cod);
+  document.getElementById('detail-modal').classList.add('open');
+}
+function switchDetailTab(tab){
+  const tabs=['info','etapas','editar'];
+  document.querySelectorAll('.modal-tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===tab));
+  tabs.forEach(t=>document.getElementById('detail-tab-'+t).style.display=t===tab?'block':'none');
+  const cod=state.currentDetailCod;
+  if(tab==='info')renderDetailInfo(cod);
+  if(tab==='etapas')renderDetailEtapas(cod);
+  if(tab==='editar')renderDetailEditar(cod);
+}
+function renderDetailInfo(cod){
+  const m=state.moldagens.find(x=>x.codigo===String(cod));if(!m)return;
+  const e=state.entregas.find(x=>x.codigo===String(cod));
+  const bp=state.baseProva.find(x=>x.codigo===String(cod));
+  const pd=state.provaDentes.find(x=>x.codigo===String(cod));
+  const rb=state.reembase.find(x=>x.codigo===String(cod));
+  const prot=state.proteticos.find(p=>p.codigo===m.dist);
+  const rems=state.remarcacoes.filter(x=>x.codigo===String(cod));
+  const bpPrevInfo=state.basePrevista.find(x=>x.codigo===String(cod));
+  const step=(label,date,color,obs,prev)=>`<div class="timeline-step"><div class="timeline-dot" style="background:${date?color:'var(--border)'}"></div><div style="flex:1"><div style="font-size:13px;font-weight:500">${label}</div><div style="font-size:12px;color:var(--text2)">${date||'Pendente'}</div>${!date&&prev?`<div style="font-size:11px;color:#13456a;margin-top:2px">📅 Previsão: <strong>${prev}</strong></div>`:''} ${obs?`<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 ${obs}</div>`:''}</div>${date?'<span class="badge badge-green">✓</span>':'<span class="badge badge-gray">–</span>'}</div>`;
+  const remHtml=rems.length?`<div style="margin-top:12px"><div style="font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Remarcações</div>${rems.map(r=>`<div style="font-size:12px;padding:6px 10px;background:var(--surface2);border-radius:6px;margin-bottom:4px">🔁 <strong>${r.etapa}</strong> → ${r.data}${r.obs?' — '+r.obs:''}</div>`).join('')}</div>`:'';
+  const relacionados=tratamentosRelacionados(cod).filter(x=>x.codigo!==String(cod));
+  const relacionadosHtml=relacionados.length?`
+    <div class="related-tratamentos">
+      <span style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;width:100%;margin-bottom:2px">🔗 Outros tratamentos deste paciente</span>
+      ${relacionados.map(r=>{
+        const re=state.entregas.find(x=>x.codigo===r.codigo);
+        const sit=re?.entrega?'✅ Entregue':'⏳ Pendente';
+        return`<button class="trat-chip" onclick="closeDetail();showDetail('${r.codigo}')">#${r.codigo} · ${r.tipo} · ${sit}</button>`;
+      }).join('')}
+    </div>`:'';
+  document.getElementById('detail-tab-info').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">TIPO DE PEÇA</div><div style="font-size:14px;font-weight:600">${m.tipo}</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">DENTISTA</div><div style="font-size:14px;font-weight:600">${cap(m.dentista)}</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">DISTRIBUIÇÃO</div><div style="font-size:14px;font-weight:600">${m.dist}${prot?' — '+prot.nome:''}</div></div>
+      ${m.obs?`<div style="background:var(--surface2);border-radius:8px;padding:11px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">OBSERVAÇÃO</div><div style="font-size:13px">${m.obs}</div></div>`:''}
+    </div>
+    <div style="font-size:10px;color:var(--text2);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Linha do Tempo</div>
+    ${step('Moldagem',m.data,'#4af0a0','')}
+    ${step('Base de Prova / Armação',bp?.data,'#13456a',bp?.obs||'',bpPrevInfo?.previsao||'')}
+    ${step('Prova de Dentes',pd?.data,'#f59e0b',pd?.obs||'',pd?.previsao||'')}
+    ${step('Entrega',e?.entrega,'#4af0a0',e?.obs||'')}
+    ${e?.previsao&&!e?.entrega?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-left:26px">📅 Previsão: <strong style="color:var(--text)">${e.previsao}</strong></div>`:''}
+    ${remHtml}
+    ${rb?.data?step('Reembase',rb.data,'#f43f5e',rb.obs||''):''}
+    ${relacionadosHtml}`;
+}
+function isAdmin(){
+  // NOTA (migração Supabase): admin agora vem de allowed_users.is_admin, checado
+  // no login (ver checkAllowedUser()) e cacheado em state.allowedUser. O RLS no
+  // banco é quem realmente impede escrita de não-admin — isso aqui é só a UI.
+  return !!state.allowedUser?.isAdmin;
+}
+
+// Re-renderiza etapas se modal estiver aberto — chamado após loadAll garantir adminEmails carregado
+function refreshDetailIfOpen(){
+  if(!state.currentDetailCod) return;
+  const modal=document.getElementById('detail-modal');
+  if(!modal?.classList.contains('open')) return;
+  const activeTab=document.querySelector('#detail-modal .modal-tab.active');
+  if(activeTab?.textContent.includes('Etapas')) renderDetailEtapas(state.currentDetailCod);
+  if(activeTab?.textContent.includes('Editar')) renderDetailEditar(state.currentDetailCod);
+}
+
+function renderDetailEtapas(cod){
+  const e=state.entregas.find(x=>x.codigo===String(cod))||{};
+  const bp=state.baseProva.find(x=>x.codigo===String(cod))||{};
+  const bpPrev=state.basePrevista.find(x=>x.codigo===String(cod))||null;
+  const pd=state.provaDentes.find(x=>x.codigo===String(cod))||{};
+  const rb=state.reembase.find(x=>x.codigo===String(cod))||{};
+  const admin=isAdmin();
+  const ro=admin?'':'disabled';
+  document.getElementById('detail-tab-etapas').innerHTML=`
+    <div class="alert alert-info">📅 Informe as datas das etapas. Cada etapa tem seu próprio botão de salvar.${!admin?' <strong>Modo leitura — sem permissão de edição.</strong>':''}</div>
+    <div class="etapa-block bp">
+      <div class="section-divider bp">🔵 Base de Prova / Armação</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="et-bp" value="${toInput(bp.data)}" ${ro} style="flex:1" onchange="autoSaveEtapa('${cod}','bp')">
+            ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','bp','et-bp')" ${ro}>⚡ Registrar Hoje</button>`:''}
+          </div>
+        </div>
+        <div class="form-group"><label>Previsão</label><input type="date" id="et-bp-prev" value="${toInput(bp.previsao||bpPrev?.previsao||'')}" ${ro} onchange="autoSaveEtapa('${cod}','bp')"></div>
+      </div>
+      <div class="form-group"><label>Observação</label><input type="text" id="et-bp-obs" value="${bp.obs||bpPrev?.obs||''}" placeholder="Obs. opcional" ${ro}></div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','bp')">💾 Salvar Base de Prova</button>`:''}
+    </div>
+
+    <div class="etapa-block pd">
+      <div class="section-divider pd">🟡 Prova de Dentes</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="et-pd" value="${toInput(pd.data)}" ${ro} style="flex:1" onchange="autoSaveEtapa('${cod}','pd')">
+            ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','pd','et-pd')" ${ro}>⚡ Registrar Hoje</button>`:''}
+          </div>
+        </div>
+        <div class="form-group"><label>Previsão</label><input type="date" id="et-pd-prev" value="${toInput(pd.previsao)}" ${ro} onchange="autoSaveEtapa('${cod}','pd')"></div>
+      </div>
+      <div class="form-group"><label>Observação</label><input type="text" id="et-pd-obs" value="${pd.obs||''}" placeholder="Obs. opcional" ${ro}></div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','pd')">💾 Salvar Prova de Dentes</button>`:''}
+    </div>
+
+    <div class="etapa-block ent">
+      <div class="section-divider ent">✅ Entrega</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data de Entrega</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="et-ent" value="${toInput(e.entrega)}" ${ro} style="flex:1" onchange="autoSaveEtapa('${cod}','ent')">
+            ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','ent','et-ent')" ${ro}>⚡ Registrar Hoje</button>`:''}
+          </div>
+        </div>
+        <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="et-prev" value="${toInput(e.previsao)}" ${ro} onchange="autoSaveEtapa('${cod}','ent')"></div>
+      </div>
+      <div class="form-group"><label>Observação da Entrega</label><input type="text" id="et-ent-obs" value="${e.obs||''}" placeholder="Obs. opcional" ${ro}></div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','ent')">💾 Salvar Entrega</button>`:''}
+    </div>
+
+    <div class="etapa-block rem">
+      <div class="section-divider rem">🔁 Remarcação</div>
+      <div class="form-row">
+        <div class="form-group"><label>Etapa Remarcada</label><select id="et-rem-etapa" ${ro} onchange="autoSaveEtapa('${cod}','rem')"><option value="">— Não remarcar —</option><option>Etapa 1</option><option>Etapa 2</option><option>Etapa 3</option></select></div>
+        <div class="form-group"><label>Nova Data</label><input type="date" id="et-rem-data" ${ro} onchange="autoSaveEtapa('${cod}','rem')"></div>
+      </div>
+      <div class="form-group"><label>Obs. da Remarcação</label><input type="text" id="et-rem-obs" placeholder="Motivo ou obs." ${ro}></div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rem')">💾 Salvar Remarcação</button>`:''}
+    </div>
+
+    <div class="etapa-block rb">
+      <div class="section-divider rb">🔧 Reembase</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data do Reembase</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="et-rb" value="${toInput(rb.data)}" ${ro} style="flex:1" onchange="autoSaveEtapa('${cod}','rb')">
+            ${admin?`<button class="btn btn-secondary btn-sm" onclick="salvarHoje('${cod}','rb','et-rb')" ${ro}>⚡ Registrar Hoje</button>`:''}
+          </div>
+        </div>
+        <div class="form-group"><label>Observação</label><input type="text" id="et-rb-obs" value="${rb.obs||''}" placeholder="Obs. opcional" ${ro}></div>
+      </div>
+      ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rb')">💾 Salvar Reembase</button>`:''}
+    </div>`;}
+
+async function submitEtapaUnica(cod,tipo){
+  try{
+    toast('Salvando...','info');
+
+    if(tipo==='bp'){
+      const bp=fromInput(document.getElementById('et-bp').value);
+      const bpPrevVal=fromInput(document.getElementById('et-bp-prev').value);
+      const bpObs=document.getElementById('et-bp-obs').value;
+      if(!bp&&!bpPrevVal){toast('Informe ao menos a previsão ou data real da Base de Prova','error');return;}
+      await upsertRow('BaseProvaArmacao',cod,[cod,'','','','',bpPrevVal,bp,bpObs]);
+
+    } else if(tipo==='pd'){
+      const pd=fromInput(document.getElementById('et-pd').value);
+      const pdPrev=fromInput(document.getElementById('et-pd-prev').value);
+      const pdObs=document.getElementById('et-pd-obs').value;
+      if(!pd&&!pdPrev){toast('Informe ao menos a previsão ou data real da Prova de Dentes','error');return;}
+      await upsertRow('Prova de Dentes',cod,[cod,'','','','',pdPrev,pd,pdObs]);
+
+    } else if(tipo==='ent'){
+      const ent=fromInput(document.getElementById('et-ent').value);
+      const prev=fromInput(document.getElementById('et-prev').value);
+      const entObs=document.getElementById('et-ent-obs').value;
+      if(!ent&&!prev){toast('Informe ao menos a previsão ou data de entrega','error');return;}
+      await upsertRow('Entregas',cod,[cod,'','','','',prev,ent,entObs]);
+
+    } else if(tipo==='rb'){
+      const rb=fromInput(document.getElementById('et-rb').value);
+      const rbObs=document.getElementById('et-rb-obs').value;
+      if(!rb){toast('Informe a data do Reembase','error');return;}
+      await upsertRow('Reembase',cod,[cod,'','','','',rb,rbObs]);
+
+    } else if(tipo==='rem'){
+      const remEtapa=document.getElementById('et-rem-etapa').value;
+      const remData=fromInput(document.getElementById('et-rem-data').value);
+      const remObs=document.getElementById('et-rem-obs').value;
+      if(!remEtapa||!remData){toast('Informe a etapa e nova data','error');return;}
+      await postSheet('Remarcacao',[cod,'','','',remEtapa,remData,remObs]);
+    }
+    toast('Salvo com sucesso!','success');
+    await loadAll();showDetail(cod);switchDetailTab('etapas');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+function renderDetailEditar(cod){
+  const m=state.moldagens.find(x=>x.codigo===String(cod));if(!m)return;
+  const admin=isAdmin();
+  const ro=admin?'':'disabled';
+  const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(x=>x.dentista).filter(Boolean))].sort();
+  const tipos=state.tiposPeca.length?state.tiposPeca.map(t=>t.desc):[...new Set(state.moldagens.map(x=>x.tipo).filter(Boolean))].sort();
+  const distOpts=state.proteticos.map(p=>`<option value="${p.codigo}"${p.codigo===m.dist?' selected':''}>${p.codigo} — ${p.nome}</option>`).join('');
+  document.getElementById('detail-tab-editar').innerHTML=`
+    <div class="alert alert-warn">✏️ ${admin?'Altere os campos desejados e clique em Salvar.':'<strong>Modo leitura — sem permissão de edição.</strong>'}</div>
+    <div class="form-row">
+      <div class="form-group"><label>Código</label><input type="text" id="ed-codigo" value="${m.codigo}" disabled></div>
+      <div class="form-group"><label>Data da Moldagem</label><input type="date" id="ed-data" value="${toInput(m.data)}" ${ro}></div>
+    </div>
+    <div class="form-group"><label>Nome do Paciente</label><input type="text" id="ed-nome" value="${m.nome}" ${ro}></div>
+    <div class="form-row">
+      <div class="form-group"><label>Dentista</label><select id="ed-dentista" ${ro}>${dents.map(d=>`<option value="${d}"${d===m.dentista?' selected':''}>${cap(d)}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Tipo de Peça</label><select id="ed-tipo" ${ro}>${tipos.map(t=>`<option${t===m.tipo?' selected':''}>${t}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-group"><label>Distribuição</label><select id="ed-dist" ${ro}>${distOpts}</select></div>
+    <div class="form-group"><label>Observação</label><textarea id="ed-obs" rows="2" ${ro}>${m.obs||''}</textarea></div>
+    ${admin?`<div style="margin-top:4px"><button class="btn btn-primary" onclick="submitEditar('${cod}')">💾 Salvar Alterações</button></div>`:''}`;
+}
+async function submitEditar(cod){
+  const nome=document.getElementById('ed-nome').value.trim();
+  const dentista=document.getElementById('ed-dentista').value;
+  const tipo=document.getElementById('ed-tipo').value;
+  const dataRaw=document.getElementById('ed-data').value;
+  const dist=document.getElementById('ed-dist').value;
+  const obs=document.getElementById('ed-obs').value.trim();
+  if(!nome){toast('Informe o nome','error');return;}
+  try{
+    toast('Atualizando...','info');
+    const m=state.moldagens.find(x=>x.codigo===String(cod));
+    if(!m) throw new Error('Registro não encontrado');
+    await upsertRow('Moldagens',cod,[cod,nome,dentista,tipo,fromInput(dataRaw),dist,m?.situacao||'Pendente',obs]);
+    toast('Dados atualizados!','success');
+    await loadAll();showDetail(cod);switchDetailTab('info');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+function closeDetail(){document.getElementById('detail-modal').classList.remove('open');}
+
+function navegarComFiltroEtapa(etapa){
+  navigate('pacientes');
+  // Aguarda a tela renderizar antes de aplicar o filtro
+  setTimeout(()=>{
+    const sel=document.getElementById('filter-etapa');
+    if(sel){sel.value=etapa;filterTable();}
+  },100);
+}
+
+/* ── PIPELINE ── */
+function renderPipeline(){
+  const bpSet=new Set(state.baseProva.map(m=>m.codigo));
+  const pdSet=new Set(state.provaDentes.filter(m=>m.data&&m.data.trim()!=='').map(m=>m.codigo));
+  const entSet=new Set(state.entregas.filter(e=>e.entrega).map(e=>e.codigo));
+  const rbSet=new Set(state.reembase.map(r=>r.codigo));
+  const totalMold=state.moldagens.length;
+
+  // Sort helper: most recent date first
+  const sortByDate=(arr,getDate)=>[...arr].sort((a,b)=>{
+    const da=parseDate(getDate(a)),db=parseDate(getDate(b));
+    if(!da&&!db)return 0; if(!da)return 1; if(!db)return -1;
+    return db-da;
+  });
+
+  // Etapa 1: sem base de prova e não entregue — mais recente (moldagem) primeiro
+  const e1raw=state.moldagens.filter(m=>!bpSet.has(m.codigo)&&!entSet.has(m.codigo));
+  const e1=sortByDate(e1raw,m=>m.data).slice(0,60);
+
+  // Etapa 2: com BP, sem prova de dentes, não entregue — mais recente (BP) primeiro
+  const e2raw=state.moldagens.filter(m=>bpSet.has(m.codigo)&&!pdSet.has(m.codigo)&&!entSet.has(m.codigo));
+  const e2=sortByDate(e2raw,m=>state.baseProva.find(b=>b.codigo===m.codigo)?.data||m.data).slice(0,60);
+
+  // Etapa 3: com prova de dentes, não entregue — mais recente (PD) primeiro
+  const e3raw=state.moldagens.filter(m=>pdSet.has(m.codigo)&&!entSet.has(m.codigo));
+  const e3=sortByDate(e3raw,m=>state.provaDentes.find(p=>p.codigo===m.codigo)?.data||m.data).slice(0,60);
+
+  // Etapa 4: entregues — mais recente (entrega) primeiro
+  const e4raw=state.moldagens.filter(m=>entSet.has(m.codigo));
+  const e4=sortByDate(e4raw,m=>state.entregas.find(e=>e.codigo===m.codigo)?.entrega||m.data).slice(0,60);
+
+  // Etapa 5: reembase — mais recente primeiro
+  const e5raw=state.moldagens.filter(m=>rbSet.has(m.codigo));
+  const e5=sortByDate(e5raw,m=>state.reembase.find(r=>r.codigo===m.codigo)?.data||m.data).slice(0,60);
+
+  const debugHtml=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">📋 Total: <strong style="color:var(--text)">${totalMold}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🔵 Base Prova: <strong style="color:var(--accent2)">${bpSet.size}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🟡 Prova Dentes: <strong style="color:var(--accent3)">${pdSet.size}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">✅ Entregues: <strong style="color:var(--accent)">${entSet.size}</strong></span>
+    <span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)">🔧 Reembase: <strong style="color:#06b6d4">${rbSet.size}</strong></span>
+  </div>`;
+
+  const mkCard=(m,extraHtml='')=>`<div class="pipeline-card" onclick="showDetail('${m.codigo}')">
+    <div class="pc-code">#${m.codigo}</div>
+    <div class="pc-name">${m.nome}</div>
+    <div class="pc-type">${m.tipo}</div>
+    <div class="pc-date">🦷 ${m.data||'—'}</div>
+    ${extraHtml}
+  </div>`;
+
+  const card1=m=>{
+    const prev=state.basePrevista.find(b=>b.codigo===m.codigo);
+    return mkCard(m,prev?`<div style="font-size:10px;color:var(--accent2);margin-top:4px;font-weight:600">📅 Prev. Base: ${prev.previsao}</div>`:'');
+  };
+  const card2=m=>{
+    const bp=state.baseProva.find(b=>b.codigo===m.codigo);
+    const pd=state.provaDentes.find(p=>p.codigo===m.codigo);
+    return mkCard(m,
+      (bp?.data?`<div style="font-size:10px;color:var(--accent2);margin-top:3px;font-weight:600">🔵 Base: ${bp.data}</div>`:'') +
+      (pd?.previsao?`<div style="font-size:10px;color:var(--accent3);margin-top:2px;font-weight:600">📅 Prev. Dentes: ${pd.previsao}</div>`:'')
+    );
+  };
+  const card3=m=>{
+    const bp=state.baseProva.find(b=>b.codigo===m.codigo);
+    const pd=state.provaDentes.find(p=>p.codigo===m.codigo);
+    return mkCard(m,
+      (bp?.data?`<div style="font-size:10px;color:var(--accent2);margin-top:3px;font-weight:600">🔵 Base: ${bp.data}</div>`:'') +
+      (pd?.data?`<div style="font-size:10px;color:var(--accent3);margin-top:2px;font-weight:600">🟡 Dentes: ${pd.data}</div>`:'')
+    );
+  };
+  const card4=m=>{
+    const ent=state.entregas.find(e=>e.codigo===m.codigo);
+    return mkCard(m,ent?.entrega?`<div style="font-size:10px;color:var(--accent);margin-top:3px;font-weight:600">✅ Entregue: ${ent.entrega}</div>`:'');
+  };
+  const card5=m=>{
+    const rb=state.reembase.find(r=>r.codigo===m.codigo);
+    const ent=state.entregas.find(e=>e.codigo===m.codigo);
+    return mkCard(m,
+      (ent?.entrega?`<div style="font-size:10px;color:var(--accent);margin-top:3px;font-weight:600">✅ Entregue: ${ent.entrega}</div>`:'') +
+      (rb?.data?`<div style="font-size:10px;color:#06b6d4;margin-top:2px;font-weight:600">🔧 Reembase: ${rb.data}</div>`:'')
+    );
+  };
+
+  const empty='<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px 10px">Nenhum item</div>';
+  document.getElementById('pipeline-content').innerHTML=`
+    <div class="alert alert-info" style="margin-bottom:10px">ℹ️ Clique em qualquer card para ver detalhes. Cards ordenados do mais recente ao mais antigo.</div>
+    ${debugHtml}
+    <div class="pipeline-grid">
+      <div class="pipeline-col step1"><div class="pipeline-col-header"><h4>🟡 Moldagem</h4><span class="pipeline-count">${e1.length}</span></div><div class="pipeline-cards">${e1.length?e1.map(card1).join(''):empty}</div></div>
+      <div class="pipeline-col step2"><div class="pipeline-col-header"><h4>🔵 Base de Prova</h4><span class="pipeline-count">${e2.length}</span></div><div class="pipeline-cards">${e2.length?e2.map(card2).join(''):empty}</div></div>
+      <div class="pipeline-col step3"><div class="pipeline-col-header"><h4>🟢 Prova de Dentes</h4><span class="pipeline-count">${e3.length}</span></div><div class="pipeline-cards">${e3.length?e3.map(card3).join(''):empty}</div></div>
+      <div class="pipeline-col step4"><div class="pipeline-col-header"><h4>✅ Entregues</h4><span class="pipeline-count">${e4.length}</span></div><div class="pipeline-cards">${e4.length?e4.map(card4).join(''):empty}</div></div>
+      <div class="pipeline-col" style="border-top:3px solid #06b6d4"><div class="pipeline-col-header"><h4>🔧 Reembase</h4><span class="pipeline-count">${e5.length}</span></div><div class="pipeline-cards">${e5.length?e5.map(card5).join(''):empty}</div></div>
+    </div>`;
+}
+
+/* ── CONTRATOS ── */
+let editingContrato=null;
+function renderContratos(){
+  const admin=isAdmin();
+  const list=state.contratos;
+  const today=new Date();today.setHours(0,0,0,0);
+
+  const statusBadge=(c)=>{
+    const ini=parseDate(c.inicio);
+    const fim=parseDate(c.fim);
+    if(!ini||!fim) return '<span class="badge badge-gray">—</span>';
+    if(today<ini) return '<span class="badge badge-yellow">Futuro</span>';
+    if(today>fim) return '<span class="badge badge-gray">Encerrado</span>';
+    return '<span class="badge badge-green">● Ativo</span>';
+  };
+
+  document.getElementById('contratos-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${admin?`<div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="contrato-form-title">➕ Novo Contrato</h3>
+          <div class="form-group"><label>Identificação</label><input type="text" id="ct-id" placeholder="Ex: Contrato 2024-2026"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Data Início</label><input type="date" id="ct-inicio"></div>
+            <div class="form-group"><label>Data Fim</label><input type="date" id="ct-fim"></div>
+          </div>
+          <div class="form-group"><label>Reembase contratado / mês</label><input type="number" id="ct-reembase" min="0" placeholder="Ex: 6"></div>
+          <div class="form-group"><label>Total de peças contratadas</label><input type="number" id="ct-pecas" min="0" placeholder="Ex: 1200"><small>Exibido no card Entregues do dashboard como "X / total"</small></div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn btn-primary" onclick="submitContrato()">💾 Salvar</button>
+            <button class="btn btn-secondary" id="ct-cancel-btn" onclick="cancelEditContrato()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>`:''}
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>📃 Contratos</h3><span style="font-size:12px;color:var(--text2)">${list.length} contrato(s)</span></div>
+          <table>
+            <thead><tr><th>Identificação</th><th>Início</th><th>Fim</th><th>Reembase/mês</th><th>Peças contratadas</th><th>Situação</th>${admin?'<th></th>':''}</tr></thead>
+            <tbody>
+            ${list.length?list.map((c,i)=>`<tr>
+              <td class="td-name"><strong>${c.id}</strong></td>
+              <td>${c.inicio}</td>
+              <td>${c.fim}</td>
+              <td style="text-align:center">${c.reembaseMes||'—'}</td>
+              <td style="text-align:center;font-weight:600;color:var(--accent2)">${c.pecasContratadas||'—'}</td>
+              <td>${statusBadge(c)}</td>
+              ${admin?`<td><button class="icon-btn" onclick="editContrato(${i})">✏️</button></td>`:''}
+            </tr>`).join(''):`<tr><td colspan="${admin?7:6}" style="text-align:center;padding:20px;color:var(--text3)">Nenhum contrato cadastrado.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <div class="alert alert-info" style="margin-top:14px">
+          ℹ️ O contrato <strong>ativo</strong> é detectado automaticamente pela data de hoje. O dashboard exibe apenas dados dentro do período do contrato ativo.
+          ${state.contratoAtivo?`<br><strong>Ativo agora:</strong> ${state.contratoAtivo.id} (${state.contratoAtivo.inicio} a ${state.contratoAtivo.fim})`:'<br><strong>Nenhum contrato ativo no momento.</strong>'}
+        </div>
+      </div>
+    </div>`;
+  editingContrato=null;
+}
+
+function editContrato(idx){
+  editingContrato=idx;
+  const c=state.contratos[idx];
+  document.getElementById('ct-id').value=c.id;
+  document.getElementById('ct-inicio').value=toInput(c.inicio);
+  document.getElementById('ct-fim').value=toInput(c.fim);
+  document.getElementById('ct-reembase').value=c.reembaseMes||'';
+  document.getElementById('ct-pecas').value=c.pecasContratadas||'';
+  document.getElementById('contrato-form-title').textContent='✏️ Editar Contrato';
+  document.getElementById('ct-cancel-btn').style.display='inline-flex';
+  document.getElementById('ct-id').focus();
+}
+function cancelEditContrato(){
+  editingContrato=null;
+  ['ct-id','ct-inicio','ct-fim','ct-reembase','ct-pecas'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('contrato-form-title').textContent='➕ Novo Contrato';
+  document.getElementById('ct-cancel-btn').style.display='none';
+}
+async function submitContrato(){
+  const id=document.getElementById('ct-id').value.trim();
+  const inicio=fromInput(document.getElementById('ct-inicio').value);
+  const fim=fromInput(document.getElementById('ct-fim').value);
+  const reembase=document.getElementById('ct-reembase').value||'0';
+  const pecas=document.getElementById('ct-pecas').value||'0';
+  if(!id||!inicio||!fim){toast('Preencha identificação, início e fim','error');return;}
+  try{
+    toast('Salvando...','info');
+    if(editingContrato!==null){
+      const old=state.contratos[editingContrato];
+      await upsertRow('Contratos',old.id,[id,inicio,fim,reembase,pecas]);
+      toast(`Contrato "${id}" atualizado!`,'success');
+    } else {
+      await postSheet('Contratos',[id,inicio,fim,reembase,pecas]);
+      toast(`Contrato "${id}" cadastrado!`,'success');
+    }
+    await loadAll();
+    navigate('contratos');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ── FECHAMENTO ── */
+function renderFechamento(){
+  const today=new Date();
+  document.getElementById('fechamento-content').innerHTML=`
+    <div class="form-card" style="max-width:400px;margin-bottom:20px">
+      <h3>📅 Selecionar Período</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Ano</label><input type="number" id="fech-ano" value="${today.getFullYear()}" min="2020" max="2099"></div>
+        <div class="form-group"><label>Mês</label><select id="fech-mes">${MESES.map((m,i)=>`<option value="${i+1}"${i===today.getMonth()?' selected':''}>${m}</option>`).join('')}</select></div>
+      </div>
+      <button class="btn btn-primary" onclick="gerarFechamento()">🔍 Gerar Fechamento</button>
+    </div>
+    <div id="fechamento-resultado"></div>`;
+}
+function renderResumo(dataSel){
+  const el=document.getElementById('resumo-content');
+  const hoje=new Date();
+  const _td=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const hojeStr=dataSel||_td(hoje);
+  const toInputLocal=d=>{if(!d)return'';const p=d.split('/');return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:'';}
+  const isHoje=dateStr=>toInputLocal(dateStr)===hojeStr;
+
+  const moldHoje=state.moldagens.filter(m=>isHoje(m.data));
+  const bpHoje=state.baseProva.filter(b=>isHoje(b.data));
+  const pdHoje=state.provaDentes.filter(p=>isHoje(p.data));
+  const entHoje=state.entregas.filter(e=>isHoje(e.entrega));
+  const rbHoje=state.reembase.filter(r=>isHoje(r.data));
+
+  const mkSecao=(titulo,icon,cor,items,campos)=>{
+    if(!items.length) return `<div class="table-card" style="margin-bottom:16px;opacity:.6">
+      <div class="table-header"><h3>${icon} ${titulo}</h3><span style="font-size:12px;color:var(--text3)">Nenhum registro hoje</span></div></div>`;
+    const rows=items.map(item=>{
+      const m=state.moldagens.find(x=>x.codigo===item.codigo)||{};
+      const cols=campos.map(f=>`<td>${f(item,m)}</td>`).join('');
+      return`<tr><td class="td-code"><button class="icon-btn" onclick="showDetail('${item.codigo}')" style="margin-right:4px">🔎</button>#${item.codigo}</td><td class="td-name">${m.nome||item.nome||'—'}</td>${cols}</tr>`;
+    }).join('');
+    return`<div class="table-card" style="margin-bottom:16px;border-left:3px solid ${cor}">
+      <div class="table-header"><h3>${icon} ${titulo}</h3><span style="font-size:12px;color:var(--text2);font-weight:700">${items.length} registro(s)</span></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Código</th><th>Paciente</th>${campos.map((_,i)=>`<th>${['Dentista','Tipo','Protético','Obs.'][i]||''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+  };
+
+  const selDate=new Date(hojeStr+'T12:00:00');
+  const dStr=selDate.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const total=moldHoje.length+bpHoje.length+pdHoje.length+entHoje.length+rbHoje.length;
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <div>
+        <h3 style="margin:0;font-size:18px">📋 Resumo do Dia</h3>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px;text-transform:capitalize">${dStr}</div>
+      </div>
+      <input type="date" class="filter-select" value="${hojeStr}" onchange="renderResumo(this.value)" style="width:auto">
+      <button class="btn btn-secondary btn-sm" onclick="renderResumo(document.querySelector('#resumo-content input[type=date]')?.value||'')">🔄 Atualizar</button>
+      ${total===0?'<span style="font-size:13px;color:var(--text3)">Nenhuma movimentação nesta data.</span>':'<span style="font-size:13px;color:var(--accent);font-weight:700">'+total+' movimentação(ões)</span>'}
+    </div>
+    ${mkSecao('Moldagens','🦷','var(--text2)',moldHoje,[
+      (it,m)=>`${cap(m.dentista||it.dentista||'—')}`,
+      (it,m)=>`${m.tipo||it.tipo||'—'}`,
+      (it,m)=>`${it.dist||m.dist||'—'}`,
+    ])}
+    ${mkSecao('Base de Prova / Armação','🔵','#13456a',bpHoje,[
+      (it,m)=>`${cap(m.dentista||'—')}`,
+      (it,m)=>`${m.tipo||'—'}`,
+      (it)=>`${it.obs||'—'}`,
+    ])}
+    ${mkSecao('Prova de Dentes','🟡','#f59e0b',pdHoje,[
+      (it,m)=>`${cap(m.dentista||'—')}`,
+      (it,m)=>`${m.tipo||'—'}`,
+      (it)=>`${it.obs||'—'}`,
+    ])}
+    ${mkSecao('Entregas','✅','#22c55e',entHoje,[
+      (it,m)=>`${cap(m.dentista||'—')}`,
+      (it,m)=>`${m.tipo||'—'}`,
+      (it)=>`${it.obs||'—'}`,
+    ])}
+    ${mkSecao('Reembase','🔧','#0a3d62',rbHoje,[
+      (it,m)=>`${cap(m.dentista||'—')}`,
+      (it,m)=>`${m.tipo||'—'}`,
+      (it)=>`${it.obs||'—'}`,
+    ])}`;
+}
+function renderValidacao(){
+  const el=document.getElementById('validacao-content');
+  el.innerHTML='<div class="not-connected"><div class="icon">🔄</div><p>Analisando dados...</p></div>';
+  setTimeout(()=>{
+    const codsMold=new Set(state.moldagens.map(m=>m.codigo));
+    const sheets=[
+      {nome:'Base de Prova',arr:state.baseProva},
+      {nome:'Base de Prova (Previsão)',arr:state.basePrevista},
+      {nome:'Prova de Dentes',arr:state.provaDentes},
+      {nome:'Entregas',arr:state.entregas},
+      {nome:'Reembase',arr:state.reembase},
+    ];
+
+    // 3.1 Duplicatas por aba
+    const dupRows=[];
+    sheets.forEach(({nome,arr})=>{
+      const cnt={};
+      arr.forEach(r=>{cnt[r.codigo]=(cnt[r.codigo]||0)+1;});
+      Object.entries(cnt).filter(([,v])=>v>1).forEach(([cod,v])=>{
+        const m=state.moldagens.find(x=>x.codigo===cod);
+        dupRows.push(`<tr><td class="td-code">#${cod}</td><td>${m?.nome||'—'}</td><td>${nome}</td><td style="color:var(--accent4);font-weight:700">${v} registros</td></tr>`);
+      });
+    });
+
+    // 3.2 Registros sem moldagem
+    const semMoldRows=[];
+    sheets.forEach(({nome,arr})=>{
+      arr.filter(r=>!codsMold.has(r.codigo)).forEach(r=>{
+        semMoldRows.push(`<tr><td class="td-code">#${r.codigo}</td><td style="color:var(--text3)">Sem moldagem</td><td>${nome}</td><td style="color:var(--accent3)">⚠️ Órfão</td></tr>`);
+      });
+    });
+
+    // 3.3 Moldagens sem nenhuma etapa (possível linha "perdida" na sequência)
+    const semEtapaCodsArr=state.moldagens.filter(m=>{
+      const tem=state.baseProva.some(x=>x.codigo===m.codigo)||
+                state.basePrevista.some(x=>x.codigo===m.codigo)||
+                state.provaDentes.some(x=>x.codigo===m.codigo)||
+                state.entregas.some(x=>x.codigo===m.codigo)||
+                state.reembase.some(x=>x.codigo===m.codigo);
+      return !tem;
+    });
+
+    const mkTable=(titulo,icon,rows,headers)=>{
+      if(!rows.length) return `<div class="alert alert-info" style="margin-bottom:12px">${icon} <strong>${titulo}</strong>: nenhum problema encontrado ✅</div>`;
+      return `<div class="table-card" style="margin-bottom:20px">
+        <div class="table-header"><h3>${icon} ${titulo}</h3><span style="font-size:12px;color:var(--text2)">${rows.length} ocorrência(s)</span></div>
+        <div style="overflow-x:auto"><table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>
+      </div>`;
+    };
+
+    const semEtapaRows=semEtapaCodsArr.map(m=>`<tr><td class="td-code">#${m.codigo}</td><td>${m.nome}</td><td>${m.data}</td><td style="color:var(--text3)">Sem etapas registradas</td></tr>`);
+
+    el.innerHTML=`
+      <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <h3 style="margin:0">📊 Resultado da Validação</h3>
+        <button class="btn btn-secondary btn-sm" onclick="renderValidacao()">🔄 Reanalisar</button>
+        <span style="font-size:12px;color:var(--text3)">${state.moldagens.length} moldagens · ${state.entregas.length} entregas</span>
+      </div>
+      ${mkTable('Duplicatas por Aba','🔁',dupRows,['Código','Paciente','Aba','Situação'])}
+      ${mkTable('Registros sem Moldagem (Órfãos)','👻',semMoldRows,['Código','Paciente','Aba','Situação'])}
+      ${mkTable('Moldagens sem nenhuma etapa','📭',semEtapaRows,['Código','Paciente','Data Moldagem','Observação'])}
+    `;
+  },100);
+}
+function exportarTabela(tabelaId,titulo){
+  const tbl=document.getElementById(tabelaId);
+  if(!tbl){toast('Tabela não encontrada','error');return;}
+  const rows=[...tbl.querySelectorAll('tr')];
+  const tsv=rows.map(r=>[...r.querySelectorAll('th,td')].map(c=>c.innerText.replace(/\t/g,' ')).join('\t')).join('\n');
+  navigator.clipboard.writeText(tsv).then(()=>toast('✅ "'+titulo+'" copiada! Cole direto na planilha (Ctrl+V).','success')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=tsv;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    toast('✅ Copiado! Cole direto na planilha (Ctrl+V).','success');
+  });
+}
+function gerarFechamento(){
+  const ano=+document.getElementById('fech-ano').value;
+  const mes=+document.getElementById('fech-mes').value;
+  const entregasDoMes=state.entregas.filter(e=>{
+    if(!e.entrega)return false;
+    const dt=parseDate(e.entrega);
+    return dt&&dt.getFullYear()===ano&&dt.getMonth()+1===mes;
+  });
+  if(!entregasDoMes.length){document.getElementById('fechamento-resultado').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>Nenhuma entrega encontrada neste período.</p></div>';return;}
+
+  const rows=entregasDoMes.map(e=>{
+    const m=state.moldagens.find(x=>x.codigo===e.codigo)||{};
+    const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
+    return{...m,entrega:e.entrega,qtPT:+tp.pt||0,qtPPR:+tp.ppr||0};
+  }).sort((a,b)=>{const da=parseDate(a.entrega),db=parseDate(b.entrega);return da&&db?da-db:0;});
+
+  const totPac=rows.length;
+  const totPT=rows.reduce((s,r)=>s+r.qtPT,0);
+  const totPPR=rows.reduce((s,r)=>s+r.qtPPR,0);
+
+  // Por distribuição
+  const distMap={};
+  rows.forEach(r=>{
+    const d=r.dist||'—';
+    if(!distMap[d]) distMap[d]={pac:0,pt:0,ppr:0};
+    distMap[d].pac++;distMap[d].pt+=r.qtPT;distMap[d].ppr+=r.qtPPR;
+  });
+
+  const distTableRows=Object.entries(distMap).map(([d,v])=>`<tr><td><strong>${d}</strong></td><td style="text-align:center">${v.pac}</td><td style="text-align:center">${v.pt}</td><td style="text-align:center">${v.ppr}</td><td style="text-align:center;font-weight:700;color:var(--accent)">${v.pt+v.ppr}</td></tr>`).join('');
+
+  const tableRows=rows.map(r=>{
+    const prot=state.proteticos.find(p=>p.codigo===r.dist);
+    const distLabel=prot?`${r.dist} — ${prot.nome}`:r.dist||'—';
+    return`<tr><td class="td-code"><button class="icon-btn" onclick="showDetail('${r.codigo}')" title="Ver detalhes" style="margin-right:4px">🔎</button>#${r.codigo||'—'}</td><td class="td-name">${r.nome||'—'}</td><td>${cap(r.dentista||'')}</td><td>${distLabel}</td><td>${r.entrega}</td><td>${r.tipo||'—'}</td><td style="text-align:center">${r.qtPT}</td><td style="text-align:center">${r.qtPPR}</td></tr>`;
+  }).join('');
+
+  document.getElementById('fechamento-resultado').innerHTML=`
+    <h3 style="font-size:16px;margin-bottom:16px">${MESES[mes-1]} ${ano} — ${totPac} entrega${totPac!==1?'s':''}</h3>
+    <div class="fechamento-totais">
+      <div class="total-card">
+        <h4>🔢 Total Geral</h4>
+        <div class="total-row"><span>Pacientes</span><span class="tval">${totPac}</span></div>
+        <div class="total-row"><span>Total PT</span><span class="tval">${totPT}</span></div>
+        <div class="total-row"><span>Total PPR</span><span class="tval">${totPPR}</span></div>
+        <div class="total-row"><span>Total Peças</span><span class="tval">${totPT+totPPR}</span></div>
+      </div>
+      <div class="total-card">
+        <h4>📦 Total por Distribuição</h4>
+        <table style="width:100%;font-size:12px">
+          <thead><tr><th style="text-align:left;padding:4px 6px;color:var(--text2)">Dist.</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Pac.</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PT</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PPR</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Total</th></tr></thead>
+          <tbody>${distTableRows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><h3>Listagem de Entregas</h3><span style="font-size:12px;color:var(--text2)">${totPac} pacientes · ordem por data</span><button class="btn btn-secondary btn-sm" onclick="exportarTabela('tbl-fechamento','Fechamento Mensal')">📋 Copiar tabela</button></div>
+      <table id="tbl-fechamento"><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Distribuição</th><th>Data Entrega</th><th>Tipo Peça</th><th>Qtde. PT</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
+    </div>`;
+}
+
+/* ── FECHAMENTO ARMAÇÃO ── */
+function renderFechamentoArmacao(){
+  const today=new Date();
+  document.getElementById('fechamento-armacao-content').innerHTML=`
+    <div class="form-card" style="max-width:400px;margin-bottom:20px">
+      <h3>🔩 Fechamento por Armação</h3>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Exibe as Base de Prova concluídas (com data) de peças do tipo PPR.</p>
+      <div class="form-row">
+        <div class="form-group"><label>Ano</label><input type="number" id="fa-ano" value="${today.getFullYear()}" min="2020" max="2099"></div>
+        <div class="form-group"><label>Mês</label><select id="fa-mes">${MESES.map((m,i)=>`<option value="${i+1}"${i===today.getMonth()?' selected':''}>${m}</option>`).join('')}</select></div>
+      </div>
+      <button class="btn btn-primary" onclick="gerarFechamentoArmacao()">🔍 Gerar Fechamento</button>
+    </div>
+    <div id="fechamento-armacao-resultado"></div>`;
+}
+function gerarFechamentoArmacao(){
+  const ano=+document.getElementById('fa-ano').value;
+  const mes=+document.getElementById('fa-mes').value;
+  // Considera armação todos os registros com tipo PPR
+  const isPPR=tipo=>/PPR/i.test(tipo||'');
+  const bpDoMes=state.baseProva.filter(bp=>{
+    const dt=parseDate(bp.data);
+    if(!dt||dt.getFullYear()!==ano||dt.getMonth()+1!==mes) return false;
+    const m=state.moldagens.find(x=>x.codigo===bp.codigo);
+    return m&&isPPR(m.tipo);
+  });
+  if(!bpDoMes.length){document.getElementById('fechamento-armacao-resultado').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>Nenhuma Base de Prova encontrada neste período para protéticos com armação.</p></div>';return;}
+
+  // Group by protetico — contabiliza peças via tabela de tipos
+  const distMap={};
+  bpDoMes.forEach(bp=>{
+    const m=state.moldagens.find(x=>x.codigo===bp.codigo)||{};
+    const d=m.dist||'—';
+    const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
+    const qtPT=+tp.pt||0, qtPPR=+tp.ppr||0;
+    if(!distMap[d]) distMap[d]={items:[],pt:0,ppr:0};
+    distMap[d].items.push({...m,dataBP:bp.data,qtPT,qtPPR});
+    distMap[d].pt+=qtPT;
+    distMap[d].ppr+=qtPPR;
+  });
+
+  const totPT=Object.values(distMap).reduce((s,v)=>s+v.pt,0);
+  const totPPR=Object.values(distMap).reduce((s,v)=>s+v.ppr,0);
+
+  const distRows=Object.entries(distMap).map(([d,v])=>{
+    const prot=state.proteticos.find(p=>p.codigo===d);
+    const nome=prot?prot.nome:'—';
+    return`<tr><td><strong>${d}</strong> — ${nome}</td><td style="text-align:center">${v.items.length}</td><td style="text-align:center;font-weight:700;color:var(--accent2)">${v.ppr}</td></tr>`;
+  }).join('');
+
+  const tableRows=bpDoMes.map(bp=>{
+    const m=state.moldagens.find(x=>x.codigo===bp.codigo)||{};
+    const prot=state.proteticos.find(p=>p.codigo===m.dist);
+    const distLabel=prot?`${m.dist} — ${prot.nome}`:m.dist||'—';
+    const tp=state.tiposPeca.find(t=>t.desc===m.tipo)||{pt:'0',ppr:'0'};
+    return`<tr><td class="td-code"><button class="icon-btn" onclick="showDetail('${bp.codigo}')" title="Ver detalhes" style="margin-right:4px">🔎</button>#${bp.codigo}</td><td class="td-name">${m.nome||'—'}</td><td>${cap(m.dentista||'')}</td><td>${distLabel}</td><td>${bp.data}</td><td>${m.tipo||'—'}</td><td style="text-align:center">${tp.ppr||0}</td></tr>`;
+  }).join('');
+
+  document.getElementById('fechamento-armacao-resultado').innerHTML=`
+    <h3 style="font-size:16px;margin-bottom:16px">${MESES[mes-1]} ${ano} — ${bpDoMes.length} paciente(s) · ${totPPR} PPR</h3>
+    <div class="fechamento-totais">
+      <div class="total-card">
+        <h4>🔢 Total Geral</h4>
+        <div class="total-row"><span>Pacientes</span><span class="tval">${bpDoMes.length}</span></div>
+        <div class="total-row"><span>Total PPR</span><span class="tval">${totPPR}</span></div>
+      </div>
+      <div class="total-card">
+        <h4>📦 Total por Protético</h4>
+        <table style="width:100%;font-size:12px">
+          <thead><tr><th style="text-align:left;padding:4px 6px;color:var(--text2)">Protético</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">Pac.</th><th style="text-align:center;padding:4px 6px;color:var(--text2)">PPR</th></tr></thead>
+          <tbody>${distRows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><h3>Listagem de Armações</h3><span style="font-size:12px;color:var(--text2)">${bpDoMes.length} pacientes · ${totPPR} PPR</span><button class="btn btn-secondary btn-sm" onclick="exportarTabela('tbl-armacao','Fechamento Armação')">📋 Copiar tabela</button></div>
+      <table id="tbl-armacao"><thead><tr><th>Código</th><th>Paciente</th><th>Dentista</th><th>Protético</th><th>Data Armação</th><th>Tipo Peça</th><th>Qtde. PPR</th></tr></thead><tbody>${tableRows}</tbody></table>
+    </div>`;
+}
+function renderCadastroForm(){
+  const admin=isAdmin();
+  const dents=state.dentistas.length?state.dentistas:[...new Set(state.moldagens.map(m=>m.dentista).filter(Boolean))].sort();
+  const tipos=state.tiposPeca.length?state.tiposPeca.map(t=>t.desc):['PT Dupla','PT Superior','PT Inferior','PPR Dupla','PPR Superior','PPR Inferior'];
+  const _td=new Date();const today=_td.getFullYear()+'-'+String(_td.getMonth()+1).padStart(2,'0')+'-'+String(_td.getDate()).padStart(2,'0');
+  const distOpts=state.proteticos.length
+    ?state.proteticos.map(p=>`<option value="${p.codigo}">${p.codigo} — ${p.nome}</option>`).join('')
+    :'<option value="">Nenhum protético cadastrado</option>';
+  const ro=admin?'':'disabled';
+  document.getElementById('cadastro-content').innerHTML=`
+    <div class="form-card">
+      <h3>➕ Nova Moldagem</h3>
+      ${!admin?'<div class="alert alert-warn">🔒 Modo leitura — sem permissão de edição.</div>':''}
+      <div class="form-row">
+        <div class="form-group"><label>Código</label><input type="number" id="cad-codigo" placeholder="Informe o código" ${ro}></div>
+        <div class="form-group"><label>Data da Moldagem</label><input type="date" id="cad-data" value="${today}" ${ro}></div>
+      </div>
+      <div class="form-group"><label>Nome do Paciente</label><input type="text" id="cad-nome" placeholder="Nome completo do paciente" ${admin?'onblur="verificarNomeCadastro()"':''} ${ro}></div>
+      <div id="cad-nome-alerta" style="display:none"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Dentista</label><select id="cad-dentista" ${ro}>${dents.map(d=>`<option value="${d}">${cap(d)}</option>`).join('')}${admin?'<option value="__novo">+ Novo dentista</option>':''}</select></div>
+        <div class="form-group"><label>Tipo de Peça</label><select id="cad-tipo" ${ro}>${tipos.map(t=>`<option>${t}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-group">
+        <label>Distribuição (Protético)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="cad-dist" style="flex:1" ${ro}>${distOpts}</select>
+          ${admin?'<button class="btn btn-secondary btn-sm" type="button" onclick="openProtModal()">+ Novo</button>':''}
+        </div>
+      </div>
+      <div class="form-group"><label>Previsão Base de Prova <span style="font-weight:400;color:var(--text3)">(opcional)</span></label><input type="date" id="cad-bp-prev" ${ro}></div>
+      <div class="form-group"><label>Observação</label><textarea id="cad-obs" rows="2" placeholder="Observações opcionais..." ${ro}></textarea></div>
+      ${admin?`<div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-primary" onclick="submitCadastro()">💾 Salvar Moldagem</button>
+        <button class="btn btn-secondary" onclick="renderCadastroForm()">✕ Limpar</button>
+      </div>`:''}
+    </div>`;
+  if(admin) document.getElementById('cad-dentista').addEventListener('change',function(){
+    if(this.value==='__novo'){navigate('dentistas');renderDentistas(true);this.selectedIndex=0;}
+  });
+}
+async function submitCadastro(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const codigo=document.getElementById('cad-codigo').value;
+  const nome=document.getElementById('cad-nome').value.trim();
+  const dentista=document.getElementById('cad-dentista').value;
+  const tipo=document.getElementById('cad-tipo').value;
+  const dataRaw=document.getElementById('cad-data').value;
+  const dist=document.getElementById('cad-dist').value;
+  const obs=document.getElementById('cad-obs').value.trim();
+  if(!codigo){toast('Informe o código do paciente','error');document.getElementById('cad-codigo').focus();return;}
+  if(!nome){toast('Informe o nome do paciente','error');document.getElementById('cad-nome').focus();return;}
+  // Verificar se o código já existe na base
+  const codStr=String(codigo).trim();
+  const codExiste=state.moldagens.some(m=>String(m.codigo).trim()===codStr);
+  if(codExiste){
+    const existente=state.moldagens.find(m=>String(m.codigo).trim()===codStr);
+    toast('Código '+codStr+' já está sendo utilizado pelo paciente "'+existente.nome+'" ('+existente.tipo+'). Informe outro código.','error');
+    document.getElementById('cad-codigo').focus();
+    document.getElementById('cad-codigo').select();
+    return;
+  }
+
+  // Verificar se já existe paciente com o mesmo nome
+  const sugestao=proximoCodigoTratamento(nome);
+  if(sugestao){
+    const existList=sugestao.existentes.map(m=>`#${m.codigo} (${m.tipo})`).join(', ');
+    const confirmMsg=`Já existe "${nome}" na base:\n${existList}\n\nDeseja criar como novo tratamento com código "${sugestao.proximo}"?\n\nClique OK para usar "${sugestao.proximo}" ou Cancelar para manter "${codigo}".`;
+    if(confirm(confirmMsg)){
+      document.getElementById('cad-codigo').value=sugestao.proximo;
+      // Re-read after update
+      const novoCodigo=sugestao.proximo;
+      try{
+        toast('Salvando...','info');
+        const bpPrev2=document.getElementById('cad-bp-prev')?fromInput(document.getElementById('cad-bp-prev').value):'';
+        await postSheet('Moldagens',[novoCodigo,nome,dentista,tipo,fromInput(dataRaw),dist,'Pendente',obs]);
+        if(bpPrev2) await postSheet('BaseProvaArmacao',[novoCodigo,'','','','',bpPrev2]);
+        toast(`Novo tratamento de ${nome} cadastrado! (${novoCodigo})`,'success');
+        state.lastSavedCodigo=String(novoCodigo);
+        await loadAll();
+        navigate('pacientes');
+        document.getElementById('search-input').value=nome;
+        filterTable();
+        // Auto-expand the group
+        expandedGroups.add(baseCod(novoCodigo));
+        renderTablePage();
+      }catch(e){toast('Erro ao salvar: '+e.message,'error');}
+      return;
+    }
+  }
+
+  try{
+    toast('Salvando...','info');
+    const bpPrev=document.getElementById('cad-bp-prev')?fromInput(document.getElementById('cad-bp-prev').value):'';
+    await postSheet('Moldagens',[codigo,nome,dentista,tipo,fromInput(dataRaw),dist,'Pendente',obs]);
+    if(bpPrev) await postSheet('BaseProvaArmacao',[codigo,'','','','',bpPrev]);
+    toast(`${nome} cadastrado com sucesso!`,'success');
+    state.lastSavedCodigo=String(codigo);
+    await loadAll();
+    navigate('pacientes');
+    document.getElementById('search-input').value=nome;
+    filterTable();
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');}
+}
+
+/* ── VERIFICAÇÃO DE NOME NO CADASTRO ── */
+function verificarNomeCadastro(){
+  const nome=document.getElementById('cad-nome').value.trim();
+  const alertEl=document.getElementById('cad-nome-alerta');
+  if(!alertEl)return;
+  if(!nome){alertEl.style.display='none';return;}
+  const sugestao=proximoCodigoTratamento(nome);
+  if(sugestao){
+    const existList=sugestao.existentes.map(m=>`<strong>#${m.codigo}</strong> — ${m.tipo} (${(m.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente'})`).join('<br>');
+    alertEl.style.display='block';
+    alertEl.innerHTML=`<div class="alert alert-warn" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <div>⚠️ <strong>${nome}</strong> já possui tratamento(s) cadastrado(s):</div>
+      <div style="font-size:12px;line-height:1.8">${existList}</div>
+      <div style="font-size:12px">Ao salvar, será perguntado se deseja criar como novo tratamento com código <strong>${sugestao.proximo}</strong>.</div>
+    </div>`;
+    // Pré-preenche o código sugerido
+    document.getElementById('cad-codigo').value=sugestao.proximo;
+  }else{
+    alertEl.style.display='none';
+  }
+}
+
+/* ── DENTISTAS ── */
+let editingDentista=null;
+function renderDentistas(focusForm=false){
+  const admin=isAdmin();
+  const list=state.dentistas;
+  document.getElementById('dentistas-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${admin?`<div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="dent-form-title">➕ Novo Dentista</h3>
+          <div class="form-group"><label>Nome Completo</label><input type="text" id="nd-nome" placeholder="Nome do dentista"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="submitNovoDentistaDireto()">💾 Salvar</button>
+            <button class="btn btn-secondary" id="dent-cancel-btn" onclick="cancelEditDentista()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>`:''}
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>👨‍⚕️ Dentistas cadastrados</h3><span style="font-size:12px;color:var(--text2)">${list.length} dentistas</span></div>
+          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
+          <div style="padding:12px">
+            ${list.length?list.map((d,i)=>`<div class="list-item" ${admin?`onclick="editDentista(${i})"`:''}><div class="list-item-info"><div class="name">${cap(d)}</div></div>${admin?'<span style="font-size:11px;color:var(--text3)">✏️ editar</span>':''}</div>`).join(''):'<div class="empty-state"><p>Nenhum dentista cadastrado.</p></div>'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  editingDentista=null;
+  if(admin&&focusForm) setTimeout(()=>document.getElementById('nd-nome')?.focus(),100);
+}
+function editDentista(idx){
+  editingDentista=idx;
+  document.getElementById('nd-nome').value=state.dentistas[idx];
+  document.getElementById('dent-form-title').textContent='✏️ Editar Dentista';
+  document.getElementById('dent-cancel-btn').style.display='inline-flex';
+  document.getElementById('nd-nome').focus();
+}
+function cancelEditDentista(){
+  editingDentista=null;
+  document.getElementById('nd-nome').value='';
+  document.getElementById('dent-form-title').textContent='➕ Novo Dentista';
+  document.getElementById('dent-cancel-btn').style.display='none';
+}
+async function submitNovoDentistaDireto(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const nome=document.getElementById('nd-nome').value.trim();
+  if(!nome){toast('Informe o nome','error');return;}
+  try{
+    if(editingDentista!==null){
+      toast('Atualizando...','info');
+      const oldNome=state.dentistas[editingDentista];
+      await upsertRow('Dentistas',oldNome,[nome]);
+      state.dentistas[editingDentista]=nome;
+      toast(`Atualizado para ${cap(nome)}!`,'success');
+    }else{
+      if(state.dentistas.find(d=>d.toLowerCase()===nome.toLowerCase())){toast('Dentista já cadastrado','error');return;}
+      toast('Salvando...','info');
+      await postSheet('Dentistas',[nome]);
+      state.dentistas.push(nome);
+      toast(`${cap(nome)} cadastrado!`,'success');
+    }
+    renderDentistas();renderCadastroForm();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ── PROTETICOS ── */
+let editingProtetico=null;
+function renderProteticos(){
+  const admin=isAdmin();
+  document.getElementById('proteticos-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${admin?`<div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="prot-form-title">➕ Novo Protético</h3>
+          <div class="form-group"><label>Código (sigla)</label><input type="text" id="np-cod" placeholder="Ex: E" maxlength="5" style="text-transform:uppercase"></div>
+          <div class="form-group"><label>Nome Completo</label><input type="text" id="np-nome" placeholder="Nome do protético"></div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px">
+              <input type="checkbox" id="np-paga-armacao" style="width:auto;accent-color:var(--accent2)">
+              Pagamento por Armação (Base de Prova)
+            </label>
+            <small>Ao marcar, este protético será incluído no Fechamento por Armação.</small>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="submitNovoProteticoDireto()">💾 Salvar</button>
+            <button class="btn btn-secondary" id="prot-cancel-btn" onclick="cancelEditProtetico()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>`:''}
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>🧑‍🔧 Protéticos cadastrados</h3><span style="font-size:12px;color:var(--text2)">${state.proteticos.length} protéticos</span></div>
+          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
+          <div style="padding:12px">
+            ${state.proteticos.length?state.proteticos.map((p,i)=>`<div class="list-item" ${admin?`onclick="editProtetico(${i})"`:''}><div class="list-item-info">
+                <div class="code">${p.codigo} ${p.pagaArmacao?'<span style="font-size:10px;background:rgba(19,69,106,.15);color:var(--accent2);padding:1px 5px;border-radius:4px">Armação</span>':''}</div>
+                <div class="name">${p.nome}</div>
+              </div>${admin?'<span style="font-size:11px;color:var(--text3)">✏️ editar</span>':''}
+            </div>`).join(''):'<div class="empty-state"><p>Nenhum protético cadastrado.</p></div>'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  editingProtetico=null;
+}
+function editProtetico(idx){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  editingProtetico=idx;
+  const p=state.proteticos[idx];
+  document.getElementById('np-cod').value=p.codigo;
+  document.getElementById('np-nome').value=p.nome;
+  document.getElementById('np-paga-armacao').checked=p.pagaArmacao||false;
+  document.getElementById('prot-form-title').textContent='✏️ Editar Protético';
+  document.getElementById('prot-cancel-btn').style.display='inline-flex';
+  document.getElementById('np-nome').focus();
+}
+function cancelEditProtetico(){
+  editingProtetico=null;
+  document.getElementById('np-cod').value='';document.getElementById('np-nome').value='';
+  document.getElementById('prot-form-title').textContent='➕ Novo Protético';
+  document.getElementById('prot-cancel-btn').style.display='none';
+}
+async function submitNovoProteticoDireto(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const codigo=document.getElementById('np-cod').value.trim().toUpperCase();
+  const nome=document.getElementById('np-nome').value.trim();
+  const pagaArmacao=document.getElementById('np-paga-armacao').checked?'S':'N';
+  if(!codigo||!nome){toast('Preencha código e nome','error');return;}
+  try{
+    if(editingProtetico!==null){
+      const dupCod=state.proteticos.find((p,i)=>i!==editingProtetico&&p.codigo===codigo);
+      if(dupCod){toast('Código '+codigo+' já está em uso pelo protético "'+dupCod.nome+'"','error');return;}
+      toast('Atualizando...','info');
+      const old=state.proteticos[editingProtetico];
+      await upsertRow('Proteticos',old.codigo,[codigo,nome,pagaArmacao]);
+      state.proteticos[editingProtetico]={codigo,nome,pagaArmacao:pagaArmacao==='S'};
+      toast(`Protético ${codigo} atualizado!`,'success');
+    }else{
+      const dupNovo=state.proteticos.find(p=>p.codigo===codigo);
+      if(dupNovo){toast('Código '+codigo+' já está em uso pelo protético "'+dupNovo.nome+'"','error');return;}
+      toast('Salvando...','info');
+      await postSheet('Proteticos',[codigo,nome,pagaArmacao]);
+      state.proteticos.push({codigo,nome,pagaArmacao:pagaArmacao==='S'});
+      toast(`Protético ${codigo} cadastrado!`,'success');
+    }
+    renderProteticos();renderCadastroForm();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+function openProtModal(){document.getElementById('protetico-modal').classList.add('open');}
+function closeProtModal(){document.getElementById('protetico-modal').classList.remove('open');document.getElementById('prot-codigo').value='';document.getElementById('prot-nome').value='';}
+async function submitNovoProtetico(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const codigo=document.getElementById('prot-codigo').value.trim().toUpperCase();
+  const nome=document.getElementById('prot-nome').value.trim();
+  if(!codigo||!nome){toast('Preencha código e nome','error');return;}
+  if(state.proteticos.find(p=>p.codigo===codigo)){toast('Código já existe','error');return;}
+  try{
+    toast('Salvando...','info');
+    await postSheet('Proteticos',[codigo,nome]);
+    state.proteticos.push({codigo,nome});
+    toast(`Protético ${codigo} cadastrado!`,'success');
+    closeProtModal();renderCadastroForm();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ── TIPO DE PEÇA ── */
+let editingTipo=null;
+function renderTipoPeca(){
+  const admin=isAdmin();
+  const list=state.tiposPeca;
+  document.getElementById('tipopeca-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${admin?`<div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="tipo-form-title">➕ Novo Tipo de Peça</h3>
+          <div class="form-group"><label>Descrição</label><input type="text" id="tp-desc" placeholder="Ex: PT Dupla"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Qtde. PT</label><input type="number" id="tp-pt" value="0" min="0"></div>
+            <div class="form-group"><label>Qtde. PPR</label><input type="number" id="tp-ppr" value="0" min="0"></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="submitNovoTipo()">💾 Salvar</button>
+            <button class="btn btn-secondary" id="tipo-cancel-btn" onclick="cancelEditTipo()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>`:''}
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>🦷 Tipos de Peça</h3><span style="font-size:12px;color:var(--text2)">${list.length} tipos</span></div>
+          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
+          <table><thead><tr><th>Descrição</th><th>Qtde. PT</th><th>Qtde. PPR</th>${admin?'<th></th>':''}</tr></thead><tbody>
+            ${list.length?list.map((t,i)=>`<tr><td class="td-name">${t.desc}</td><td>${t.pt}</td><td>${t.ppr}</td>${admin?`<td><button class="icon-btn" onclick="editTipo(${i})">✏️</button></td>`:''}</tr>`).join(''):`<tr><td colspan="${admin?4:3}" style="text-align:center;padding:20px;color:var(--text3)">Nenhum tipo cadastrado.</td></tr>`}
+          </tbody></table>
+        </div>
+      </div>
+    </div>`;
+  editingTipo=null;
+}
+function editTipo(idx){
+  editingTipo=idx;
+  const t=state.tiposPeca[idx];
+  document.getElementById('tp-desc').value=t.desc;
+  document.getElementById('tp-pt').value=t.pt;
+  document.getElementById('tp-ppr').value=t.ppr;
+  document.getElementById('tipo-form-title').textContent='✏️ Editar Tipo de Peça';
+  document.getElementById('tipo-cancel-btn').style.display='inline-flex';
+  document.getElementById('tp-desc').focus();
+}
+function cancelEditTipo(){
+  editingTipo=null;
+  document.getElementById('tp-desc').value='';document.getElementById('tp-pt').value='0';document.getElementById('tp-ppr').value='0';
+  document.getElementById('tipo-form-title').textContent='➕ Novo Tipo de Peça';
+  document.getElementById('tipo-cancel-btn').style.display='none';
+}
+async function submitNovoTipo(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const desc=document.getElementById('tp-desc').value.trim();
+  const pt=document.getElementById('tp-pt').value;
+  const ppr=document.getElementById('tp-ppr').value;
+  if(!desc){toast('Informe a descrição','error');return;}
+  try{
+    if(editingTipo!==null){
+      toast('Atualizando...','info');
+      const old=state.tiposPeca[editingTipo];
+      await upsertRow('BaseDados',old.desc,[desc,pt,ppr]);
+      state.tiposPeca[editingTipo]={desc,pt,ppr};
+      toast(`${desc} atualizado!`,'success');
+    }else{
+      if(state.tiposPeca.find(t=>t.desc.toLowerCase()===desc.toLowerCase())){toast('Tipo já cadastrado','error');return;}
+      toast('Salvando...','info');
+      await postSheet('BaseDados',[desc,pt,ppr]);
+      state.tiposPeca.push({desc,pt,ppr});
+      toast(`${desc} cadastrado!`,'success');
+    }
+    renderTipoPeca();renderCadastroForm();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+document.getElementById('config-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeConfig();});
+document.getElementById('detail-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDetail();});
+document.getElementById('protetico-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeProtModal();});
+
+// ── PWA MANIFEST (inline, no extra file needed) ──
+const manifest={
+  name:'ProSUS — Controle de Próteses',
+  short_name:'ProSUS',
+  description:'Sistema de Controle de Próteses Dentárias do SUS',
+  start_url:'./',
+  display:'standalone',
+  background_color:'#fbfdfc',
+  theme_color:'#0d7d6e',
+  orientation:'portrait-primary',
+  icons:[
+    {src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='42' fill='%230d7d6e'/><g transform='translate(21 21) scale(1.5)'><circle cx='50' cy='50' r='33' fill='none' stroke='%23ffffff' stroke-width='13' stroke-linecap='round' stroke-dasharray='170 207' transform='rotate(-90 50 50)'/><circle cx='50' cy='17' r='8.5' fill='%23bdeee3'/></g></svg>",sizes:'192x192',type:'image/svg+xml'},
+    {src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='112' fill='%230d7d6e'/><g transform='translate(56 56) scale(4)'><circle cx='50' cy='50' r='33' fill='none' stroke='%23ffffff' stroke-width='13' stroke-linecap='round' stroke-dasharray='170 207' transform='rotate(-90 50 50)'/><circle cx='50' cy='17' r='8.5' fill='%23bdeee3'/></g></svg>",sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}
+  ]
+};
+const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+const manifestUrl=URL.createObjectURL(blob);
+const manifestLink=document.createElement('link');
+manifestLink.rel='manifest';manifestLink.href=manifestUrl;
+document.head.appendChild(manifestLink);
+</script>
+</body>
+</html>
