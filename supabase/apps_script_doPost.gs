@@ -30,19 +30,13 @@ function doGet(e) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName(sheetName);
     if (!sheet) throw new Error("Aba '" + sheetName + "' não encontrada na planilha.");
-    var tz = ss.getSpreadsheetTimeZone();
-    var raw = sheet.getDataRange().getValues();
-    // Células de data vêm como objeto Date do Apps Script — formata como texto
-    // dd/MM/aaaa aqui mesmo (no fuso da planilha) pra evitar o bug de virar data
-    // em UTC ao serializar (o mesmo problema que o app já evita com toISOString()).
-    var values = raw.map(function(row){
-      return row.map(function(cell){
-        if (Object.prototype.toString.call(cell) === '[object Date]') {
-          return Utilities.formatDate(cell, tz, 'dd/MM/yyyy');
-        }
-        return cell;
-      });
-    });
+    // getDisplayValues() devolve o texto exatamente como aparece na planilha (mesmo
+    // comportamento que a Sheets API/FORMATTED_VALUE já usava na produção) — evita
+    // que uma célula mal-interpretada pelo Sheets (ex: código de tratamento "7457/1"
+    // auto-convertido pra uma data internamente) venha com o valor errado. getValues()
+    // devolveria o valor BRUTO (o objeto Date de verdade por trás), o que causava
+    // esse bug.
+    var values = sheet.getDataRange().getDisplayValues();
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       values: values

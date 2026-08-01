@@ -703,7 +703,7 @@ const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 // Gravação dupla temporária: também escreve (best-effort) na planilha antiga durante a transição.
 // Desligar (false) depois do período de validação de 2-4 semanas.
 const DUAL_WRITE_SHEETS=true;
-const supabase=(SUPABASE_URL.startsWith('http'))?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
+const sb=(SUPABASE_URL.startsWith('http'))?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
 
 const state={
   user:null,
@@ -744,7 +744,7 @@ window.onload=async ()=>{
     return;
   }
   // Sessão Supabase persiste sozinha em localStorage — se já existir, pula o prompt do Google
-  const{data:{session}}=await supabase.auth.getSession();
+  const{data:{session}}=await sb.auth.getSession();
   if(session?.user){
     await afterSupabaseLogin(session.user);
   }else{
@@ -778,7 +778,7 @@ async function waitForGSI(){
 
 async function onGoogleCredential(resp){
   try{
-    const{data,error}=await supabase.auth.signInWithIdToken({provider:'google',token:resp.credential,nonce:_authNonce});
+    const{data,error}=await sb.auth.signInWithIdToken({provider:'google',token:resp.credential,nonce:_authNonce});
     if(error) throw error;
     await afterSupabaseLogin(data.user);
   }catch(e){
@@ -792,7 +792,7 @@ function signIn(){
 }
 
 async function signOut(){
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   state.user=null;state.allowedUser=null;state.connected=false;
   localStorage.removeItem('prosus_user_email');
   localStorage.removeItem('prosus_user_name');
@@ -808,10 +808,10 @@ async function afterSupabaseLogin(supaUser){
     const meta=supaUser.user_metadata||{};
     const u={email,name:meta.full_name||meta.name||email,picture:meta.avatar_url||meta.picture||''};
 
-    const{data:allowedRow,error:allowedErr}=await supabase.from('allowed_users').select('*').eq('email',email).maybeSingle();
+    const{data:allowedRow,error:allowedErr}=await sb.from('allowed_users').select('*').eq('email',email).maybeSingle();
     if(allowedErr||!allowedRow){
       showUnauthorizedScreen(email);
-      await supabase.auth.signOut();
+      await sb.auth.signOut();
       return;
     }
 
@@ -882,7 +882,7 @@ function closeConfig(){document.getElementById('config-modal').classList.remove(
 async function renderAllowedUsers(){
   const admin=isAdmin();
   const list=document.getElementById('cfg-users-list');
-  const{data,error}=await supabase.from('allowed_users').select('*').order('criado_em');
+  const{data,error}=await sb.from('allowed_users').select('*').order('criado_em');
   if(error){list.innerHTML=`<div class="alert alert-error">Erro ao carregar: ${error.message}</div>`;return;}
   list.innerHTML=(data&&data.length)?data.map(u=>`
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
@@ -904,7 +904,7 @@ async function addAllowedUser(){
   if(!email){toast('Informe o e-mail','error');return;}
   try{
     toast('Salvando...','info');
-    const{error}=await supabase.from('allowed_users').insert({email,nome,is_admin:admin});
+    const{error}=await sb.from('allowed_users').insert({email,nome,is_admin:admin});
     if(error) throw error;
     document.getElementById('cfg-new-email').value='';
     document.getElementById('cfg-new-nome').value='';
@@ -916,7 +916,7 @@ async function addAllowedUser(){
 async function toggleAllowedAdmin(email,novoIsAdmin){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   try{
-    const{error}=await supabase.from('allowed_users').update({is_admin:novoIsAdmin}).eq('email',email);
+    const{error}=await sb.from('allowed_users').update({is_admin:novoIsAdmin}).eq('email',email);
     if(error) throw error;
     if(email===state.allowedUser?.email) state.allowedUser.isAdmin=novoIsAdmin;
     toast('Atualizado!','success');
@@ -926,7 +926,7 @@ async function removeAllowedUser(email){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   if(!confirm('Remover o acesso de '+email+'?')) return;
   try{
-    const{error}=await supabase.from('allowed_users').delete().eq('email',email);
+    const{error}=await sb.from('allowed_users').delete().eq('email',email);
     if(error) throw error;
     toast('Acesso removido!','success');
     await renderAllowedUsers();
@@ -952,7 +952,7 @@ async function checkConnections(){
   if(DUAL_WRITE_SHEETS) state.sheetsStatus='checking';
   updateStatus();
   try{
-    const{error}=await supabase.from('allowed_users').select('email').limit(1);
+    const{error}=await sb.from('allowed_users').select('email').limit(1);
     state.dbStatus=error?'error':'ok';
   }catch(e){ state.dbStatus='error'; }
   if(DUAL_WRITE_SHEETS){
@@ -1042,7 +1042,7 @@ const SHEET_MAP={
   'Remarcacao':{table:'remarcacao',fields:['codigo',null,null,null,'etapa','data','obs'],dates:['data'],numeric:true}, // sem pk — sempre insert (histórico)
   'Proteticos':{table:'proteticos',pk:'codigo',fields:['codigo','nome','paga_armacao'],bools:['paga_armacao']},
   'Dentistas':{table:'dentistas',pk:'nome',fields:['nome']},
-  'BaseDados':{table:'tipos_peca',pk:'descricao',fields:['descricao','qtd_pt','qtd_ppr']},
+  'BaseDados':{table:'tipos_peca',pk:'descricao',fields:['descricao','qtd_pt','qtd_ppr'],headerRows:2}, // aba tem 2 linhas de cabeçalho (igual ao range antigo BaseDados!A3:C200)
   'Contratos':{table:'contratos',pk:'id',fields:['id','inicio','fim','reembase_mes','pecas_contratadas'],dates:['inicio','fim']},
 };
 // Ordem de migração: Moldagens primeiro (as tabelas de etapas têm FK pra moldagens.codigo).
@@ -1071,15 +1071,28 @@ async function fetchSheet(range){
   const sheetName=range.split('!')[0];
   const map=SHEET_MAP[sheetName];
   if(!map) return [];
-  const{data,error}=await supabase.from(map.table).select('*');
-  if(error) throw new Error(error.message);
-  return(data||[]).map(row=>objToRow(map,row));
+  // O Supabase/PostgREST devolve no máximo ~1000 linhas por consulta — sem paginar,
+  // tabelas maiores (moldagens, entregas, etc.) ficavam cortadas silenciosamente,
+  // sem erro nenhum, causando contagens menores que o real.
+  const pageSize=1000;
+  let allRows=[],from=0;
+  while(true){
+    let query=sb.from(map.table).select('*').range(from,from+pageSize-1);
+    if(map.pk) query=query.order(map.pk,{ascending:true});
+    const{data,error}=await query;
+    if(error) throw new Error(error.message);
+    if(!data||!data.length) break;
+    allRows=allRows.concat(data);
+    if(data.length<pageSize) break;
+    from+=pageSize;
+  }
+  return allRows.map(row=>objToRow(map,row));
 }
 async function postSheet(sheet,row){
   const map=SHEET_MAP[sheet];
   if(!map) throw new Error('Tabela não mapeada: '+sheet);
   const obj=rowToObj(map,row);
-  const{error}=await supabase.from(map.table).insert(obj);
+  const{error}=await sb.from(map.table).insert(obj);
   if(error) throw new Error(error.message||'Erro ao salvar em '+sheet);
   dualWriteSheets(sheet,row);
   return{success:true};
@@ -1094,10 +1107,10 @@ async function upsertRow(sheet,matchKey,row){
   const map=SHEET_MAP[sheet];
   if(!map||!map.pk) throw new Error('Tabela sem chave de upsert: '+sheet);
   const obj=rowToObj(map,row);
-  const{data,error}=await supabase.from(map.table).update(obj).eq(map.pk,String(matchKey)).select();
+  const{data,error}=await sb.from(map.table).update(obj).eq(map.pk,String(matchKey)).select();
   if(error) throw new Error(error.message||'Erro ao salvar em '+sheet);
   if(!data||data.length===0){
-    const{error:insErr}=await supabase.from(map.table).insert(obj);
+    const{error:insErr}=await sb.from(map.table).insert(obj);
     if(insErr) throw new Error(insErr.message||'Erro ao salvar em '+sheet);
   }
   dualWriteSheets(sheet,row,matchKey);
@@ -1130,12 +1143,23 @@ function linhaValidaMigracao(map,row){
   if(map.numeric&&!/^\d/.test(row[0].toString().trim())) return false;
   return true;
 }
+// Grava em lotes; se um lote falhar (ex: dois códigos duplicados no mesmo lote, ou
+// uma linha com FK inválida), reprocessa aquele lote linha a linha — assim uma linha
+// problemática não derruba a tabela inteira, e duplicados na planilha se resolvem
+// naturalmente (a última leitura da mesma chave "ganha"). Devolve as linhas que
+// falharam mesmo individualmente, com o motivo, pra reportar no log.
 async function upsertEmLotes(table,objs,pk,batchSize=500){
+  const falhas=[];
   for(let i=0;i<objs.length;i+=batchSize){
     const chunk=objs.slice(i,i+batchSize);
-    const{error}=pk?await supabase.from(table).upsert(chunk,{onConflict:pk}):await supabase.from(table).insert(chunk);
-    if(error) throw error;
+    const{error}=pk?await sb.from(table).upsert(chunk,{onConflict:pk}):await sb.from(table).insert(chunk);
+    if(!error) continue;
+    for(const obj of chunk){
+      const{error:rowErr}=pk?await sb.from(table).upsert(obj,{onConflict:pk}):await sb.from(table).insert(obj);
+      if(rowErr) falhas.push({obj,error:rowErr.message});
+    }
   }
+  return falhas;
 }
 async function migrarDadosDoSheets(){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
@@ -1148,12 +1172,19 @@ async function migrarDadosDoSheets(){
     try{
       append(`⏳ Lendo "${sheetName}" do Sheets...`);
       const rawRows=await fetchRawSheetFromGoogle(sheetName);
-      const dataRows=rawRows.slice(1); // pula cabeçalho
+      const dataRows=rawRows.slice(map.headerRows||1); // pula cabeçalho(s)
       const validRows=dataRows.filter(r=>linhaValidaMigracao(map,r));
       if(!validRows.length){ append(`— "${sheetName}": nenhuma linha válida encontrada.`); continue; }
       const objs=validRows.map(r=>rowToObj(map,r));
-      await upsertEmLotes(map.table,objs,map.pk);
-      append(`✅ "${sheetName}": ${objs.length} linhas migradas para "${map.table}".`);
+      const falhas=await upsertEmLotes(map.table,objs,map.pk);
+      const ok=objs.length-falhas.length;
+      if(falhas.length){
+        append(`⚠️ "${sheetName}": ${ok} linhas migradas, ${falhas.length} com erro:`);
+        falhas.slice(0,10).forEach(f=>append(`&nbsp;&nbsp;— código "${f.obj[map.pk]??f.obj.codigo??'?'}": ${f.error}`));
+        if(falhas.length>10) append(`&nbsp;&nbsp;— (+${falhas.length-10} outras)`);
+      } else {
+        append(`✅ "${sheetName}": ${ok} linhas migradas para "${map.table}".`);
+      }
     }catch(e){
       append(`❌ Erro em "${sheetName}": ${e.message}`);
     }
@@ -1167,7 +1198,7 @@ async function conferirContagens(){
   append('📊 Conferindo contagens no Supabase...');
   for(const sheetName of MIGRATION_ORDER){
     const map=SHEET_MAP[sheetName];
-    const{count,error}=await supabase.from(map.table).select('*',{count:'exact',head:true});
+    const{count,error}=await sb.from(map.table).select('*',{count:'exact',head:true});
     append(error?`❌ ${map.table}: ${error.message}`:`📊 ${map.table}: ${count} linhas`);
   }
 }
