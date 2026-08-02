@@ -125,6 +125,9 @@ create table estoque_movimentos (
   -- Aponta para o movimento que este estorna. O razão é append-only: desfazer uma
   -- movimentação insere a contrapartida em vez de apagar a linha original.
   estorno_de bigint references estoque_movimentos(id) on delete set null,
+  -- Marca movimentações geradas por ajuste manual de saldo (correção, quebra, perda,
+  -- divergência de contagem), para a auditoria separá-las do movimento real.
+  ajuste boolean not null default false,
   criado_em timestamptz not null default now()
 );
 

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v7.1 - backup completo dos dados em JSON (Configurações, só admin) -->
+<!-- ProSUS v7.2 - ajuste manual de saldo do estoque (entrada ou saída conforme a diferença) -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -485,7 +485,7 @@
       <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.1</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.2</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -1150,7 +1150,7 @@ async function baixarBackup(){
   const st=document.getElementById('backup-status');
   const msg=t=>{ if(st) st.textContent=t; };
   try{
-    const dump={_meta:{app:'ProSUS v7.1',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
+    const dump={_meta:{app:'ProSUS v7.2',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
     for(const t of BACKUP_TABLES){
       msg(`Lendo ${t}...`);
       const linhas=await sbSelectAll(t);
@@ -3268,6 +3268,22 @@ function renderEstoque(){
           <div class="form-group"><label>Observação</label><input type="text" id="ee-obs" placeholder="Nota fiscal, fornecedor, etc." ${semProduto?'disabled':''}></div>
           <button class="btn btn-primary" onclick="submitEntradaEstoque()" ${semProduto?'disabled':''}>💾 Registrar Entrada</button>
         </div>
+
+        <div class="form-card" style="margin-top:16px">
+          <h3>⚖️ Ajustar Saldo</h3>
+          <small>Corrige o saldo para o valor real: cadastro errado, quebra, perda ou divergência na contagem física. O sistema calcula a diferença e registra a entrada ou saída correspondente.</small>
+          <div class="form-group" style="margin-top:12px"><label>Produto</label><select id="aj-produto" onchange="onAjusteProdutoChange()" ${semProduto?'disabled':''}>
+            <option value="">— Selecione —</option>
+            ${produtosAtivos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
+          </select></div>
+          <div class="form-row">
+            <div class="form-group"><label>Saldo atual</label><input type="number" id="aj-atual" value="" disabled><small id="aj-hint">Selecione um produto.</small></div>
+            <div class="form-group"><label>Saldo correto</label><input type="number" id="aj-novo" min="0" placeholder="Quantidade real" ${semProduto?'disabled':''}></div>
+          </div>
+          <div class="form-group"><label>Data</label><input type="date" id="aj-data" value="${hojeISO()}" ${semProduto?'disabled':''}></div>
+          <div class="form-group"><label>Motivo</label><input type="text" id="aj-obs" placeholder="Ex: cadastro lançado errado, placa quebrada" ${semProduto?'disabled':''}><small>Obrigatório — é o que explica o ajuste na auditoria.</small></div>
+          <button class="btn btn-primary" onclick="submitAjusteEstoque()" ${semProduto?'disabled':''}>⚖️ Ajustar Saldo</button>
+        </div>
       </div>`:''}
       <div style="flex:2;min-width:280px">
         <div class="table-card">
@@ -3305,6 +3321,7 @@ function renderEstoque(){
           <option value="">Entradas e saídas</option>
           <option value="entrada">Só entradas</option>
           <option value="saida">Só saídas</option>
+          <option value="ajuste">Só ajustes de saldo</option>
         </select>
         <input type="date" id="fh-de" onchange="renderHistoricoEstoque()" title="Data inicial">
         <input type="date" id="fh-ate" onchange="renderHistoricoEstoque()" title="Data final">
@@ -3328,7 +3345,8 @@ function renderHistoricoEstoque(){
   const admin=isAdmin();
   let movs=state.estoqueMovimentos.slice();
   if(fProduto) movs=movs.filter(m=>String(m.produto_id)===fProduto);
-  if(fTipo) movs=movs.filter(m=>m.tipo===fTipo);
+  if(fTipo==='ajuste') movs=movs.filter(m=>m.ajuste);
+  else if(fTipo) movs=movs.filter(m=>m.tipo===fTipo);
   if(fDe) movs=movs.filter(m=>m.data&&m.data>=fDe);
   if(fAte) movs=movs.filter(m=>m.data&&m.data<=fAte);
   // Mais recentes primeiro: pela data da movimentação, desempatando pelo id (ordem de lançamento)
@@ -3355,7 +3373,7 @@ function renderHistoricoEstoque(){
                 <div style="font-size:10px;color:var(--text3)">${lancado||'—'}${retroativo?' ⏱️':''}</div>
               </td>
               <td>${produtoLabel(p)}</td>
-              <td><span class="badge ${estorno?'badge-gray':(entrada?'badge-green':'badge-yellow')}">${estorno?'↩️ Estorno':(entrada?'↑ Entrada':'↓ Saída')}</span></td>
+              <td><span class="badge ${estorno?'badge-gray':(m.ajuste?'badge-yellow':(entrada?'badge-green':'badge-yellow'))}">${estorno?'↩️ Estorno':(m.ajuste?`⚖️ Ajuste ${entrada?'+':'−'}`:(entrada?'↑ Entrada':'↓ Saída'))}</span></td>
               <td><strong>${entrada?'+':'−'}${m.quantidade}</strong></td>
               <td>${m.codigo?`<a href="#" onclick="showDetail('${m.codigo}');return false">#${m.codigo}</a>`:'—'}</td>
               <td style="font-size:11px;color:var(--text3)">${m.usuario_email||'—'}</td>
@@ -3387,6 +3405,55 @@ async function submitEntradaEstoque(){
     await loadAll();navigate('estoque');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
+/* ── AJUSTE MANUAL DE SALDO ──
+   Para casos em que o saldo do sistema não bate com a realidade: lançamento feito
+   errado, placa quebrada, perda, divergência em contagem física. O usuário informa
+   o saldo correto e o sistema registra a diferença como entrada ou saída — o razão
+   continua sendo a única fonte de verdade, sem ninguém "setar" o saldo na mão. */
+function onAjusteProdutoChange(){
+  const id=parseInt(document.getElementById('aj-produto').value,10);
+  const atual=document.getElementById('aj-atual');
+  const novo=document.getElementById('aj-novo');
+  const hint=document.getElementById('aj-hint');
+  if(!id){atual.value='';novo.value='';hint.textContent='Selecione um produto.';return;}
+  const saldo=estoqueAtual(id);
+  atual.value=saldo;
+  novo.value=saldo; // parte do saldo atual: o usuário só altera o que está errado
+  hint.textContent=`Saldo registrado hoje: ${saldo}.`;
+}
+async function submitAjusteEstoque(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const produto_id=parseInt(document.getElementById('aj-produto').value,10);
+  const novoSaldo=parseInt(document.getElementById('aj-novo').value,10);
+  const data=document.getElementById('aj-data').value;
+  const motivo=document.getElementById('aj-obs').value.trim();
+  if(!produto_id){toast('Selecione o produto','error');return;}
+  if(isNaN(novoSaldo)){toast('Informe o saldo correto','error');return;}
+  if(!data){toast('Informe a data','error');return;}
+  if(!motivo){toast('Informe o motivo do ajuste','error');return;}
+  const saldoAtual=estoqueAtual(produto_id);
+  const diff=novoSaldo-saldoAtual;
+  if(diff===0){toast('O saldo informado é igual ao atual — nada a ajustar.','info');return;}
+  const p=produtoById(produto_id);
+  const acao=diff>0?`entrada de ${diff}`:`saída de ${Math.abs(diff)}`;
+  if(!confirm(`Ajustar "${produtoLabel(p)}" de ${saldoAtual} para ${novoSaldo}?\n\nSerá registrada uma ${acao} unidade(s).`)) return;
+  try{
+    toast('Salvando...','info');
+    const{error}=await sb.from('estoque_movimentos').insert({
+      produto_id,
+      tipo:diff>0?'entrada':'saida',
+      quantidade:Math.abs(diff),
+      data,
+      ajuste:true,
+      obs:`Ajuste de saldo: ${saldoAtual} → ${novoSaldo}. ${motivo}`,
+      usuario_email:state.user?.email||null
+    });
+    if(error) throw error;
+    toast(`Saldo ajustado para ${novoSaldo}.`,'success');
+    await loadAll();navigate('estoque');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
 // Nada é apagado do razão: estornar insere o movimento contrário, preservando o
 // registro original e deixando a correção visível no histórico.
 async function estornarMovimentoUI(id){

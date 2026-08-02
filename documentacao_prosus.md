@@ -248,7 +248,8 @@ A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo r
 
 | Versão | Mudanças |
 | :--- | :--- |
-| **v7.1** | Backup completo dos dados em JSON, pela tela de Configurações (só admin), cobrindo a ausência de backup automático no plano gratuito do Supabase. |
+| **v7.2** | Ajuste manual de saldo do estoque: informa-se o saldo correto e o sistema registra a entrada ou saída correspondente, com motivo obrigatório. |
+| v7.1 | Backup completo dos dados em JSON, pela tela de Configurações (só admin), cobrindo a ausência de backup automático no plano gratuito do Supabase. |
 | v7.0 | **Cutover para produção.** A aplicação sobre Supabase substitui a versão baseada em planilha, que passa a `legacy/` como plano de retorno. Gravação dupla desligada (a planilha fica congelada) e ferramenta de migração removida. |
 | v6.3-beta | Livro-razão append-only: desfazer uma movimentação passa a gerar estorno em vez de apagar o registro, preservando a sequência (utilização → devolução) no histórico. Histórico passa a exibir a hora exata do lançamento. |
 | v6.2-beta | Exclusão de cores, tipos de placa e produtos, com inativação automática quando o registro está em uso. Inativos somem dos seletores mas preservam os dados que dependem deles. |
@@ -345,7 +346,16 @@ Na etapa de Prova de Dentes é possível registrar quais placas foram usadas no 
 
 Se o estoque for insuficiente, o sistema **avisa mas não bloqueia**, permitindo saldo negativo. A decisão é deliberada: o atendimento clínico já ocorreu, e impedir o registro apenas deixaria o dado real fora do sistema — o saldo negativo, visível no histórico, sinaliza que faltou lançar uma entrada.
 
-### 12.5 Exclusão e inativação de cadastros (v6.2-beta)
+### 12.5 Ajuste manual de saldo (v7.2)
+Quando o saldo do sistema não corresponde à realidade — um lançamento feito errado, uma placa quebrada, perda, ou divergência apurada numa contagem física — a tela de Estoque permite corrigir.
+
+O usuário seleciona o produto (o saldo atual aparece automaticamente), informa **qual é o saldo correto** e o motivo. O sistema calcula a diferença e registra a movimentação correspondente: entrada, se o saldo real for maior; saída, se for menor.
+
+O ponto importante é que **nenhum saldo é escrito diretamente**. O ajuste vira uma movimentação como qualquer outra, e o saldo continua sendo a soma do livro-razão. Isso mantém a propriedade de que todo número exibido pode ser explicado por movimentações rastreáveis.
+
+O motivo é obrigatório, e os ajustes ficam marcados com `⚖️` no histórico, com filtro próprio — assim a auditoria consegue separar movimento real de correção.
+
+### 12.6 Exclusão e inativação de cadastros (v6.2-beta)
 Cores, tipos de placa e produtos podem ser excluídos, mas nunca à custa de dados existentes. Ao clicar em excluir, o sistema tenta a remoção real; se o registro estiver em uso — uma cor usada por um produto, ou um produto que já tem movimentações — o próprio banco recusa, e a aplicação o marca como **inativo**.
 
 Um cadastro inativo:
@@ -355,7 +365,7 @@ Um cadastro inativo:
 
 Essa distinção evita o dilema comum de "não posso apagar porque quebraria o histórico, mas também não quero continuar vendo isso na lista". Um produto inativo, por exemplo, some da entrada de estoque mas continua no saldo (pode ter sobra) e no histórico (auditoria).
 
-### 12.6 Aviso de estoque mínimo
+### 12.7 Aviso de estoque mínimo
 Usuários marcados com `notificar_estoque` veem uma faixa de alerta no topo do aplicativo quando algum produto atinge ou fica abaixo do mínimo, com atalho para a tela de estoque. Como o aviso é por usuário, não polui a interface dos demais.
 
 > Envio por **e-mail** ou **WhatsApp** foi avaliado e ficou de fora nesta etapa: e-mail exigiria uma Edge Function no Supabase somada a um serviço de envio; WhatsApp exigiria a WhatsApp Business Platform (Meta) ou intermediário como Twilio — serviços pagos, com verificação de empresa e aprovação prévia de modelos de mensagem.

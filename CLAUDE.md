@@ -142,6 +142,8 @@ As três primeiras têm `ativo boolean`. O padrão de exclusão é **excluir-ou-
 
 **O saldo nunca é armazenado** — é sempre derivado do razão (`estoqueAtual(produtoId)` soma entradas menos saídas), então não existe saldo dessincronizado.
 
+**Ajuste manual de saldo** (`submitAjusteEstoque()`): o usuário informa o saldo correto e o sistema grava a diferença como entrada ou saída, com `ajuste=true` e motivo obrigatório na `obs`. Ninguém "seta" o saldo na mão — ele continua derivado do razão. A flag existe para a auditoria separar correção de movimento real, e o histórico tem filtro "só ajustes".
+
 **O razão é append-only: nada é apagado.** Desfazer uma movimentação insere a contrapartida vinculada ao original via `estorno_de` (`estornarMovimento(id)`), preservando a sequência real no histórico — a saída da placa e a devolução aparecem como dois registros. Uma saída estornada deixa de contar como placa em uso no paciente (`foiEstornado()`), mas continua visível no histórico. Estornos não podem ser estornados de novo.
 
 Em `estoque_movimentos`, `data` é quando a movimentação aconteceu (editável, aceita retroativo) e `criado_em` é quando foi lançada no sistema. A diferença entre as duas é o que permite auditar divergência.

@@ -1,0 +1,2 @@
+# Backups do sistema — contêm dados de pacientes, NUNCA versionar
+prosus-backup-*.json
