@@ -5,11 +5,11 @@ O **ProSUS** é uma aplicação do tipo *Single Page Application* (SPA) com capa
 
 Este documento fornece um detalhamento completo de sua arquitetura, fluxos de dados, componentes e regras de negócio.
 
-> ⚠️ **Duas versões convivem no repositório.** As seções 1 a 10 descrevem a **versão de produção (v5.2, `index.html`)**, baseada em Google Sheets. A partir da **seção 11** está documentada a **versão beta (v6.1-beta, `beta/index.html`)**, que migra o backend para **Supabase (PostgreSQL)** e acrescenta o **controle de estoque de placas**. O beta é a evolução destinada a substituir a produção.
+> ⚠️ **A partir da v7.0 o sistema roda sobre Supabase (PostgreSQL).** As seções 1 a 10 descrevem a arquitetura **legada**, baseada em Google Sheets, hoje aposentada e preservada apenas em `legacy/index.html` como plano de retorno. A arquitetura **em uso** está documentada a partir da **seção 11**.
 
 ---
 
-## 1. Arquitetura Geral do Sistema (produção)
+## 1. Arquitetura Geral do Sistema (legado, até a v5.2)
 
 O sistema é construído sobre uma arquitetura serveless e sem banco de dados SQL/NoSQL tradicional. Em vez disso, ele aproveita o ecossistema do Google:
 
@@ -248,7 +248,8 @@ A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo r
 
 | Versão | Mudanças |
 | :--- | :--- |
-| **v6.3-beta** | Livro-razão append-only: desfazer uma movimentação passa a gerar estorno em vez de apagar o registro, preservando a sequência (utilização → devolução) no histórico. Histórico passa a exibir a hora exata do lançamento. |
+| **v7.0** | **Cutover para produção.** A aplicação sobre Supabase substitui a versão baseada em planilha, que passa a `legacy/` como plano de retorno. Gravação dupla desligada (a planilha fica congelada) e ferramenta de migração removida. |
+| v6.3-beta | Livro-razão append-only: desfazer uma movimentação passa a gerar estorno em vez de apagar o registro, preservando a sequência (utilização → devolução) no histórico. Histórico passa a exibir a hora exata do lançamento. |
 | v6.2-beta | Exclusão de cores, tipos de placa e produtos, com inativação automática quando o registro está em uso. Inativos somem dos seletores mas preservam os dados que dependem deles. |
 | v6.1-beta | Controle de estoque de placas: cadastros de cores, tipos de placa e produtos; entrada e consulta de estoque; histórico auditável de movimentações; baixa automática na Prova de Dentes; banner de estoque mínimo. |
 | v6.0-beta | Migração do backend para Supabase (PostgreSQL + Auth + RLS). Lista de acesso real (`allowed_users`), gravação dupla temporária no Sheets, ferramenta de migração de dados embutida. |
@@ -290,10 +291,14 @@ O bloqueio é garantido por **Row Level Security** no próprio Postgres, atravé
 ### 11.4 Modelo de dados
 Cada aba virou uma tabela. As colunas B-E, que na planilha eram VLOOKUPs, deixaram de existir (agora são JOIN), e as tabelas de etapas passaram a ter **chave estrangeira** para `moldagens` — algo que a planilha não conseguia garantir.
 
-### 11.5 Transição segura
-Durante o período de validação, o Supabase é a fonte de verdade (leitura e confirmação de escrita), mas o app continua enviando uma **cópia best-effort para a planilha antiga** (`DUAL_WRITE_SHEETS`), que funciona como backup vivo — necessário porque o plano gratuito do Supabase não inclui backup automático. Falhas nessa cópia nunca travam a aplicação; apenas acendem a badge "Planilha" no topo.
+### 11.5 Como foi feita a transição
+Durante a validação, o Supabase já era a fonte de verdade (leitura e confirmação de escrita), mas o app enviava também uma **cópia best-effort para a planilha antiga** (`DUAL_WRITE_SHEETS`), servindo de backup vivo. Falhas nessa cópia nunca travavam a aplicação; apenas acendiam a badge "Planilha" no topo.
 
-A migração dos dados históricos é feita pela própria interface (**Configurações → Migrar dados**), que lê as abas via Apps Script e grava em lote, respeitando a ordem das chaves estrangeiras. O processo é idempotente e reporta, linha a linha, o que não pôde ser migrado.
+A migração dos dados históricos foi feita por uma ferramenta na própria interface, que lia as abas via Apps Script e gravava em lote respeitando a ordem das chaves estrangeiras, reportando linha a linha o que não pôde ser migrado.
+
+**No cutover da v7.0 essa fase foi encerrada:** a gravação dupla foi desligada (a planilha ficou congelada no estado daquele momento) e a ferramenta de migração foi removida do sistema — com a planilha parada, executá-la sobrescreveria dados novos do banco com dados velhos. Ambas seguem recuperáveis pelo histórico do Git, se algum dia for necessário.
+
+> ⚠️ **Consequência a acompanhar:** sem a cópia na planilha, e como o plano gratuito do Supabase não faz backup automático, o sistema passou a operar sem backup. Convém estabelecer uma rotina de exportação.
 
 ---
 

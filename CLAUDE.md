@@ -3,66 +3,65 @@
 ## O que é
 PWA (Progressive Web App) de arquivo único para gestão de próteses dentárias no SUS. Frontend puro com JS/CSS embarcados.
 
-**Existem hoje DUAS versões vivas no repositório** — sempre confirme em qual você está mexendo:
+**A migração para Supabase foi concluída na v7.0.** O antigo app baseado em Google Sheets foi aposentado e mantido apenas como plano de retorno.
 
-| | Produção | Beta (migração) |
+| | Produção (atual) | Legado (aposentado) |
 |---|---|---|
-| Arquivo | `index.html` (raiz) | `beta/index.html` |
-| Versão | **v5.2** | **v6.1-beta** |
-| Backend | Google Sheets + Apps Script | **Supabase** (Postgres + Auth + RLS) |
-| URL | https://lrlgv.github.io/prosus | https://lrlgv.github.io/prosus/beta/ |
+| Arquivo | `index.html` (raiz) | `legacy/index.html` |
+| Versão | **v7.0** | v5.2 |
+| Backend | **Supabase** (Postgres + Auth + RLS) | Google Sheets + Apps Script |
+| URL | https://lrlgv.github.io/prosus | https://lrlgv.github.io/prosus/legacy/ |
 
-O beta é a evolução que substituirá a produção. **Funcionalidades novas vão só no beta** — a produção está congelada, recebendo no máximo correções.
+O `legacy/` existe só como rollback rápido nos primeiros dias — **não recebe alterações**. A planilha ficou congelada no estado do cutover (a gravação dupla foi desligada), então o legado só serve para consultar dados antigos, nunca para gravar.
 
 ## Arquivos
-- `index.html` — aplicação de produção (Sheets)
-- `beta/index.html` — aplicação beta (Supabase), onde o desenvolvimento acontece
+- `index.html` — a aplicação (Supabase)
+- `legacy/index.html` — versão antiga sobre Sheets, congelada, só para rollback
+- `beta/index.html` — apenas um redirecionamento para a raiz (a URL `/beta/` foi usada durante os testes)
 - `supabase/schema.sql` — schema completo do banco (recriação do zero)
-- `supabase/migration_estoque.sql` — incremento do controle de estoque (o schema já tinha sido aplicado antes dessa feature existir)
-- `supabase/apps_script_doPost.gs` — `doPost`/`doGet` do Apps Script, usados pela migração de dados e pela gravação dupla
+- `supabase/migration_*.sql` — incrementos aplicados em ordem sobre o schema original
+- `supabase/limpar_estoque_teste.sql` — zera o módulo de estoque (só para reset de testes)
+- `supabase/apps_script_doPost.gs` — Apps Script da planilha; **sem uso desde o cutover**, mantido para o legado
 - Deploy: GitHub Pages a partir da branch `main` / raiz
 
 ## Constantes importantes
 ```js
 // ambos
 CLIENT_ID   = '29814188441-tk6mg6ni8r63u5jmncog34ijv719cff0.apps.googleusercontent.com'
+
+// só no legado
+SHEET_ID    = '1cWCh7bcDlsBJA9NkmHHPUEgweFYNnVGWO2h3HtuqiNY'
 APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyT3XF5rauK9vOZxPMlzHy4gsGLyhkko_XzI2j2XqQIsU5FSCjnETtWf0Tb462YBvmhyw/exec'
 
-// só produção
-SHEET_ID    = '1cWCh7bcDlsBJA9NkmHHPUEgweFYNnVGWO2h3HtuqiNY'
-
-// só beta
+// aplicação atual
 SUPABASE_URL = 'https://cqepzwqmlpgdttuzgihx.supabase.co'
 SUPABASE_ANON_KEY = '...'   // chave anon/public — segura no navegador porque o RLS protege os dados
-DUAL_WRITE_SHEETS = true    // gravação dupla temporária na planilha antiga (desligar no fim da transição)
+DUAL_WRITE_SHEETS = false   // desligado no cutover v7.0; a planilha não recebe mais nada
 ```
+
+⚠️ **Não existe mais backup automático dos dados.** O plano gratuito do Supabase não faz backup, e a cópia para a planilha foi desligada no cutover. Se for mexer em algo que apague dados em massa, exporte antes.
+
+⚠️ **A ferramenta "Migrar dados" foi removida na v7.0** (está no histórico do Git). Com a planilha congelada, rodá-la sobrescreveria dados novos do banco com dados velhos da planilha.
 
 ## Estrutura do state
-No **beta**, `accessToken`/`tokenExpiry`/`config.adminEmails` não existem mais (a sessão é do `supabase-js` e o admin vem de `allowed_users`), e há campos novos: `allowedUser`, `dbStatus`, `sheetsStatus`, `cores`, `tiposPlaca`, `produtos`, `estoqueMovimentos`.
-
 ```js
 const state = {
-  accessToken, tokenExpiry, user, connected,   // só produção
-  moldagens:[],        // aba Moldagens
-  baseProva:[],        // aba BaseProvaArmacao — com data real (col G)
-  basePrevista:[],     // aba BaseProvaArmacao — só previsão (col F), sem data real
-  provaDentes:[],      // aba Prova de Dentes — com data real (col G)
-  pdPrevista:[],       // aba Prova de Dentes — só previsão futura (col F), sem data real
-  entregas:[],         // aba Entregas
-  remarcacoes:[],      // aba Remarcacao
-  reembase:[],         // aba Reembase
-  proteticos:[],       // aba Proteticos
-  dentistas:[],        // aba Dentistas
-  tiposPeca:[],        // aba BaseDados
-  contratos:[],        // aba Contratos
+  user, allowedUser,   // allowedUser = { email, isAdmin, notificarEstoque, nome }
+  connected, dbStatus, // dbStatus/sheetsStatus alimentam as badges do topo
+  moldagens:[], baseProva:[], basePrevista:[], provaDentes:[],
+  entregas:[], remarcacoes:[], reembase:[],
+  proteticos:[], dentistas:[], tiposPeca:[], contratos:[],
+  cores:[], tiposPlaca:[],        // [{ nome, ativo }]
+  produtos:[], estoqueMovimentos:[],
   filtered:[], currentPage:1, perPage:15,
   distVisible:true, currentDetailCod:null, lastSavedCodigo:null,
-  contratoAtivo:null,  // { id, inicio, fim, reembaseMes, pecasContratadas }
-  config:{ adminEmails:'' }
+  contratoAtivo:null   // { id, inicio, fim, reembaseMes, pecasContratadas }
 };
 ```
+No legado ainda existem `accessToken`/`tokenExpiry`/`config.adminEmails` — na versão atual a sessão é do `supabase-js` e a permissão vem de `allowed_users`.
 
-## Estrutura das abas do Sheets
+## Estrutura das abas do Sheets (referência histórica)
+Mantida porque `SHEET_MAP` ainda usa os nomes das abas como chave, e o legado depende delas.
 
 ### Moldagens (A:H)
 | Col | Campo |
@@ -114,9 +113,9 @@ const state = {
 
 ### Configuracao (A:B)
 Chave/valor. Chave `admin_emails` → lista de e-mails separados por `,` ou `;`
-**No beta essa aba não é mais usada** — foi substituída pela tabela `allowed_users`.
+**Essa aba não é mais usada** — foi substituída pela tabela `allowed_users`.
 
-## Banco de dados (beta — Supabase)
+## Banco de dados (Supabase)
 Uma tabela por aba antiga. As colunas B-E de VLOOKUP das abas de etapas **não existem** no banco (resolvidas por JOIN), então as escritas ficam mais simples.
 
 | Tabela | Origem | Chave |
@@ -127,7 +126,7 @@ Uma tabela por aba antiga. As colunas B-E de VLOOKUP das abas de etapas **não e
 | `proteticos` / `dentistas` / `tipos_peca` / `contratos` | abas homônimas | nome/código |
 | `allowed_users` | *(nova)* | `email` |
 
-### Controle de estoque de placas (v6.1-beta — nativo do banco, não existe no Sheets)
+### Controle de estoque de placas (nativo do banco, nunca existiu no Sheets)
 | Tabela | Papel |
 |---|---|
 | `cores` | Cores das placas (A2, A3…), PK = `nome` |
@@ -149,12 +148,12 @@ FKs de `produtos` para `cores`/`tipos_placa` usam `ON UPDATE CASCADE`, porque es
 
 ## Autenticação
 
-### Produção (Google OAuth com access token)
+### Legado (Google OAuth com access token)
 - Scopes: `spreadsheets`, `userinfo.email`, `userinfo.profile`
 - Login silencioso com `prompt:'none'` + `login_hint` do localStorage
 - Se token inválido/expirado com "insufficient scopes" → força re-login
 
-### Beta (Google ID Token → Supabase Auth)
+### Atual (Google ID Token → Supabase Auth)
 - `google.accounts.id` gera um **ID Token**, trocado por sessão Supabase via `sb.auth.signInWithIdToken()`
 - Usa **nonce** (`crypto.subtle`), então exige contexto seguro: `https://` ou `http://localhost` — **não funciona em `file://`**
 - A sessão é gerenciada e renovada pelo próprio `supabase-js`; não há mais `ensureToken()`/`tokenExpiry` manuais
@@ -162,10 +161,10 @@ FKs de `produtos` para `cores`/`tipos_placa` usam `ON UPDATE CASCADE`, porque es
 
 ## Controle de acesso
 
-### Produção
+### Legado
 `isAdmin()` compara o e-mail logado contra `admin_emails` da aba Configuracao. **Qualquer conta Google consegue logar e ver os dados** em modo leitura.
 
-### Beta (allowlist real + RLS)
+### Atual (allowlist real + RLS)
 Só quem está em `allowed_users` consegue ver qualquer coisa; quem não está cai numa tela de "acesso não autorizado".
 ```js
 function isAdmin(){ return !!state.allowedUser?.isAdmin; }
@@ -192,7 +191,7 @@ Colunas: `is_admin` (pode editar) e `notificar_estoque` (recebe o banner de esto
 | `tipopeca` | CRUD de tipos de peça |
 | `validacao` | Validação de integridade dos dados |
 
-Só no **beta** (v6.1-beta):
+Telas do módulo de estoque:
 
 | ID | Descrição |
 |----|-----------|
@@ -220,7 +219,7 @@ exportarTabela(id, titulo)  — copia tabela TSV para clipboard
 setHoje(inputId)         — preenche campo de data com hoje
 ```
 
-Só no **beta**:
+Específicas da arquitetura Supabase:
 ```
 sb                       — cliente Supabase (NÃO chamar de `supabase`: colide com o global da lib e quebra o script inteiro)
 sbSelectAll(table, orderBy) — lê tabela inteira paginando de 1000 em 1000
@@ -257,25 +256,25 @@ Todos os arrays filtram linhas com `#N/A` ou código não-numérico:
 r[0] && !r[0].toString().includes('#') && /^\d/.test(r[0].toString().trim())
 ```
 
-### Race condition pós-save (só produção)
+### Race condition pós-save (só no legado)
 Após salvar via Apps Script, aguardar 600ms antes do `loadAll()`:
 ```js
 await new Promise(r=>setTimeout(r,600));
 await loadAll();
 ```
-**No beta isso não existe mais** — o upsert do Postgres é atômico, sem passo intermediário de "descobrir a linha", então `loadAll()` é chamado direto.
+**Isso não existe mais** — o upsert do Postgres é atômico, sem passo intermediário de "descobrir a linha", então `loadAll()` é chamado direto.
 
 ### Upsert
-Produção — sempre busca na coluna A da planilha, não depende do state local:
+Legado — sempre busca na coluna A da planilha, não depende do state local:
 ```js
 const rows = await fetchSheet(sheet+'!A:A');
 const rowIdx = rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
 if(rowIdx>=0){ /* update via Apps Script action:'update' */ }
 else { await postSheet(sheet, values); }
 ```
-Beta — `upsertRow(sheet, matchKey, row)` faz update e, se não afetou nenhuma linha, insere.
+Atual — `upsertRow(sheet, matchKey, row)` faz update e, se não afetou nenhuma linha, insere.
 
-### Armadilhas específicas do beta (todas já custaram bug)
+### Armadilhas já conhecidas (todas custaram bug)
 - **Nome do cliente Supabase**: use `sb`, nunca `supabase` — a lib declara esse global e a colisão quebra o parse do `<script>` inteiro (todas as funções viram "not defined").
 - **Limite de 1000 linhas**: o PostgREST corta em ~1000 registros por consulta, **sem erro**. Sempre pagine (`sbSelectAll`), senão tabelas grandes vêm truncadas silenciosamente.
 - **Leitura do Sheets no Apps Script**: use `getDisplayValues()`, não `getValues()`. Códigos de tratamento com barra (`7457/1`) são auto-convertidos para data pelo Sheets, e `getValues()` devolve o valor bruto errado.
@@ -289,7 +288,6 @@ Filtra por tipo de peça contendo "PPR" (`/PPR/i`). Não usa mais flag `pagaArma
 Entregas seguem o contrato da **moldagem** (não da data de entrega).
 
 ## Verificação de sintaxe (rodar antes de qualquer deploy)
-Trocar o caminho por `beta/index.html` quando estiver mexendo no beta.
 ```bash
 python3 -c "
 import re
@@ -305,9 +303,14 @@ Se `python3`/`node` não estiverem disponíveis na máquina, validar ao menos o 
 - comentário do topo (linha ~4): `<!-- ProSUS vX.Y - descrição curta -->`
 - rodapé da sidebar: `<div style="...">vX.Y</div>`
 
-## Estado da migração para Supabase
-- ✅ Schema, RLS e allowlist aplicados; dados históricos migrados
-- ✅ Login, leitura e escrita validados no beta
-- ⏳ **Gravação dupla ativa** (`DUAL_WRITE_SHEETS=true`): o Supabase é a fonte de verdade, e a planilha antiga segue recebendo cópia como backup vivo, porque o plano gratuito do Supabase não tem backup automático. Desligar após o período de validação.
-- ⏳ Beta em teste com usuário final antes de substituir a produção
-- Badges no topo do beta mostram o estado das duas conexões (Banco / Planilha); a badge "Planilha" some sozinha quando a gravação dupla for desligada
+## Migração para Supabase — concluída (v7.0)
+- ✅ Schema, RLS e allowlist aplicados; dados históricos migrados e conferidos
+- ✅ Login, leitura e escrita validados com usuário final
+- ✅ Cutover feito: o app sobre Supabase virou a raiz; o antigo foi para `legacy/`
+- ✅ Gravação dupla desligada — a planilha ficou congelada no estado do cutover
+- ✅ Ferramenta de migração removida (rodá-la agora sobrescreveria dados novos com os velhos da planilha)
+
+### Pendência conhecida
+**Não há backup dos dados.** O plano gratuito do Supabase não faz backup automático e a cópia para a planilha foi desligada. Vale montar algum export periódico.
+
+A badge "Planilha" no topo some sozinha com `DUAL_WRITE_SHEETS=false`; só a badge "Banco" aparece.

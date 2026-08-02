@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v7.0 - primeira versão de produção sobre Supabase (substitui a versão baseada em planilha) -->
+<!-- ProSUS v5.2 - auto-save das datas na aba Etapas (sem precisar clicar em Salvar) -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -17,7 +17,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   :root{
     /* ── Superfícies ── */
@@ -474,18 +473,14 @@
       <button class="nav-btn" data-page="fechamento" onclick="navigate('fechamento')"><span class="nav-icon">📅</span> Fechamento</button>
       <button class="nav-btn" data-page="fechamento-armacao" onclick="navigate('fechamento-armacao')"><span class="nav-icon">🔩</span> Fecham. Armação</button>
       <button class="nav-btn" data-page="contratos" onclick="navigate('contratos')"><span class="nav-icon">📃</span> Contratos</button>
-      <button class="nav-btn" data-page="estoque" onclick="navigate('estoque')"><span class="nav-icon">📦</span> Estoque</button>
       <div class="nav-section">Cadastros</div>
       <button class="nav-btn" data-page="cadastro" onclick="navigate('cadastro')"><span class="nav-icon">➕</span> Nova Moldagem</button>
       <button class="nav-btn" data-page="dentistas" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
       <button class="nav-btn" data-page="proteticos" onclick="navigate('proteticos')"><span class="nav-icon">🧑‍🔧</span> Protéticos</button>
       <button class="nav-btn" data-page="tipopeca" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
-      <button class="nav-btn" data-page="produtos" onclick="navigate('produtos')"><span class="nav-icon">📦</span> Produtos (Placas)</button>
-      <button class="nav-btn" data-page="tiposplaca" onclick="navigate('tiposplaca')"><span class="nav-icon">🧩</span> Tipos de Placa</button>
-      <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.0</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v5.2</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -525,10 +520,6 @@
       <div class="mob-more-item" onclick="closeMobMore();navigate('dentistas')"><span class="icon">👨‍⚕️</span><span>Dentistas</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('proteticos')"><span class="icon">🧑‍🔧</span><span>Protéticos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tipopeca')"><span class="icon">🦷</span><span>Tipos de Peça</span></div>
-      <div class="mob-more-item" onclick="closeMobMore();navigate('estoque')"><span class="icon">📦</span><span>Estoque</span></div>
-      <div class="mob-more-item" onclick="closeMobMore();navigate('produtos')"><span class="icon">📦</span><span>Produtos</span></div>
-      <div class="mob-more-item" onclick="closeMobMore();navigate('tiposplaca')"><span class="icon">🧩</span><span>Tipos de Placa</span></div>
-      <div class="mob-more-item" onclick="closeMobMore();navigate('cores')"><span class="icon">🎨</span><span>Cores</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('validacao')"><span class="icon">✅</span><span>Validação</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('resumo')"><span class="icon">📋</span><span>Resumo do Dia</span></div>
       <div class="mob-more-item" onclick="closeMobMore();recarregarDados()"><span class="icon">🔄</span><span>Atualizar</span></div>
@@ -557,7 +548,6 @@
       <div id="connection-status"></div>
       <div id="user-status"></div>
     </div>
-    <div id="estoque-banner"></div>
     <div class="page-content">
 
       <div class="page active" id="page-dashboard">
@@ -631,22 +621,6 @@
         <div id="tipopeca-content"></div>
       </div>
 
-      <div class="page" id="page-cores">
-        <div id="cores-content"></div>
-      </div>
-
-      <div class="page" id="page-tiposplaca">
-        <div id="tiposplaca-content"></div>
-      </div>
-
-      <div class="page" id="page-produtos">
-        <div id="produtos-content"></div>
-      </div>
-
-      <div class="page" id="page-estoque">
-        <div id="estoque-content"></div>
-      </div>
-
       <div class="page" id="page-validacao">
         <div id="validacao-content"><div class="not-connected"><div class="icon">🔍</div><p>Carregando...</p></div></div>
       </div>
@@ -663,18 +637,10 @@
 <div class="modal-overlay" id="config-modal">
   <div class="modal">
     <div class="modal-header"><h3>⚙️ Configurações</h3><button class="modal-close" onclick="closeConfig()">✕</button></div>
-    <div class="section-divider ent">🔒 Usuários com acesso</div>
+    <div class="section-divider ent">🔒 Acesso</div>
     <div id="cfg-readonly-warn" style="display:none" class="alert alert-warn">🔒 Modo leitura — sem permissão de edição.</div>
-    <small>Só quem está nesta lista consegue logar e ver os dados. "Admin" também pode editar/excluir. "Estoque" recebe o aviso quando um produto atinge o estoque mínimo.</small>
-    <div id="cfg-users-list" style="margin-top:10px"></div>
-    <div id="cfg-add-row" class="form-row" style="margin-top:14px">
-      <div class="form-group"><label>E-mail</label><input type="text" id="cfg-new-email" placeholder="pessoa@gmail.com"></div>
-      <div class="form-group"><label>Nome</label><input type="text" id="cfg-new-nome" placeholder="Opcional"></div>
-    </div>
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-admin"> É admin (pode editar/excluir)</label>
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-estoque"> Avisar quando o estoque atingir o mínimo</label>
-
-    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Fechar</button><button id="cfg-save-btn" class="btn btn-primary" onclick="addAllowedUser()">➕ Adicionar</button></div>
+    <div class="form-group"><label>E-mails dos administradores</label><input type="text" id="cfg-admin-emails" placeholder="email1@gmail.com, email2@gmail.com"><small>Administradores podem editar e excluir registros. Separe por vírgula ou ponto e vírgula. Salvo na planilha (aba Configuracao).</small></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Fechar</button><button id="cfg-save-btn" class="btn btn-primary" onclick="saveConfig()">💾 Salvar</button></div>
   </div>
 </div>
 
@@ -710,30 +676,25 @@
 
 <script>
 const CLIENT_ID='29814188441-tk6mg6ni8r63u5jmncog34ijv719cff0.apps.googleusercontent.com';
+const SHEET_ID='1cWCh7bcDlsBJA9NkmHHPUEgweFYNnVGWO2h3HtuqiNY';
+const SCOPES='https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
 const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbyT3XF5rauK9vOZxPMlzHy4gsGLyhkko_XzI2j2XqQIsU5FSCjnETtWf0Tb462YBvmhyw/exec';
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-// ── SUPABASE ──
-const SUPABASE_URL='https://cqepzwqmlpgdttuzgihx.supabase.co';
-const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZXB6d3FtbHBnZHR0dXpnaWh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NTY5NDgsImV4cCI6MjEwMTAzMjk0OH0.iV8UUAQKLTigD_wMpOhfLueuTnj7RpLdJ1GW_aCk1tE';
-// Gravação dupla na planilha antiga: desligada no cutover para produção (v7.0).
-// A planilha ficou congelada no estado do cutover e não recebe mais nada.
-const DUAL_WRITE_SHEETS=false;
-const sb=(SUPABASE_URL.startsWith('http'))?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
-
 const state={
+  accessToken:null,
+  tokenExpiry:null,
   user:null,
-  allowedUser:null, // { email, isAdmin, nome } — carregado de allowed_users após login
   connected:false,
-  dbStatus:'checking', // 'checking'|'ok'|'error' — badge de conexão com o Supabase
-  sheetsStatus:'checking', // idem, pra gravação dupla no Sheets (só usado enquanto DUAL_WRITE_SHEETS=true)
   moldagens:[],baseProva:[],basePrevista:[],provaDentes:[],entregas:[],remarcacoes:[],reembase:[],
   proteticos:[],dentistas:[],tiposPeca:[],contratos:[],
-  cores:[],tiposPlaca:[],produtos:[],estoqueMovimentos:[], // controle de estoque de placas (nativo do banco)
   filtered:[],currentPage:1,perPage:15,
   distVisible:true,currentDetailCod:null,
   lastSavedCodigo:null,
   contratoAtivo:null, // { id, inicio, fim, reembaseMes }
+  config:{
+    adminEmails:''
+  }
 };
 
 const pageMeta={
@@ -748,73 +709,67 @@ const pageMeta={
   proteticos:['Protéticos','Gerencie os protéticos (acesso restrito)'],
   tipopeca:['Tipos de Peça','Gerencie os tipos de peça (BaseDados)'],
   validacao:['Validação de Dados','Cheque integridade dos registros nas planilhas'],
-  resumo:['Resumo do Dia','Movimentações registradas hoje'],
-  estoque:['Estoque de Placas','Entradas, saldo atual e histórico de movimentações'],
-  produtos:['Produtos','Placas cadastradas (tipo + cor) e estoque mínimo'],
-  cores:['Cores','Gerencie as cores das placas'],
-  tiposplaca:['Tipos de Placa','Gerencie os tipos de placa']
+  resumo:['Resumo do Dia','Movimentações registradas hoje']
 };
 
-window.onload=async ()=>{
+window.onload=()=>{
   const theme=localStorage.getItem('prosus_theme')||'light';
   if(theme==='light'){document.body.classList.add('light');document.getElementById('theme-icon').textContent='🌙';document.getElementById('theme-label').textContent='Tema escuro';}
   else{document.body.classList.remove('light');document.getElementById('theme-icon').textContent='☀️';document.getElementById('theme-label').textContent='Tema claro';}
-
-  if(!supabase){
-    showLoginError('SUPABASE_URL/SUPABASE_ANON_KEY ainda não configurados neste beta. Veja supabase/schema.sql.');
-    return;
-  }
-  // Sessão Supabase persiste sozinha em localStorage — se já existir, pula o prompt do Google
-  const{data:{session}}=await sb.auth.getSession();
-  if(session?.user){
-    await afterSupabaseLogin(session.user);
-  }else{
-    waitForGSI();
+  // Pré-popula state.user com dados salvos para isAdmin funcionar imediatamente
+  const savedEmail=localStorage.getItem('prosus_user_email');
+  const savedName=localStorage.getItem('prosus_user_name')||'';
+  if(savedEmail && savedEmail!=='undefined' && savedEmail!=='null'){
+    state.user={email:savedEmail,name:savedName,picture:''};
   }
 };
 
-// Nonce OIDC: gera um valor aleatório (_authNonce), manda o HASH dele pro Google (embutido
-// no ID Token) e manda o valor cru pro Supabase, que re-hasheia e confere — evita replay attack.
-// Exige contexto seguro (https:// ou http://localhost); não funciona abrindo o arquivo direto (file://).
-let _authNonce=null;
-function randomNonce(){
-  return Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-async function sha256Hex(str){
-  const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-// Aguarda a lib GSI (Google Identity Services) carregar e inicializa o fluxo de ID Token
-async function waitForGSI(){
-  if(window.google?.accounts?.id){
-    _authNonce=randomNonce();
-    const hashedNonce=await sha256Hex(_authNonce);
-    google.accounts.id.initialize({client_id:CLIENT_ID,callback:onGoogleCredential,auto_select:true,nonce:hashedNonce});
-    google.accounts.id.prompt(); // tenta login silencioso (One Tap) se já houve login antes
+// Aguarda a lib GSI carregar e inicializa OAuth
+let tokenClient=null;
+let _silentLogin=false;
+function waitForGSI(){
+  if(window.google?.accounts?.oauth2){
+    initOAuth();
   } else {
     setTimeout(waitForGSI, 100);
   }
 }
+waitForGSI();
 
-async function onGoogleCredential(resp){
-  try{
-    const{data,error}=await sb.auth.signInWithIdToken({provider:'google',token:resp.credential,nonce:_authNonce});
-    if(error) throw error;
-    await afterSupabaseLogin(data.user);
-  }catch(e){
-    showLoginError('Erro ao autenticar: '+e.message);
+function initOAuth(){
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID,
+    scope:SCOPES,
+    callback:(resp)=>{
+      if(resp.error){
+        // Login silencioso falhou — normal, só mostra botão de login sem erro
+        if(_silentLogin){_silentLogin=false;return;}
+        showLoginError('Erro ao autenticar: '+resp.error);
+        return;
+      }
+      _silentLogin=false;
+      state.accessToken=resp.access_token;
+      state.tokenExpiry=Date.now()+(resp.expires_in-60)*1000;
+      fetchUserInfo();
+    }
+  });
+  // Tenta login silencioso se houver sessão anterior
+  const hint=localStorage.getItem('prosus_user_email');
+  if(hint && hint!=='undefined' && hint!=='null'){
+    if(!state.user?.email) state.user={email:hint,name:localStorage.getItem('prosus_user_name')||'',picture:''};
+    _silentLogin=true;
+    tokenClient.requestAccessToken({prompt:'none',login_hint:hint});
   }
 }
 
 function signIn(){
-  if(!window.google?.accounts?.id){toast('Aguarde a inicialização do Google...','info');return;}
-  google.accounts.id.prompt();
+  if(!tokenClient){toast('Aguarde a inicialização do Google...','info');return;}
+  tokenClient.requestAccessToken({prompt:'consent'});
 }
 
-async function signOut(){
-  await sb.auth.signOut();
-  state.user=null;state.allowedUser=null;state.connected=false;
+function signOut(){
+  if(state.accessToken){google.accounts.oauth2.revoke(state.accessToken,()=>{});}
+  state.accessToken=null;state.user=null;state.connected=false;
   localStorage.removeItem('prosus_user_email');
   localStorage.removeItem('prosus_user_name');
   document.getElementById('login-screen').style.display='flex';
@@ -822,61 +777,45 @@ async function signOut(){
   document.getElementById('user-status').innerHTML='';
 }
 
-// Login Google validado → cria/renova sessão Supabase → checa allowed_users antes de liberar qualquer dado
-async function afterSupabaseLogin(supaUser){
+async function fetchUserInfo(){
   try{
-    const email=supaUser.email;
-    const meta=supaUser.user_metadata||{};
-    const u={email,name:meta.full_name||meta.name||email,picture:meta.avatar_url||meta.picture||''};
-
-    const{data:allowedRow,error:allowedErr}=await sb.from('allowed_users').select('*').eq('email',email).maybeSingle();
-    if(allowedErr||!allowedRow){
-      showUnauthorizedScreen(email);
-      await sb.auth.signOut();
-      return;
-    }
-
+    const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{
+      headers:{Authorization:`Bearer ${state.accessToken}`}
+    });
+    if(!r.ok) throw new Error('Token inválido: '+r.status);
+    const u=await r.json();
+    if(!u.email) throw new Error('Email não retornado pelo Google');
     state.user=u;
-    state.allowedUser={email,isAdmin:!!allowedRow.is_admin,notificarEstoque:!!allowedRow.notificar_estoque,nome:allowedRow.nome||u.name};
-    localStorage.setItem('prosus_user_email',email);
-    localStorage.setItem('prosus_user_name',u.name);
-
+    localStorage.setItem('prosus_user_email',u.email);
+    localStorage.setItem('prosus_user_name',u.name||'');
+    // Show app
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='flex';
-    renderUserChip(u);
-    await loadAll();
-    await checkConnections();
-  }catch(e){showLoginError('Erro ao obter dados do usuário.');}
-}
-
-function renderUserChip(u){
-  const userChipHtml=`
-    <div class="user-chip" onclick="signOut()" title="Clique para sair">
-      <img src="${u.picture}" alt="${u.name}" onerror="this.style.display='none'">
-      <div class="user-chip-info">
-        <span class="user-chip-name">${u.name.split(' ')[0]}</span>
-        <span class="user-chip-out">Sair</span>
-      </div>
-    </div>`;
-  document.getElementById('user-status').innerHTML=userChipHtml;
-  const mobUs=document.getElementById('mob-user-status');
-  if(mobUs) mobUs.innerHTML=userChipHtml;
-  const su=document.getElementById('sidebar-user');
-  if(su){
-    su.innerHTML=`
-      <img src="${u.picture}" width="32" height="32" style="border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'">
-      <div style="min-width:0;flex:1;overflow:hidden">
-        <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name}</div>
-        <div style="font-size:10px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.email}</div>
+    // User chip no topbar desktop e mobile
+    const userChipHtml=`
+      <div class="user-chip" onclick="signOut()" title="Clique para sair">
+        <img src="${u.picture}" alt="${u.name}" onerror="this.style.display='none'">
+        <div class="user-chip-info">
+          <span class="user-chip-name">${u.name.split(' ')[0]}</span>
+          <span class="user-chip-out">Sair</span>
+        </div>
       </div>`;
-    su.setAttribute('style','display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #2a3048');
-  }
-}
-
-function showUnauthorizedScreen(email){
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('app').style.display='none';
-  showLoginError(`Acesso não autorizado para ${email}. Fale com o administrador do sistema.`);
+    document.getElementById('user-status').innerHTML=userChipHtml;
+    const mobUs=document.getElementById('mob-user-status');
+    if(mobUs) mobUs.innerHTML=userChipHtml;
+    // Sidebar user
+    const su=document.getElementById('sidebar-user');
+    if(su){
+      su.innerHTML=`
+        <img src="${u.picture}" width="32" height="32" style="border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'">
+        <div style="min-width:0;flex:1;overflow:hidden">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name}</div>
+          <div style="font-size:10px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.email}</div>
+        </div>`;
+      su.setAttribute('style','display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #2a3048');
+    }
+    await loadAll();
+  }catch(e){showLoginError('Erro ao obter dados do usuário.');}
 }
 
 function showLoginError(msg){
@@ -884,126 +823,58 @@ function showLoginError(msg){
   if(el){el.textContent=msg;el.style.display='block';}
 }
 
-// NOTA (migração Supabase): sob Supabase não há mais token de acesso do Google a
-// gerenciar (a sessão é do supabase-js, que renova sozinha) — ensureToken() e o
-// antigo tokenClient de access-token foram removidos; ver onGoogleCredential().
+async function ensureToken(){
+  if(state.accessToken&&Date.now()<state.tokenExpiry) return;
+  // Token expired — request silently
+  return new Promise((resolve,reject)=>{
+    tokenClient.callback=(resp)=>{
+      if(resp.error){reject(new Error(resp.error));return;}
+      state.accessToken=resp.access_token;
+      state.tokenExpiry=Date.now()+(resp.expires_in-60)*1000;
+      resolve();
+    };
+    tokenClient.requestAccessToken({prompt:'none'});
+  });
+}
 
-async function openConfig(){
+function openConfig(){
   const admin=isAdmin();
+  const input=document.getElementById('cfg-admin-emails');
+  input.value=state.config.adminEmails||'';
+  input.disabled=!admin;
   document.getElementById('cfg-save-btn').style.display=admin?'':'none';
-  document.getElementById('cfg-add-row').style.display=admin?'':'none';
   document.getElementById('cfg-readonly-warn').style.display=admin?'none':'block';
   document.getElementById('config-modal').classList.add('open');
-  await renderAllowedUsers();
 }
 function closeConfig(){document.getElementById('config-modal').classList.remove('open');}
-
-async function renderAllowedUsers(){
-  const admin=isAdmin();
-  const list=document.getElementById('cfg-users-list');
-  const{data,error}=await sb.from('allowed_users').select('*').order('criado_em');
-  if(error){list.innerHTML=`<div class="alert alert-error">Erro ao carregar: ${error.message}</div>`;return;}
-  list.innerHTML=(data&&data.length)?data.map(u=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
-      <div style="flex:1;min-width:0;overflow:hidden">
-        <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome||u.email}</div>
-        <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.email}</div>
-      </div>
-      <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap">
-        <input type="checkbox" ${u.is_admin?'checked':''} ${admin?'':'disabled'} onchange="toggleAllowedAdmin('${u.email}',this.checked)"> Admin
-      </label>
-      <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap" title="Recebe aviso de estoque mínimo">
-        <input type="checkbox" ${u.notificar_estoque?'checked':''} ${admin?'':'disabled'} onchange="toggleNotificarEstoque('${u.email}',this.checked)"> Estoque
-      </label>
-      ${admin?`<button class="btn btn-secondary btn-sm" onclick="removeAllowedUser('${u.email}')">🗑️</button>`:''}
-    </div>`).join(''):'<div class="empty-state"><p>Nenhum usuário cadastrado.</p></div>';
-}
-async function addAllowedUser(){
+async function saveConfig(){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  const email=document.getElementById('cfg-new-email').value.trim().toLowerCase();
-  const nome=document.getElementById('cfg-new-nome').value.trim();
-  const admin=document.getElementById('cfg-new-admin').checked;
-  const notificarEstoque=document.getElementById('cfg-new-estoque').checked;
-  if(!email){toast('Informe o e-mail','error');return;}
+  const adminEmails=document.getElementById('cfg-admin-emails').value.trim();
   try{
     toast('Salvando...','info');
-    const{error}=await sb.from('allowed_users').insert({email,nome,is_admin:admin,notificar_estoque:notificarEstoque});
-    if(error) throw error;
-    document.getElementById('cfg-new-email').value='';
-    document.getElementById('cfg-new-nome').value='';
-    document.getElementById('cfg-new-admin').checked=false;
-    document.getElementById('cfg-new-estoque').checked=false;
-    toast('Usuário adicionado!','success');
-    await renderAllowedUsers();
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function toggleAllowedAdmin(email,novoIsAdmin){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  try{
-    const{error}=await sb.from('allowed_users').update({is_admin:novoIsAdmin}).eq('email',email);
-    if(error) throw error;
-    if(email===state.allowedUser?.email) state.allowedUser.isAdmin=novoIsAdmin;
-    toast('Atualizado!','success');
-  }catch(e){toast('Erro: '+e.message,'error');await renderAllowedUsers();}
-}
-async function toggleNotificarEstoque(email,novoValor){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  try{
-    const{error}=await sb.from('allowed_users').update({notificar_estoque:novoValor}).eq('email',email);
-    if(error) throw error;
-    // Se for o próprio usuário logado, o banner reflete a mudança na hora
-    if(email===state.allowedUser?.email){state.allowedUser.notificarEstoque=novoValor;renderEstoqueBanner();}
-    toast('Atualizado!','success');
-  }catch(e){toast('Erro: '+e.message,'error');await renderAllowedUsers();}
-}
-async function removeAllowedUser(email){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  if(!confirm('Remover o acesso de '+email+'?')) return;
-  try{
-    const{error}=await sb.from('allowed_users').delete().eq('email',email);
-    if(error) throw error;
-    toast('Acesso removido!','success');
-    await renderAllowedUsers();
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-// Badges de status: Banco (Supabase) sempre visível; Planilha (Sheets/Apps Script)
-// só aparece enquanto DUAL_WRITE_SHEETS estiver ligado — quando a gravação dupla for
-// desligada ao final da migração, essa badge some sozinha e fica só o Banco.
-function statusBadge(status,label){
-  const cls={ok:'badge-green',error:'badge-red',checking:'badge-yellow'}[status]||'badge-gray';
-  const txt={ok:'Conectado',error:'Erro',checking:'Verificando...'}[status]||'—';
-  return `<span class="badge ${cls}">● ${label}: ${txt}</span>`;
+    let cfgRows=[];
+    try{cfgRows=await fetchSheet('Configuracao!A:B');}catch(e){}
+    const rowIdx=cfgRows.findIndex(r=>r[0]&&r[0].toString().trim().toLowerCase()==='admin_emails');
+    if(rowIdx>=0){
+      await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Configuracao',row:rowIdx+1,values:['admin_emails',adminEmails]})});
+    } else {
+      await postSheet('Configuracao',['admin_emails',adminEmails]);
+    }
+    state.config.adminEmails=adminEmails;
+    closeConfig();
+    toast('Configurações salvas!','success');
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');}
 }
 function updateStatus(){
   const el=document.getElementById('connection-status');
   if(!el)return;
-  let html=statusBadge(state.dbStatus,'Banco');
-  if(DUAL_WRITE_SHEETS) html+=' '+statusBadge(state.sheetsStatus,'Planilha');
-  el.innerHTML=html;
-}
-async function checkConnections(){
-  state.dbStatus='checking';
-  if(DUAL_WRITE_SHEETS) state.sheetsStatus='checking';
-  updateStatus();
-  try{
-    const{error}=await sb.from('allowed_users').select('email').limit(1);
-    state.dbStatus=error?'error':'ok';
-  }catch(e){ state.dbStatus='error'; }
-  if(DUAL_WRITE_SHEETS){
-    try{
-      const r=await fetch(`${APPS_SCRIPT_URL}?ping=1`);
-      const result=await r.json();
-      state.sheetsStatus=result.success?'ok':'error';
-    }catch(e){ state.sheetsStatus='error'; }
-  }
-  updateStatus();
+  el.innerHTML=state.connected?'<span class="badge badge-green">● Conectado</span>':'<span class="badge badge-yellow">● Carregando...</span>';
 }
 
 async function recarregarDados(){
   const btn=document.getElementById('refresh-btn');
   if(btn){btn.textContent='⏳ Atualizando...';btn.disabled=true;}
   await loadAll();
-  await checkConnections();
   if(btn){btn.textContent='🔄 Atualizar dados';btn.disabled=false;}
 }
 
@@ -1028,7 +899,7 @@ function navigate(page){
     const btn=document.getElementById('mob-btn-'+p);
     if(btn) btn.classList.toggle('active',p===page);
   });
-  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao','resumo','estoque','produtos','tiposplaca','cores'];
+  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao','resumo'];
   const mobMore=document.getElementById('mob-btn-more');
   if(mobMore) mobMore.classList.toggle('active',morePages.includes(page));
   document.getElementById('page-'+page).classList.add('active');
@@ -1047,10 +918,6 @@ function navigate(page){
   if(page==='contratos'&&state.connected) renderContratos();
   if(page==='validacao'&&state.connected) renderValidacao();
   if(page==='resumo'&&state.connected) renderResumo();
-  if(page==='cores'&&state.connected) renderCores();
-  if(page==='tiposplaca'&&state.connected) renderTiposPlaca();
-  if(page==='produtos'&&state.connected) renderProdutos();
-  if(page==='estoque'&&state.connected) renderEstoque();
   // Scroll to top on mobile
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1064,186 +931,19 @@ function closeMobMore(){
   document.getElementById('mob-more-sheet').classList.remove('open');
 }
 
-/* ── FETCH / POST (adapters Supabase) ──
-   Mantém as assinaturas antigas de fetchSheet(range)/postSheet(sheet,row) — que já
-   são usadas em ~30 pontos do app — para minimizar mudanças no resto do código.
-   `range`/`sheet` continuam sendo o nome da aba antiga (ex: 'Moldagens!A2:H5000' ou
-   'Moldagens'); só a parte antes do '!' é usada para achar a tabela correspondente.
-   Cada linha (array posicional, no formato antigo de colunas do Sheets) é convertida
-   de/para um objeto nomeado da tabela do Postgres. */
-const SHEET_MAP={
-  'Moldagens':{table:'moldagens',pk:'codigo',fields:['codigo','nome','dentista','tipo','data','dist','situacao','obs'],dates:['data']},
-  'BaseProvaArmacao':{table:'base_prova_armacao',pk:'codigo',fields:['codigo',null,null,null,null,'previsao','data','obs'],dates:['previsao','data']},
-  'Prova de Dentes':{table:'prova_dentes',pk:'codigo',fields:['codigo',null,null,null,null,'previsao','data','obs'],dates:['previsao','data']},
-  'Entregas':{table:'entregas',pk:'codigo',fields:['codigo',null,null,null,null,'previsao','entrega','obs'],dates:['previsao','entrega']},
-  'Reembase':{table:'reembase',pk:'codigo',fields:['codigo',null,null,null,null,'data','obs'],dates:['data']},
-  'Remarcacao':{table:'remarcacao',fields:['codigo',null,null,null,'etapa','data','obs'],dates:['data']}, // sem pk — sempre insert (histórico)
-  'Proteticos':{table:'proteticos',pk:'codigo',fields:['codigo','nome','paga_armacao'],bools:['paga_armacao']},
-  'Dentistas':{table:'dentistas',pk:'nome',fields:['nome']},
-  'BaseDados':{table:'tipos_peca',pk:'descricao',fields:['descricao','qtd_pt','qtd_ppr']},
-  'Contratos':{table:'contratos',pk:'id',fields:['id','inicio','fim','reembase_mes','pecas_contratadas'],dates:['inicio','fim']},
-};
-function rowToObj(map,row){
-  const obj={};
-  map.fields.forEach((f,i)=>{
-    if(!f||row[i]===undefined) return;
-    let v=row[i];
-    if(map.dates?.includes(f)) v=v?toInput(v):null; // dd/mm/aaaa -> aaaa-mm-dd (coluna date do Postgres)
-    else if(map.bools?.includes(f)) v=(v==='S'||v===true);
-    obj[f]=v;
-  });
-  return obj;
-}
-function objToRow(map,obj){
-  return map.fields.map(f=>{
-    if(!f) return '';
-    let v=obj[f];
-    if(map.dates?.includes(f)) return v?fromInput(v):''; // aaaa-mm-dd (Postgres) -> dd/mm/aaaa
-    if(map.bools?.includes(f)) return v?'S':'N';
-    return v??'';
-  });
-}
-// Lê uma tabela inteira do Supabase, paginando. O PostgREST devolve no máximo
-// ~1000 linhas por consulta — sem paginar, tabelas maiores (moldagens, entregas,
-// estoque_movimentos...) ficam cortadas silenciosamente, sem erro nenhum.
-async function sbSelectAll(table,orderBy){
-  const pageSize=1000;
-  let allRows=[],from=0;
-  while(true){
-    let query=sb.from(table).select('*').range(from,from+pageSize-1);
-    if(orderBy) query=query.order(orderBy,{ascending:true});
-    const{data,error}=await query;
-    if(error) throw new Error(error.message);
-    if(!data||!data.length) break;
-    allRows=allRows.concat(data);
-    if(data.length<pageSize) break;
-    from+=pageSize;
-  }
-  return allRows;
-}
+/* ── FETCH / POST ── */
 async function fetchSheet(range){
-  const sheetName=range.split('!')[0];
-  const map=SHEET_MAP[sheetName];
-  if(!map) return [];
-  const rows=await sbSelectAll(map.table,map.pk);
-  return rows.map(row=>objToRow(map,row));
+  await ensureToken();
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}`;
+  const r=await fetch(url,{headers:{Authorization:`Bearer ${state.accessToken}`}});
+  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.statusText);}
+  return(await r.json()).values||[];
 }
 async function postSheet(sheet,row){
-  const map=SHEET_MAP[sheet];
-  if(!map) throw new Error('Tabela não mapeada: '+sheet);
-  const obj=rowToObj(map,row);
-  const{error}=await sb.from(map.table).insert(obj);
-  if(error) throw new Error(error.message||'Erro ao salvar em '+sheet);
-  dualWriteSheets(sheet,row);
-  return{success:true};
-}
-// Update-ou-insert real via Postgres, substitui o padrão antigo de "buscar a coluna A
-// pra achar o número da linha, depois atualizar por índice" — elimina a race condition
-// documentada no CLAUDE.md (não há mais esse passo intermediário). `matchKey` é o valor
-// atual da chave (útil para os poucos casos em que a própria chave pode ser editada,
-// como o "id" de Contratos — o `row` já traz o valor novo, `matchKey` é só pra achar
-// a linha existente).
-async function upsertRow(sheet,matchKey,row){
-  const map=SHEET_MAP[sheet];
-  if(!map||!map.pk) throw new Error('Tabela sem chave de upsert: '+sheet);
-  const obj=rowToObj(map,row);
-  const{data,error}=await sb.from(map.table).update(obj).eq(map.pk,String(matchKey)).select();
-  if(error) throw new Error(error.message||'Erro ao salvar em '+sheet);
-  if(!data||data.length===0){
-    const{error:insErr}=await sb.from(map.table).insert(obj);
-    if(insErr) throw new Error(insErr.message||'Erro ao salvar em '+sheet);
-  }
-  dualWriteSheets(sheet,row,matchKey);
-  return{success:true};
-}
-// Gravação dupla temporária (best-effort): mantém a planilha antiga como backup vivo
-// durante o período de validação. Nunca deve travar a UI — falhas são só logadas.
-function dualWriteSheets(sheet,row,keyVal){
-  if(!DUAL_WRITE_SHEETS) return;
-  const body=(keyVal!==undefined)?{action:'upsert_by_key',sheet,key:String(keyVal),values:row}:{sheet,row};
-  fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(body)})
-    .then(r=>r.json())
-    .then(res=>{ state.sheetsStatus=res.success?'ok':'error'; updateStatus(); })
-    .catch(e=>{ console.warn('[dual-write] falhou em '+sheet+':',e); state.sheetsStatus='error'; updateStatus(); });
-}
-
-/* ── ESTOQUE DE PLACAS (helpers) ──
-   O saldo nunca é armazenado: é sempre derivado do livro-razão (estoque_movimentos),
-   somando entradas e subtraindo saídas. Assim não existe saldo dessincronizado, e
-   remover um movimento devolve a quantidade ao estoque naturalmente. */
-function estoqueAtual(produtoId){
-  return state.estoqueMovimentos
-    .filter(m=>m.produto_id===produtoId)
-    .reduce((acc,m)=>acc+(m.tipo==='entrada'?m.quantidade:-m.quantidade),0);
-}
-function produtoLabel(p){
-  if(!p) return '—';
-  return `${p.tipo_placa} — ${p.cor}`;
-}
-function produtoById(id){ return state.produtos.find(p=>p.id===id); }
-function ativos(lista){ return lista.filter(x=>x.ativo!==false); }
-/* Exclui de verdade quando o registro não é usado por ninguém; se alguma FK apontar
-   para ele, o Postgres recusa (código 23503) e a gente apenas inativa — some dos
-   seletores mas preserva tudo que depende dele. Devolve 'excluido' ou 'inativado'. */
-async function excluirOuInativar(tabela,coluna,valor){
-  const{error}=await sb.from(tabela).delete().eq(coluna,valor);
-  if(!error) return 'excluido';
-  if(error.code!=='23503') throw error;
-  const{error:erroInativar}=await sb.from(tabela).update({ativo:false}).eq(coluna,valor);
-  if(erroInativar) throw erroInativar;
-  return 'inativado';
-}
-async function reativar(tabela,coluna,valor){
-  const{error}=await sb.from(tabela).update({ativo:true}).eq(coluna,valor);
-  if(error) throw error;
-}
-function produtosAbaixoMinimo(){
-  return state.produtos.filter(p=>p.ativo!==false&&estoqueAtual(p.id)<=p.estoque_minimo);
-}
-// Data de hoje em aaaa-mm-dd — sem toISOString(), que causaria erro de fuso (ver CLAUDE.md)
-function hojeISO(){
-  const d=new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-// Converte um timestamptz do Postgres (UTC) para a data local em aaaa-mm-dd.
-// Fatiar os 10 primeiros caracteres da string mostraria o dia errado para registros
-// feitos à noite no Brasil (UTC-3), já que a string vem em UTC.
-function tsParaDataLocal(ts){
-  if(!ts) return '';
-  const d=new Date(ts);
-  if(isNaN(d)) return '';
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-// timestamptz (UTC) → 'dd/mm/aaaa HH:MM:SS' no fuso local
-function tsParaDataHoraLocal(ts){
-  if(!ts) return '';
-  const d=new Date(ts);
-  if(isNaN(d)) return '';
-  const p=n=>String(n).padStart(2,'0');
-  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
-
-/* Estorno: desfazer uma movimentação insere a contrapartida vinculada ao original
-   (append-only), em vez de apagar a linha. O saldo se corrige sozinho, porque é
-   derivado da soma do razão, e o histórico preserva a sequência do que aconteceu. */
-function estornoDe(movId){ return state.estoqueMovimentos.find(m=>m.estorno_de===movId); }
-function foiEstornado(movId){ return !!estornoDe(movId); }
-function ehEstorno(m){ return !!m.estorno_de; }
-async function estornarMovimento(id){
-  const orig=state.estoqueMovimentos.find(m=>m.id===id);
-  if(!orig) throw new Error('Movimentação não encontrada');
-  if(foiEstornado(id)) throw new Error('Esta movimentação já foi estornada');
-  const{error}=await sb.from('estoque_movimentos').insert({
-    produto_id:orig.produto_id,
-    tipo:orig.tipo==='saida'?'entrada':'saida', // contrapartida
-    quantidade:orig.quantidade,
-    data:hojeISO(),          // o estorno acontece hoje, não na data do movimento original
-    codigo:orig.codigo,
-    estorno_de:id,
-    obs:`Estorno da ${orig.tipo==='saida'?'saída':'entrada'} #${id}`,
-    usuario_email:state.user?.email||null
-  });
-  if(error) throw error;
+  const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({sheet,row})});
+  const result=await r.json();
+  if(!result.success) throw new Error(result.error||'Erro ao salvar em '+sheet);
+  return result;
 }
 
 /* ── UTILS ── */
@@ -1320,7 +1020,7 @@ function toast(msg,type='info'){
 
 /* ── LOAD ── */
 async function loadAll(){
-  state.connected=false;state.dbStatus='checking';updateStatus();
+  state.connected=false;updateStatus();
   document.getElementById('dashboard-content').innerHTML='<div class="loading-state"><div class="loading-spinner"></div>Carregando dados...</div>';
   try{
     const[mRows,bRows,dRows,eRows]=await Promise.all([
@@ -1329,23 +1029,20 @@ async function loadAll(){
       fetchSheet('Prova de Dentes!A2:H2000'),
       fetchSheet('Entregas!A2:J2000')
     ]);
-    let pRows=[],dentRows=[],tipoRows=[],remRows=[],reemRows=[];
+    let pRows=[],dentRows=[],tipoRows=[],remRows=[],reemRows=[],cfgRows=[];
     try{pRows=await fetchSheet('Proteticos!A2:C200');}catch(e){}
     try{dentRows=await fetchSheet('Dentistas!A2:A500');}catch(e){}
     try{tipoRows=await fetchSheet('BaseDados!A3:C200');}catch(e){}
     try{remRows=await fetchSheet('Remarcacao!A2:G500');}catch(e){}
     try{reemRows=await fetchSheet('Reembase!A2:G2000');}catch(e){}
+    try{cfgRows=await fetchSheet('Configuracao!A2:B50');}catch(e){}
     let contratoRows=[];
     try{contratoRows=await fetchSheet('Contratos!A2:D100');}catch(e){}
 
-    // Estoque de placas — tabelas nativas do banco (não existem no Sheets), lidas direto.
-    try{state.cores=await sbSelectAll('cores','nome');}catch(e){}          // [{nome, ativo}]
-    try{state.tiposPlaca=await sbSelectAll('tipos_placa','nome');}catch(e){} // [{nome, ativo}]
-    try{state.produtos=await sbSelectAll('produtos','id');}catch(e){}
-    try{state.estoqueMovimentos=await sbSelectAll('estoque_movimentos','id');}catch(e){}
-
-    // NOTA (migração Supabase): admin_emails/Configuracao foi substituído por allowed_users,
-    // checado no login (ver afterSupabaseLogin/checkAllowedUser) — não faz mais parte do loadAll.
+    // Parse config from sheet: col A = chave, col B = valor
+    const cfg={};
+    cfgRows.forEach(r=>{ if(r[0]) cfg[r[0].toString().trim().toLowerCase()]=r[1]||''; });
+    state.config.adminEmails=cfg['admin_emails']||'';
 
     // Parse contratos: A=id, B=inicio(dd/mm/aaaa), C=fim(dd/mm/aaaa), D=reembase_mes, E=pecas_contratadas
     state.contratos=contratoRows.filter(r=>r[0]&&r[1]&&r[2]).map(r=>({
@@ -1375,20 +1072,25 @@ async function loadAll(){
     state.tiposPeca=tipoRows.filter(r=>r[0]).map(r=>({desc:r[0],pt:r[1]||'0',ppr:r[2]||'0'}));
     state.remarcacoes=remRows.filter(r=>r[0]&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),etapa:r[4]||'',data:r[5]||'',obs:r[6]||''}));
 
-    state.connected=true;state.dbStatus='ok';updateStatus();
-    toast('Dados carregados do banco! '+state.moldagens.length+' registros.','success');
+    state.connected=true;updateStatus();
+    toast('Planilha carregada! '+state.moldagens.length+' registros.','success');
     renderDashboard();renderTable();renderPipeline();renderCadastroForm();
     renderFechamento();renderFechamentoArmacao();
     refreshDetailIfOpen();
-    renderEstoqueBanner();
     if(document.querySelector('#page-resumo.active')) renderResumo();
     if(document.querySelector('#page-contratos.active')) renderContratos();
-    if(document.querySelector('#page-cores.active')) renderCores();
-    if(document.querySelector('#page-tiposplaca.active')) renderTiposPlaca();
-    if(document.querySelector('#page-produtos.active')) renderProdutos();
-    if(document.querySelector('#page-estoque.active')) renderEstoque();
   }catch(e){
-    state.connected=false;state.dbStatus='error';updateStatus();
+    state.connected=false;updateStatus();
+    // Se o erro for de scopes insuficientes, força novo login com consentimento
+    if(e.message&&e.message.toLowerCase().includes('insufficient')){
+      localStorage.removeItem('prosus_user_email');
+      localStorage.removeItem('prosus_user_name');
+      state.accessToken=null;
+      document.getElementById('login-screen').style.display='flex';
+      document.getElementById('app').style.display='none';
+      showLoginError('Permissões insuficientes. Por favor, faça login novamente para autorizar o acesso.');
+      return;
+    }
     toast('Erro: '+e.message,'error');
     document.getElementById('dashboard-content').innerHTML=`<div class="not-connected"><div class="icon">❌</div><h3>Erro de conexão</h3><p>${e.message}</p><button class="btn btn-primary" onclick="loadAll()">🔄 Tentar novamente</button></div>`;
   }
@@ -1810,10 +1512,14 @@ function renderDetailInfo(cod){
     ${relacionadosHtml}`;
 }
 function isAdmin(){
-  // NOTA (migração Supabase): admin agora vem de allowed_users.is_admin, checado
-  // no login (ver checkAllowedUser()) e cacheado em state.allowedUser. O RLS no
-  // banco é quem realmente impede escrita de não-admin — isso aqui é só a UI.
-  return !!state.allowedUser?.isAdmin;
+  const stored=(state.config.adminEmails||'').trim();
+  if(!stored) return true;
+  const emails=stored.toLowerCase().split(/[,;]/).map(e=>e.trim()).filter(Boolean);
+  if(!emails.length) return true;
+  const rawEmail=state.user?.email || localStorage.getItem('prosus_user_email') || '';
+  const userEmail=rawEmail.toLowerCase().trim();
+  if(!userEmail||userEmail==='undefined'||userEmail==='null') return false;
+  return emails.includes(userEmail);
 }
 
 // Re-renderiza etapas se modal estiver aberto — chamado após loadAll garantir adminEmails carregado
@@ -1866,22 +1572,6 @@ function renderDetailEtapas(cod){
       </div>
       <div class="form-group"><label>Observação</label><input type="text" id="et-pd-obs" value="${pd.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','pd')">💾 Salvar Prova de Dentes</button>`:''}
-
-      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-        <label style="display:block;margin-bottom:6px">🧩 Placas utilizadas</label>
-        <div id="pd-placas-lista"></div>
-        ${admin?(ativos(state.produtos).length?`
-        <div style="display:flex;gap:6px;align-items:flex-end;margin-top:8px;flex-wrap:wrap">
-          <div class="form-group" style="flex:2;min-width:150px;margin:0"><label style="font-size:11px">Placa</label>
-            <select id="pd-placa-produto">
-              <option value="">— Selecione —</option>
-              ${ativos(state.produtos).map(p=>`<option value="${p.id}">${produtoLabel(p)} (${estoqueAtual(p.id)} em estoque)</option>`).join('')}
-            </select>
-          </div>
-          <div class="form-group" style="flex:0 0 80px;margin:0"><label style="font-size:11px">Qtd</label><input type="number" id="pd-placa-qtd" min="1" value="1"></div>
-          <button class="btn btn-secondary btn-sm" onclick="adicionarPlacaPaciente('${cod}')">➕ Adicionar</button>
-        </div>`:`<div class="alert alert-warn" style="margin-top:8px">⚠️ Nenhum produto ativo cadastrado. <a href="#" onclick="closeDetail();navigate('produtos');return false" style="color:inherit;text-decoration:underline">Cadastrar produtos</a></div>`):''}
-      </div>
     </div>
 
     <div class="etapa-block ent">
@@ -1923,39 +1613,84 @@ function renderDetailEtapas(cod){
         <div class="form-group"><label>Observação</label><input type="text" id="et-rb-obs" value="${rb.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       </div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rb')">💾 Salvar Reembase</button>`:''}
-    </div>`;
-  renderPlacasPaciente(cod);}
+    </div>`;}
 
 async function submitEtapaUnica(cod,tipo){
   try{
     toast('Salvando...','info');
+
+    // Helper: upsert — atualiza se já existe, insere se não existe
+    const upsert=async(sheet,stateArr,values)=>{
+      // Sempre busca na planilha para evitar duplicatas mesmo quando state não tem o registro
+      const rows=await fetchSheet(sheet+'!A:A');
+      const codStr=String(cod);
+      const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===codStr);
+      if(rowIdx>=0){
+        const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet,row:rowIdx+1,values})});
+        const res=await r.json();
+        if(!res.success) throw new Error(res.error||'Erro ao atualizar');
+      } else {
+        await postSheet(sheet,values);
+      }
+    };
 
     if(tipo==='bp'){
       const bp=fromInput(document.getElementById('et-bp').value);
       const bpPrevVal=fromInput(document.getElementById('et-bp-prev').value);
       const bpObs=document.getElementById('et-bp-obs').value;
       if(!bp&&!bpPrevVal){toast('Informe ao menos a previsão ou data real da Base de Prova','error');return;}
-      await upsertRow('BaseProvaArmacao',cod,[cod,'','','','',bpPrevVal,bp,bpObs]);
+      // Upsert considerando tanto baseProva (data real) quanto basePrevista (só previsão)
+      const bpAllRows=[...state.baseProva,...state.basePrevista];
+      const upsertBP=async()=>{
+        const rows=await fetchSheet('BaseProvaArmacao!A:A');
+        const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
+        if(rowIdx>=0){
+          const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'BaseProvaArmacao',row:rowIdx+1,values:[cod,'','','','',bpPrevVal,bp,bpObs]})});
+          const res=await r.json();
+          if(!res.success) throw new Error(res.error||'Erro ao atualizar');
+        } else {
+          await postSheet('BaseProvaArmacao',[cod,'','','','',bpPrevVal,bp,bpObs]);
+        }
+      };
+      await upsertBP();
 
     } else if(tipo==='pd'){
       const pd=fromInput(document.getElementById('et-pd').value);
       const pdPrev=fromInput(document.getElementById('et-pd-prev').value);
       const pdObs=document.getElementById('et-pd-obs').value;
       if(!pd&&!pdPrev){toast('Informe ao menos a previsão ou data real da Prova de Dentes','error');return;}
-      await upsertRow('Prova de Dentes',cod,[cod,'','','','',pdPrev,pd,pdObs]);
+      const upsertPD=async()=>{
+        const rows=await fetchSheet('Prova de Dentes!A:A');
+        const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
+        if(rowIdx>=0){
+          const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Prova de Dentes',row:rowIdx+1,values:[cod,'','','','',pdPrev,pd,pdObs]})});
+          const res=await r.json();
+          if(!res.success) throw new Error(res.error||'Erro ao atualizar');
+        } else {
+          await postSheet('Prova de Dentes',[cod,'','','','',pdPrev,pd,pdObs]);
+        }
+      };
+      await upsertPD();
 
     } else if(tipo==='ent'){
       const ent=fromInput(document.getElementById('et-ent').value);
       const prev=fromInput(document.getElementById('et-prev').value);
       const entObs=document.getElementById('et-ent-obs').value;
       if(!ent&&!prev){toast('Informe ao menos a previsão ou data de entrega','error');return;}
-      await upsertRow('Entregas',cod,[cod,'','','','',prev,ent,entObs]);
+      const eRows=await fetchSheet('Entregas!A:A');
+      const eRowIdx=eRows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
+      const existing=state.entregas.find(x=>x.codigo===String(cod));
+      if(eRowIdx>=0){
+        await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Entregas',row:eRowIdx+1,values:[cod,'','','','',prev||existing?.previsao||'',ent||existing?.entrega||'',entObs||existing?.obs||'']})});
+      } else {
+        await postSheet('Entregas',[cod,'','','','',prev,ent,entObs]);
+      }
 
     } else if(tipo==='rb'){
       const rb=fromInput(document.getElementById('et-rb').value);
       const rbObs=document.getElementById('et-rb-obs').value;
       if(!rb){toast('Informe a data do Reembase','error');return;}
-      await upsertRow('Reembase',cod,[cod,'','','','',rb,rbObs]);
+      await upsert('Reembase',state.reembase,[cod,'','','','',rb,rbObs]);
 
     } else if(tipo==='rem'){
       const remEtapa=document.getElementById('et-rem-etapa').value;
@@ -1965,6 +1700,7 @@ async function submitEtapaUnica(cod,tipo){
       await postSheet('Remarcacao',[cod,'','','',remEtapa,remData,remObs]);
     }
     toast('Salvo com sucesso!','success');
+    await new Promise(r=>setTimeout(r,600));
     await loadAll();showDetail(cod);switchDetailTab('etapas');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
@@ -2000,9 +1736,14 @@ async function submitEditar(cod){
   if(!nome){toast('Informe o nome','error');return;}
   try{
     toast('Atualizando...','info');
+    const rows=await fetchSheet('Moldagens!A:A');
+    const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===String(cod));
+    if(rowIdx<0) throw new Error('Registro não encontrado');
+    const sheetRow=rowIdx+1;
     const m=state.moldagens.find(x=>x.codigo===String(cod));
-    if(!m) throw new Error('Registro não encontrado');
-    await upsertRow('Moldagens',cod,[cod,nome,dentista,tipo,fromInput(dataRaw),dist,m?.situacao||'Pendente',obs]);
+    const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Moldagens',row:sheetRow,values:[cod,nome,dentista,tipo,fromInput(dataRaw),dist,m?.situacao||'Pendente',obs]})});
+    const result=await r.json();
+    if(!result.success) throw new Error(result.error||'Erro desconhecido');
     toast('Dados atualizados!','success');
     await loadAll();showDetail(cod);switchDetailTab('info');
   }catch(e){toast('Erro: '+e.message,'error');}
@@ -2205,7 +1946,12 @@ async function submitContrato(){
     toast('Salvando...','info');
     if(editingContrato!==null){
       const old=state.contratos[editingContrato];
-      await upsertRow('Contratos',old.id,[id,inicio,fim,reembase,pecas]);
+      const rows=await fetchSheet('Contratos!A:A');
+      const rowIdx=rows.findIndex(r=>r[0]&&r[0].toString().trim()===old.id);
+      if(rowIdx<0) throw new Error('Contrato não encontrado na planilha');
+      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Contratos',row:rowIdx+1,values:[id,inicio,fim,reembase,pecas]})});
+      const res=await r.json();
+      if(!res.success) throw new Error(res.error||'Erro ao atualizar');
       toast(`Contrato "${id}" atualizado!`,'success');
     } else {
       await postSheet('Contratos',[id,inicio,fim,reembase,pecas]);
@@ -2687,9 +2433,15 @@ async function submitNovoDentistaDireto(){
   if(!nome){toast('Informe o nome','error');return;}
   try{
     if(editingDentista!==null){
+      // Editar — encontra linha na planilha
       toast('Atualizando...','info');
+      const rows=await fetchSheet('Dentistas!A:A');
       const oldNome=state.dentistas[editingDentista];
-      await upsertRow('Dentistas',oldNome,[nome]);
+      const rowIdx=rows.findIndex(r=>r[0]===oldNome);
+      if(rowIdx<0) throw new Error('Dentista não encontrado na planilha');
+      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Dentistas',row:rowIdx+1,values:[nome]})});
+      const result=await r.json();
+      if(!result.success) throw new Error(result.error);
       state.dentistas[editingDentista]=nome;
       toast(`Atualizado para ${cap(nome)}!`,'success');
     }else{
@@ -2772,7 +2524,12 @@ async function submitNovoProteticoDireto(){
       if(dupCod){toast('Código '+codigo+' já está em uso pelo protético "'+dupCod.nome+'"','error');return;}
       toast('Atualizando...','info');
       const old=state.proteticos[editingProtetico];
-      await upsertRow('Proteticos',old.codigo,[codigo,nome,pagaArmacao]);
+      const rows=await fetchSheet('Proteticos!A:A');
+      const rowIdx=rows.findIndex(r=>r[0]===old.codigo);
+      if(rowIdx<0) throw new Error('Protético não encontrado na planilha');
+      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'Proteticos',row:rowIdx+1,values:[codigo,nome,pagaArmacao]})});
+      const result=await r.json();
+      if(!result.success) throw new Error(result.error);
       state.proteticos[editingProtetico]={codigo,nome,pagaArmacao:pagaArmacao==='S'};
       toast(`Protético ${codigo} atualizado!`,'success');
     }else{
@@ -2862,7 +2619,13 @@ async function submitNovoTipo(){
     if(editingTipo!==null){
       toast('Atualizando...','info');
       const old=state.tiposPeca[editingTipo];
-      await upsertRow('BaseDados',old.desc,[desc,pt,ppr]);
+      const rows=await fetchSheet('BaseDados!A:A');
+      // Procura a partir da linha 3 (índice 2 = linha 3 na planilha)
+      const rowIdx=rows.findIndex((r,i)=>i>=1&&r[0]===old.desc); // skip cabeçalho linha1
+      if(rowIdx<0) throw new Error('Tipo não encontrado na planilha');
+      const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'update',sheet:'BaseDados',row:rowIdx+1,values:[desc,pt,ppr]})});
+      const result=await r.json();
+      if(!result.success) throw new Error(result.error);
       state.tiposPeca[editingTipo]={desc,pt,ppr};
       toast(`${desc} atualizado!`,'success');
     }else{
@@ -2874,543 +2637,6 @@ async function submitNovoTipo(){
     }
     renderTipoPeca();renderCadastroForm();
   }catch(e){toast('Erro: '+e.message,'error');}
-}
-
-/* ════════════ ESTOQUE DE PLACAS ════════════
-   Cadastros (cores, tipos de placa, produtos), entrada/consulta de estoque e
-   histórico de movimentações. Tabelas nativas do banco — não passam por
-   SHEET_MAP/dualWriteSheets, já que não existem no Sheets. */
-
-/* ── CORES ── */
-let editingCor=null;
-function renderCores(focusForm=false){
-  const admin=isAdmin();
-  const list=state.cores;
-  document.getElementById('cores-content').innerHTML=`
-    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-      ${admin?`<div style="flex:1;min-width:280px">
-        <div class="form-card">
-          <h3 id="cor-form-title">➕ Nova Cor</h3>
-          <div class="form-group"><label>Cor</label><input type="text" id="nc-nome" placeholder="Ex: A2, A3, A3,5, A4"></div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-primary" onclick="submitCor()">💾 Salvar</button>
-            <button class="btn btn-secondary" id="cor-cancel-btn" onclick="cancelEditCor()" style="display:none">✕ Cancelar</button>
-          </div>
-        </div>
-      </div>`:''}
-      <div style="flex:2;min-width:280px">
-        <div class="table-card">
-          <div class="table-header"><h3>🎨 Cores cadastradas</h3><span style="font-size:12px;color:var(--text2)">${list.length} cores</span></div>
-          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
-          <div style="padding:12px">
-            ${list.length?list.map((c,i)=>{
-              const inativo=c.ativo===false;
-              return `<div class="list-item" style="${inativo?'opacity:.6':''}" ${admin&&!inativo?`onclick="editCor(${i})"`:''}>
-                <div class="list-item-info"><div class="name">${c.nome} ${inativo?'<span class="badge badge-gray">inativa</span>':''}</div></div>
-                ${admin?(inativo
-                  ?`<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();reativarCor('${c.nome}')">↩️ Reativar</button>`
-                  :`<span style="font-size:11px;color:var(--text3);margin-right:8px">✏️ editar</span>
-                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();excluirCor('${c.nome}')" title="Excluir (ou inativar, se estiver em uso)">🗑️</button>`):''}
-              </div>`;}).join(''):'<div class="empty-state"><p>Nenhuma cor cadastrada.</p></div>'}
-          </div>
-        </div>
-      </div>
-    </div>`;
-  editingCor=null;
-  if(admin&&focusForm) setTimeout(()=>document.getElementById('nc-nome')?.focus(),100);
-}
-function editCor(idx){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  editingCor=idx;
-  document.getElementById('nc-nome').value=state.cores[idx].nome;
-  document.getElementById('cor-form-title').textContent='✏️ Editar Cor';
-  document.getElementById('cor-cancel-btn').style.display='inline-flex';
-  document.getElementById('nc-nome').focus();
-}
-function cancelEditCor(){
-  editingCor=null;
-  document.getElementById('nc-nome').value='';
-  document.getElementById('cor-form-title').textContent='➕ Nova Cor';
-  document.getElementById('cor-cancel-btn').style.display='none';
-}
-async function submitCor(){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  const nome=document.getElementById('nc-nome').value.trim();
-  if(!nome){toast('Informe a cor','error');return;}
-  try{
-    if(editingCor!==null){
-      const old=state.cores[editingCor].nome;
-      if(old===nome){cancelEditCor();return;}
-      toast('Atualizando...','info');
-      // ON UPDATE CASCADE no banco propaga o novo nome pros produtos que usam esta cor
-      const{error}=await sb.from('cores').update({nome}).eq('nome',old);
-      if(error) throw error;
-      toast(`Atualizado para ${nome}!`,'success');
-    }else{
-      if(state.cores.find(c=>c.nome.toLowerCase()===nome.toLowerCase())){toast('Cor já cadastrada','error');return;}
-      toast('Salvando...','info');
-      const{error}=await sb.from('cores').insert({nome});
-      if(error) throw error;
-      toast(`${nome} cadastrada!`,'success');
-    }
-    await loadAll();navigate('cores');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function excluirCor(nome){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  if(!confirm(`Excluir a cor "${nome}"?\n\nSe ela já estiver em uso por algum produto, será apenas inativada (deixa de aparecer nos cadastros, mas os produtos existentes continuam intactos).`)) return;
-  try{
-    const r=await excluirOuInativar('cores','nome',nome);
-    toast(r==='excluido'?`Cor "${nome}" excluída!`:`Cor "${nome}" está em uso — foi inativada.`,'success');
-    await loadAll();navigate('cores');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function reativarCor(nome){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  try{
-    await reativar('cores','nome',nome);
-    toast(`Cor "${nome}" reativada!`,'success');
-    await loadAll();navigate('cores');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-
-/* ── TIPOS DE PLACA ── */
-let editingTipoPlaca=null;
-function renderTiposPlaca(focusForm=false){
-  const admin=isAdmin();
-  const list=state.tiposPlaca;
-  document.getElementById('tiposplaca-content').innerHTML=`
-    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-      ${admin?`<div style="flex:1;min-width:280px">
-        <div class="form-card">
-          <h3 id="tpl-form-title">➕ Novo Tipo de Placa</h3>
-          <div class="form-group"><label>Tipo</label><input type="text" id="ntpl-nome" placeholder="Ex: Cristal, Térmica, Rígida"></div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-primary" onclick="submitTipoPlaca()">💾 Salvar</button>
-            <button class="btn btn-secondary" id="tpl-cancel-btn" onclick="cancelEditTipoPlaca()" style="display:none">✕ Cancelar</button>
-          </div>
-        </div>
-      </div>`:''}
-      <div style="flex:2;min-width:280px">
-        <div class="table-card">
-          <div class="table-header"><h3>🧩 Tipos de placa cadastrados</h3><span style="font-size:12px;color:var(--text2)">${list.length} tipos</span></div>
-          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
-          <div style="padding:12px">
-            ${list.length?list.map((t,i)=>{
-              const inativo=t.ativo===false;
-              return `<div class="list-item" style="${inativo?'opacity:.6':''}" ${admin&&!inativo?`onclick="editTipoPlaca(${i})"`:''}>
-                <div class="list-item-info"><div class="name">${t.nome} ${inativo?'<span class="badge badge-gray">inativo</span>':''}</div></div>
-                ${admin?(inativo
-                  ?`<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();reativarTipoPlaca('${t.nome}')">↩️ Reativar</button>`
-                  :`<span style="font-size:11px;color:var(--text3);margin-right:8px">✏️ editar</span>
-                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();excluirTipoPlaca('${t.nome}')" title="Excluir (ou inativar, se estiver em uso)">🗑️</button>`):''}
-              </div>`;}).join(''):'<div class="empty-state"><p>Nenhum tipo cadastrado.</p></div>'}
-          </div>
-        </div>
-      </div>
-    </div>`;
-  editingTipoPlaca=null;
-  if(admin&&focusForm) setTimeout(()=>document.getElementById('ntpl-nome')?.focus(),100);
-}
-function editTipoPlaca(idx){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  editingTipoPlaca=idx;
-  document.getElementById('ntpl-nome').value=state.tiposPlaca[idx].nome;
-  document.getElementById('tpl-form-title').textContent='✏️ Editar Tipo de Placa';
-  document.getElementById('tpl-cancel-btn').style.display='inline-flex';
-  document.getElementById('ntpl-nome').focus();
-}
-function cancelEditTipoPlaca(){
-  editingTipoPlaca=null;
-  document.getElementById('ntpl-nome').value='';
-  document.getElementById('tpl-form-title').textContent='➕ Novo Tipo de Placa';
-  document.getElementById('tpl-cancel-btn').style.display='none';
-}
-async function submitTipoPlaca(){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  const nome=document.getElementById('ntpl-nome').value.trim();
-  if(!nome){toast('Informe o tipo','error');return;}
-  try{
-    if(editingTipoPlaca!==null){
-      const old=state.tiposPlaca[editingTipoPlaca].nome;
-      if(old===nome){cancelEditTipoPlaca();return;}
-      toast('Atualizando...','info');
-      const{error}=await sb.from('tipos_placa').update({nome}).eq('nome',old);
-      if(error) throw error;
-      toast(`Atualizado para ${nome}!`,'success');
-    }else{
-      if(state.tiposPlaca.find(t=>t.nome.toLowerCase()===nome.toLowerCase())){toast('Tipo já cadastrado','error');return;}
-      toast('Salvando...','info');
-      const{error}=await sb.from('tipos_placa').insert({nome});
-      if(error) throw error;
-      toast(`${nome} cadastrado!`,'success');
-    }
-    await loadAll();navigate('tiposplaca');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function excluirTipoPlaca(nome){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  if(!confirm(`Excluir o tipo de placa "${nome}"?\n\nSe ele já estiver em uso por algum produto, será apenas inativado (deixa de aparecer nos cadastros, mas os produtos existentes continuam intactos).`)) return;
-  try{
-    const r=await excluirOuInativar('tipos_placa','nome',nome);
-    toast(r==='excluido'?`Tipo "${nome}" excluído!`:`Tipo "${nome}" está em uso — foi inativado.`,'success');
-    await loadAll();navigate('tiposplaca');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function reativarTipoPlaca(nome){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  try{
-    await reativar('tipos_placa','nome',nome);
-    toast(`Tipo "${nome}" reativado!`,'success');
-    await loadAll();navigate('tiposplaca');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-
-/* ── PRODUTOS (placa = tipo + cor) ── */
-let editingProduto=null;
-function renderProdutos(){
-  const admin=isAdmin();
-  // Só cores e tipos ativos podem ser usados em produtos novos.
-  const coresAtivas=ativos(state.cores);
-  const tiposAtivos=ativos(state.tiposPlaca);
-  const faltaCadastro=!coresAtivas.length||!tiposAtivos.length;
-  document.getElementById('produtos-content').innerHTML=`
-    ${faltaCadastro?`<div class="alert alert-warn">⚠️ Cadastre ao menos uma <a href="#" onclick="navigate('cores');return false" style="color:inherit;text-decoration:underline">cor</a> e um <a href="#" onclick="navigate('tiposplaca');return false" style="color:inherit;text-decoration:underline">tipo de placa</a> ativos antes de criar produtos.</div>`:''}
-    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-      ${admin?`<div style="flex:1;min-width:280px">
-        <div class="form-card">
-          <h3 id="prod-form-title">➕ Novo Produto</h3>
-          <div class="form-group"><label>Tipo de Placa</label><select id="np-tipo" ${faltaCadastro?'disabled':''}>
-            <option value="">— Selecione —</option>
-            ${tiposAtivos.map(t=>`<option>${t.nome}</option>`).join('')}
-          </select></div>
-          <div class="form-group"><label>Cor</label><select id="np-cor" ${faltaCadastro?'disabled':''}>
-            <option value="">— Selecione —</option>
-            ${coresAtivas.map(c=>`<option>${c.nome}</option>`).join('')}
-          </select></div>
-          <div class="form-group"><label>Estoque Mínimo</label><input type="number" id="np-min" min="0" value="0" ${faltaCadastro?'disabled':''}><small>Quando o saldo chegar neste valor ou abaixo, os usuários marcados são avisados.</small></div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-primary" onclick="submitProduto()" ${faltaCadastro?'disabled':''}>💾 Salvar</button>
-            <button class="btn btn-secondary" id="prod-cancel-btn" onclick="cancelEditProduto()" style="display:none">✕ Cancelar</button>
-          </div>
-        </div>
-      </div>`:''}
-      <div style="flex:2;min-width:280px">
-        <div class="table-card">
-          <div class="table-header"><h3>📦 Produtos cadastrados</h3><span style="font-size:12px;color:var(--text2)">${state.produtos.length} produtos</span></div>
-          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
-          <div style="padding:12px">
-            ${state.produtos.length?state.produtos.map((p,i)=>{
-              const saldo=estoqueAtual(p.id);
-              const baixo=saldo<=p.estoque_minimo;
-              const inativo=p.ativo===false;
-              return `<div class="list-item" style="${inativo?'opacity:.6':''}" ${admin&&!inativo?`onclick="editProduto(${i})"`:''}><div class="list-item-info">
-                <div class="name">${produtoLabel(p)} ${inativo?'<span class="badge badge-gray">inativo</span>':''}</div>
-                <div class="code" style="font-size:11px;color:var(--text3)">mínimo: ${p.estoque_minimo}</div>
-              </div>
-              <span class="badge ${inativo?'badge-gray':(baixo?'badge-red':'badge-green')}">${saldo} em estoque</span>
-              ${admin?(inativo
-                ?`<button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="event.stopPropagation();reativarProduto(${p.id})">↩️ Reativar</button>`
-                :`<button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="event.stopPropagation();excluirProduto(${p.id})" title="Excluir (ou inativar, se já tiver movimentação)">🗑️</button>`):''}
-            </div>`;}).join(''):'<div class="empty-state"><p>Nenhum produto cadastrado.</p></div>'}
-          </div>
-        </div>
-      </div>
-    </div>`;
-  editingProduto=null;
-}
-// Um produto ativo pode usar uma cor/tipo que foi inativado depois. Nesse caso o valor
-// não existe no select (que só lista ativos), e sem isto o campo apareceria em branco,
-// fazendo a edição perder o valor silenciosamente.
-function garantirOpcao(selectId,valor){
-  const sel=document.getElementById(selectId);
-  if(!sel||!valor) return;
-  if(![...sel.options].some(o=>o.value===valor)){
-    const opt=document.createElement('option');
-    opt.value=valor;opt.textContent=valor+' (inativo)';
-    sel.appendChild(opt);
-  }
-  sel.value=valor;
-}
-function editProduto(idx){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  editingProduto=idx;
-  const p=state.produtos[idx];
-  garantirOpcao('np-tipo',p.tipo_placa);
-  garantirOpcao('np-cor',p.cor);
-  document.getElementById('np-min').value=p.estoque_minimo;
-  document.getElementById('prod-form-title').textContent='✏️ Editar Produto';
-  document.getElementById('prod-cancel-btn').style.display='inline-flex';
-}
-function cancelEditProduto(){
-  editingProduto=null;
-  document.getElementById('np-tipo').value='';
-  document.getElementById('np-cor').value='';
-  document.getElementById('np-min').value='0';
-  document.getElementById('prod-form-title').textContent='➕ Novo Produto';
-  document.getElementById('prod-cancel-btn').style.display='none';
-}
-async function submitProduto(){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  const tipo_placa=document.getElementById('np-tipo').value;
-  const cor=document.getElementById('np-cor').value;
-  const estoque_minimo=parseInt(document.getElementById('np-min').value||'0',10);
-  if(!tipo_placa||!cor){toast('Selecione o tipo e a cor','error');return;}
-  if(isNaN(estoque_minimo)||estoque_minimo<0){toast('Estoque mínimo inválido','error');return;}
-  try{
-    const dup=state.produtos.find((p,i)=>i!==editingProduto&&p.tipo_placa===tipo_placa&&p.cor===cor);
-    if(dup){toast('Já existe um produto com esse tipo e cor','error');return;}
-    if(editingProduto!==null){
-      toast('Atualizando...','info');
-      const{error}=await sb.from('produtos').update({tipo_placa,cor,estoque_minimo}).eq('id',state.produtos[editingProduto].id);
-      if(error) throw error;
-      toast('Produto atualizado!','success');
-    }else{
-      toast('Salvando...','info');
-      const{error}=await sb.from('produtos').insert({tipo_placa,cor,estoque_minimo});
-      if(error) throw error;
-      toast('Produto cadastrado!','success');
-    }
-    await loadAll();navigate('produtos');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function excluirProduto(id){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  const p=produtoById(id);
-  if(!confirm(`Excluir o produto "${produtoLabel(p)}"?\n\nSe ele já tiver movimentações de estoque, será apenas inativado — o histórico é preservado e continua disponível para auditoria.`)) return;
-  try{
-    const r=await excluirOuInativar('produtos','id',id);
-    toast(r==='excluido'?'Produto excluído!':'Produto já tem movimentações — foi inativado (histórico preservado).','success');
-    await loadAll();navigate('produtos');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function reativarProduto(id){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  try{
-    await reativar('produtos','id',id);
-    toast('Produto reativado!','success');
-    await loadAll();navigate('produtos');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-
-/* ── ESTOQUE: entrada, saldo e histórico ── */
-function renderEstoque(){
-  const admin=isAdmin();
-  // Produtos inativos não recebem entrada nova, mas seguem no saldo e no histórico
-  // (podem ter saldo remanescente e movimentações passadas a auditar).
-  const produtosAtivos=ativos(state.produtos);
-  const semProduto=!produtosAtivos.length;
-  document.getElementById('estoque-content').innerHTML=`
-    ${semProduto?`<div class="alert alert-warn">⚠️ Cadastre ao menos um <a href="#" onclick="navigate('produtos');return false" style="color:inherit;text-decoration:underline">produto</a> ativo antes de movimentar o estoque.</div>`:''}
-    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-      ${admin?`<div style="flex:1;min-width:280px">
-        <div class="form-card">
-          <h3>➕ Entrada de Estoque</h3>
-          <div class="form-group"><label>Produto</label><select id="ee-produto" ${semProduto?'disabled':''}>
-            <option value="">— Selecione —</option>
-            ${produtosAtivos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
-          </select></div>
-          <div class="form-row">
-            <div class="form-group"><label>Quantidade</label><input type="number" id="ee-qtd" min="1" value="1" ${semProduto?'disabled':''}></div>
-            <div class="form-group"><label>Data</label><input type="date" id="ee-data" value="${hojeISO()}" ${semProduto?'disabled':''}><small>Pode ser retroativa (ex: compra recebida ontem).</small></div>
-          </div>
-          <div class="form-group"><label>Observação</label><input type="text" id="ee-obs" placeholder="Nota fiscal, fornecedor, etc." ${semProduto?'disabled':''}></div>
-          <button class="btn btn-primary" onclick="submitEntradaEstoque()" ${semProduto?'disabled':''}>💾 Registrar Entrada</button>
-        </div>
-      </div>`:''}
-      <div style="flex:2;min-width:280px">
-        <div class="table-card">
-          <div class="table-header"><h3>📊 Saldo atual</h3><span style="font-size:12px;color:var(--text2)">${produtosAtivos.length} ativos${state.produtos.length>produtosAtivos.length?` · ${state.produtos.length-produtosAtivos.length} inativos`:''}</span></div>
-          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
-          <div style="overflow-x:auto">
-            <table id="tbl-estoque-saldo">
-              <thead><tr><th>Produto</th><th>Mínimo</th><th>Saldo</th><th>Situação</th></tr></thead>
-              <tbody>
-                ${state.produtos.length?state.produtos.map(p=>{
-                  const saldo=estoqueAtual(p.id);
-                  const baixo=saldo<=p.estoque_minimo;
-                  const inativo=p.ativo===false;
-                  return `<tr style="${inativo?'opacity:.6':''}"><td>${produtoLabel(p)}</td><td>${p.estoque_minimo}</td><td><strong>${saldo}</strong></td>
-                    <td>${inativo?'<span class="badge badge-gray">Inativo</span>':`<span class="badge ${baixo?'badge-red':'badge-green'}">${baixo?'⚠️ Repor':'OK'}</span>`}</td></tr>`;
-                }).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--text3)">Nenhum produto cadastrado.</td></tr>'}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="table-card" style="margin-top:16px">
-      <div class="table-header">
-        <h3>🧾 Histórico de movimentações</h3>
-        <button class="btn btn-secondary btn-sm" onclick="exportarTabela('tbl-estoque-hist','Movimentações de estoque')">📋 Copiar Tabela</button>
-      </div>
-      <div class="filters-bar" style="padding:12px">
-        <select id="fh-produto" onchange="renderHistoricoEstoque()">
-          <option value="">Todos os produtos</option>
-          ${state.produtos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
-        </select>
-        <select id="fh-tipo" onchange="renderHistoricoEstoque()">
-          <option value="">Entradas e saídas</option>
-          <option value="entrada">Só entradas</option>
-          <option value="saida">Só saídas</option>
-        </select>
-        <input type="date" id="fh-de" onchange="renderHistoricoEstoque()" title="Data inicial">
-        <input type="date" id="fh-ate" onchange="renderHistoricoEstoque()" title="Data final">
-        <button class="btn btn-secondary btn-sm" onclick="limparFiltrosHistorico()">✕ Limpar</button>
-      </div>
-      <div id="estoque-historico"></div>
-    </div>`;
-  renderHistoricoEstoque();
-}
-function limparFiltrosHistorico(){
-  ['fh-produto','fh-tipo','fh-de','fh-ate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  renderHistoricoEstoque();
-}
-function renderHistoricoEstoque(){
-  const cont=document.getElementById('estoque-historico');
-  if(!cont) return;
-  const fProduto=document.getElementById('fh-produto')?.value||'';
-  const fTipo=document.getElementById('fh-tipo')?.value||'';
-  const fDe=document.getElementById('fh-de')?.value||'';
-  const fAte=document.getElementById('fh-ate')?.value||'';
-  const admin=isAdmin();
-  let movs=state.estoqueMovimentos.slice();
-  if(fProduto) movs=movs.filter(m=>String(m.produto_id)===fProduto);
-  if(fTipo) movs=movs.filter(m=>m.tipo===fTipo);
-  if(fDe) movs=movs.filter(m=>m.data&&m.data>=fDe);
-  if(fAte) movs=movs.filter(m=>m.data&&m.data<=fAte);
-  // Mais recentes primeiro: pela data da movimentação, desempatando pelo id (ordem de lançamento)
-  movs.sort((a,b)=>(b.data||'').localeCompare(a.data||'')||b.id-a.id);
-  cont.innerHTML=`
-    <div style="overflow-x:auto">
-      <table id="tbl-estoque-hist">
-        <thead><tr><th>Data/Hora</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Paciente</th><th>Usuário</th><th>Obs</th><th>Situação</th>${admin?'<th></th>':''}</tr></thead>
-        <tbody>
-          ${movs.length?movs.map(m=>{
-            const p=produtoById(m.produto_id);
-            const entrada=m.tipo==='entrada';
-            const estorno=ehEstorno(m);
-            const estornado=foiEstornado(m.id);
-            const rev=estornado?estornoDe(m.id):null;
-            // Data da movimentação + hora exata do lançamento, para reconstruir a
-            // sequência (utilização e devolução no mesmo dia só se distinguem pela hora).
-            const dataMov=m.data?fromInput(m.data):'—';
-            const lancado=tsParaDataHoraLocal(m.criado_em);
-            const dataLancada=tsParaDataLocal(m.criado_em);
-            const retroativo=dataLancada&&m.data&&dataLancada!==m.data;
-            return `<tr style="${estornado?'opacity:.55':''}">
-              <td style="white-space:nowrap">${dataMov}
-                <div style="font-size:10px;color:var(--text3)">${lancado||'—'}${retroativo?' ⏱️':''}</div>
-              </td>
-              <td>${produtoLabel(p)}</td>
-              <td><span class="badge ${estorno?'badge-gray':(entrada?'badge-green':'badge-yellow')}">${estorno?'↩️ Estorno':(entrada?'↑ Entrada':'↓ Saída')}</span></td>
-              <td><strong>${entrada?'+':'−'}${m.quantidade}</strong></td>
-              <td>${m.codigo?`<a href="#" onclick="showDetail('${m.codigo}');return false">#${m.codigo}</a>`:'—'}</td>
-              <td style="font-size:11px;color:var(--text3)">${m.usuario_email||'—'}</td>
-              <td style="font-size:11px">${m.obs||''}</td>
-              <td style="font-size:11px">${estornado?`<span class="badge badge-gray" title="Estornado pelo registro #${rev.id}">estornada</span>`:(estorno?`<span style="color:var(--text3)">de #${m.estorno_de}</span>`:'')}</td>
-              ${admin?`<td>${(estorno||estornado)?'':`<button class="btn btn-secondary btn-sm" onclick="estornarMovimentoUI(${m.id})" title="Estornar (gera movimento contrário)">↩️</button>`}</td>`:''}
-            </tr>`;
-          }).join(''):`<tr><td colspan="${admin?9:8}" style="text-align:center;color:var(--text3)">Nenhuma movimentação encontrada.</td></tr>`}
-        </tbody>
-      </table>
-    </div>`;
-}
-async function submitEntradaEstoque(){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  const produto_id=parseInt(document.getElementById('ee-produto').value,10);
-  const quantidade=parseInt(document.getElementById('ee-qtd').value,10);
-  const data=document.getElementById('ee-data').value;
-  const obs=document.getElementById('ee-obs').value.trim();
-  if(!produto_id){toast('Selecione o produto','error');return;}
-  if(!quantidade||quantidade<1){toast('Quantidade deve ser maior que zero','error');return;}
-  if(!data){toast('Informe a data','error');return;}
-  try{
-    toast('Salvando...','info');
-    const{error}=await sb.from('estoque_movimentos').insert({
-      produto_id,tipo:'entrada',quantidade,data,obs,usuario_email:state.user?.email||null
-    });
-    if(error) throw error;
-    toast('Entrada registrada!','success');
-    await loadAll();navigate('estoque');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-// Nada é apagado do razão: estornar insere o movimento contrário, preservando o
-// registro original e deixando a correção visível no histórico.
-async function estornarMovimentoUI(id){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  if(!confirm('Estornar esta movimentação?\n\nO registro original permanece no histórico e um movimento contrário é criado para corrigir o saldo.')) return;
-  try{
-    await estornarMovimento(id);
-    toast('Estorno registrado!','success');
-    await loadAll();
-    if(document.querySelector('#page-estoque.active')) renderEstoque();
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-
-/* ── PLACAS UTILIZADAS NO PACIENTE (prova de dentes) ── */
-function renderPlacasPaciente(cod){
-  const cont=document.getElementById('pd-placas-lista');
-  if(!cont) return;
-  const admin=isAdmin();
-  // Só as que continuam valendo: uma saída estornada deixa de contar como placa em uso,
-  // mas as duas linhas seguem visíveis no histórico de movimentações.
-  const usadas=state.estoqueMovimentos.filter(m=>m.tipo==='saida'&&m.codigo===String(cod)&&!foiEstornado(m.id));
-  cont.innerHTML=usadas.length?usadas.map(m=>{
-    const p=produtoById(m.produto_id);
-    return `<div class="list-item" style="cursor:default">
-      <div class="list-item-info">
-        <div class="name">${produtoLabel(p)}</div>
-        <div class="code" style="font-size:11px;color:var(--text3)">${m.quantidade} un. · ${m.data?fromInput(m.data):''}</div>
-      </div>
-      ${admin?`<button class="btn btn-secondary btn-sm" onclick="removerPlacaPaciente(${m.id},'${cod}')" title="Devolver ao estoque (gera registro de estorno)">↩️</button>`:''}
-    </div>`;
-  }).join(''):'<div style="font-size:12px;color:var(--text3);padding:4px 0">Nenhuma placa registrada.</div>';
-}
-async function adicionarPlacaPaciente(cod){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  const produto_id=parseInt(document.getElementById('pd-placa-produto').value,10);
-  const quantidade=parseInt(document.getElementById('pd-placa-qtd').value,10);
-  if(!produto_id){toast('Selecione a placa','error');return;}
-  if(!quantidade||quantidade<1){toast('Quantidade deve ser maior que zero','error');return;}
-  try{
-    // Data da baixa = data real da prova de dentes, se já informada; senão hoje.
-    const pdInput=document.getElementById('et-pd')?.value;
-    const data=pdInput||hojeISO();
-    const saldo=estoqueAtual(produto_id);
-    const{error}=await sb.from('estoque_movimentos').insert({
-      produto_id,tipo:'saida',quantidade,data,codigo:String(cod),usuario_email:state.user?.email||null
-    });
-    if(error) throw error;
-    // Estoque insuficiente não bloqueia: o atendimento já aconteceu, o saldo pode ficar negativo.
-    if(saldo<quantidade) toast(`Atenção: estoque insuficiente (havia ${saldo}). Registrado mesmo assim.`,'error');
-    else toast('Placa registrada!','success');
-    await loadAll();showDetail(cod);switchDetailTab('etapas');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-async function removerPlacaPaciente(id,cod){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  if(!confirm('Devolver esta placa ao estoque?\n\nA saída original permanece no histórico e um registro de entrada (estorno) é criado, mantendo a sequência do que aconteceu.')) return;
-  try{
-    await estornarMovimento(id);
-    toast('Placa devolvida ao estoque — estorno registrado no histórico.','success');
-    await loadAll();showDetail(cod);switchDetailTab('etapas');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-
-/* ── BANNER DE ESTOQUE MÍNIMO ── */
-function renderEstoqueBanner(){
-  const el=document.getElementById('estoque-banner');
-  if(!el) return;
-  if(!state.allowedUser?.notificarEstoque){el.innerHTML='';return;}
-  const baixos=produtosAbaixoMinimo();
-  if(!baixos.length){el.innerHTML='';return;}
-  const nomes=baixos.slice(0,3).map(p=>produtoLabel(p)).join(', ');
-  const resto=baixos.length>3?` e mais ${baixos.length-3}`:'';
-  el.innerHTML=`<div class="alert alert-warn" style="margin:12px 32px 0;cursor:pointer" onclick="navigate('estoque')">
-    ⚠️ <strong>${baixos.length} produto(s) no estoque mínimo:</strong> ${nomes}${resto}. Clique para ver o estoque.
-  </div>`;
 }
 
 document.getElementById('config-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeConfig();});
