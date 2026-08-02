@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v7.3 - ajuste de saldo em tela própria, com prévia do efeito antes de salvar -->
+<!-- ProSUS v7.4 - tela de Configurações reorganizada em blocos (usuários e backup separados) -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -232,6 +232,11 @@
 
   /* ── FORM CARD ── */
   .form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px;max-width:700px;box-shadow:var(--shadow-card);}
+  /* Blocos das Configurações: separam visualmente assuntos distintos (usuários, backup) */
+  .cfg-block{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .cfg-block .section-divider{margin-top:0;}
+  .cfg-sub{border-top:1px solid var(--border);margin-top:14px;padding-top:14px;}
+  .cfg-sub-title{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text2);}
   .form-card h3{font-size:15px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);font-weight:700;}
 
   /* ── SECTION DIVIDERS & ETAPA BLOCKS ── */
@@ -486,7 +491,7 @@
       <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.3</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.4</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -669,28 +674,38 @@
 <div class="modal-overlay" id="config-modal">
   <div class="modal">
     <div class="modal-header"><h3>⚙️ Configurações</h3><button class="modal-close" onclick="closeConfig()">✕</button></div>
-    <div class="section-divider ent">🔒 Usuários com acesso</div>
     <div id="cfg-readonly-warn" style="display:none" class="alert alert-warn">🔒 Modo leitura — sem permissão de edição.</div>
-    <small>Só quem está nesta lista consegue logar e ver os dados. "Admin" também pode editar/excluir. "Estoque" recebe o aviso quando um produto atinge o estoque mínimo.</small>
-    <div id="cfg-users-list" style="margin-top:10px"></div>
-    <div id="cfg-add-row" class="form-row" style="margin-top:14px">
-      <div class="form-group"><label>E-mail</label><input type="text" id="cfg-new-email" placeholder="pessoa@gmail.com"></div>
-      <div class="form-group"><label>Nome</label><input type="text" id="cfg-new-nome" placeholder="Opcional"></div>
-    </div>
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-admin"> É admin (pode editar/excluir)</label>
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-estoque"> Avisar quando o estoque atingir o mínimo</label>
 
-    <div id="cfg-backup-section" class="section-divider rb" style="margin-top:20px">💾 Backup dos dados</div>
-    <div id="cfg-backup-body" style="display:none">
+    <!-- BLOCO: usuários -->
+    <div class="cfg-block">
+      <div class="section-divider ent">🔒 Usuários com acesso</div>
+      <small>Só quem está nesta lista consegue logar e ver os dados. "Admin" também pode editar/excluir. "Estoque" recebe o aviso quando um produto atinge o estoque mínimo.</small>
+      <div id="cfg-users-list" style="margin-top:10px"></div>
+
+      <div id="cfg-add-row" class="cfg-sub">
+        <div class="cfg-sub-title">➕ Adicionar usuário</div>
+        <div class="form-row">
+          <div class="form-group"><label>E-mail</label><input type="text" id="cfg-new-email" placeholder="pessoa@gmail.com"></div>
+          <div class="form-group"><label>Nome</label><input type="text" id="cfg-new-nome" placeholder="Opcional"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-admin"> É admin (pode editar/excluir)</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-estoque"> Avisar quando o estoque atingir o mínimo</label>
+        <button id="cfg-save-btn" class="btn btn-primary btn-sm" style="margin-top:12px" onclick="addAllowedUser()">➕ Adicionar usuário</button>
+      </div>
+    </div>
+
+    <!-- BLOCO: backup -->
+    <div id="cfg-backup-block" class="cfg-block" style="display:none">
+      <div class="section-divider rb">💾 Backup dos dados</div>
       <small>Baixa um arquivo com <strong>todos</strong> os dados do sistema. Guarde-o em local seguro: o plano gratuito do Supabase não faz backup automático, então este arquivo é a única forma de recuperar tudo caso o banco se perca.</small>
-      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" onclick="baixarBackup()">💾 Baixar backup</button>
         <span id="backup-status" style="font-size:12px;color:var(--text3)"></span>
       </div>
       <small style="display:block;margin-top:8px">Formato JSON — preserva os dados exatamente como estão no banco. Não abra nem salve pelo Excel: ele reinterpreta datas e códigos como "7457/1", corrompendo o backup.</small>
     </div>
 
-    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Fechar</button><button id="cfg-save-btn" class="btn btn-primary" onclick="addAllowedUser()">➕ Adicionar</button></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Fechar</button></div>
   </div>
 </div>
 
@@ -907,11 +922,10 @@ function showLoginError(msg){
 
 async function openConfig(){
   const admin=isAdmin();
-  document.getElementById('cfg-save-btn').style.display=admin?'':'none';
+  // Não-admin só enxerga a lista de usuários (leitura); adicionar e backup ficam ocultos
   document.getElementById('cfg-add-row').style.display=admin?'':'none';
+  document.getElementById('cfg-backup-block').style.display=admin?'':'none';
   document.getElementById('cfg-readonly-warn').style.display=admin?'none':'block';
-  document.getElementById('cfg-backup-section').style.display=admin?'':'none';
-  document.getElementById('cfg-backup-body').style.display=admin?'':'none';
   document.getElementById('backup-status').textContent='';
   document.getElementById('config-modal').classList.add('open');
   await renderAllowedUsers();
@@ -1158,7 +1172,7 @@ async function baixarBackup(){
   const st=document.getElementById('backup-status');
   const msg=t=>{ if(st) st.textContent=t; };
   try{
-    const dump={_meta:{app:'ProSUS v7.3',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
+    const dump={_meta:{app:'ProSUS v7.4',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
     for(const t of BACKUP_TABLES){
       msg(`Lendo ${t}...`);
       const linhas=await sbSelectAll(t);
