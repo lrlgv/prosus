@@ -200,6 +200,7 @@ Telas do módulo de estoque:
 | ID | Descrição |
 |----|-----------|
 | `estoque` | Entrada de estoque + saldo atual + histórico de movimentações com filtros |
+| `ajuste` | Ajuste manual de saldo (tela própria, `renderAjuste()`) |
 | `produtos` | CRUD de produtos (tipo de placa + cor + estoque mínimo) |
 | `tiposplaca` | CRUD de tipos de placa |
 | `cores` | CRUD de cores |

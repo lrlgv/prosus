@@ -248,7 +248,8 @@ A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo r
 
 | Versão | Mudanças |
 | :--- | :--- |
-| **v7.2** | Ajuste manual de saldo do estoque: informa-se o saldo correto e o sistema registra a entrada ou saída correspondente, com motivo obrigatório. |
+| **v7.3** | Ajuste de saldo ganha tela própria no menu, com prévia do efeito antes de salvar, saldo de todos os produtos e histórico dos últimos ajustes. |
+| v7.2 | Ajuste manual de saldo do estoque: informa-se o saldo correto e o sistema registra a entrada ou saída correspondente, com motivo obrigatório. |
 | v7.1 | Backup completo dos dados em JSON, pela tela de Configurações (só admin), cobrindo a ausência de backup automático no plano gratuito do Supabase. |
 | v7.0 | **Cutover para produção.** A aplicação sobre Supabase substitui a versão baseada em planilha, que passa a `legacy/` como plano de retorno. Gravação dupla desligada (a planilha fica congelada) e ferramenta de migração removida. |
 | v6.3-beta | Livro-razão append-only: desfazer uma movimentação passa a gerar estorno em vez de apagar o registro, preservando a sequência (utilização → devolução) no histórico. Histórico passa a exibir a hora exata do lançamento. |
@@ -346,10 +347,14 @@ Na etapa de Prova de Dentes é possível registrar quais placas foram usadas no 
 
 Se o estoque for insuficiente, o sistema **avisa mas não bloqueia**, permitindo saldo negativo. A decisão é deliberada: o atendimento clínico já ocorreu, e impedir o registro apenas deixaria o dado real fora do sistema — o saldo negativo, visível no histórico, sinaliza que faltou lançar uma entrada.
 
-### 12.5 Ajuste manual de saldo (v7.2)
-Quando o saldo do sistema não corresponde à realidade — um lançamento feito errado, uma placa quebrada, perda, ou divergência apurada numa contagem física — a tela de Estoque permite corrigir.
+### 12.5 Ajuste manual de saldo (v7.2, tela própria na v7.3)
+Quando o saldo do sistema não corresponde à realidade — um lançamento feito errado, uma placa quebrada, perda, ou divergência apurada numa contagem física — o menu **⚖️ Ajustar Saldo** permite corrigir.
 
-O usuário seleciona o produto (o saldo atual aparece automaticamente), informa **qual é o saldo correto** e o motivo. O sistema calcula a diferença e registra a movimentação correspondente: entrada, se o saldo real for maior; saída, se for menor.
+A funcionalidade tem tela dedicada em vez de dividir espaço com a de Estoque: ajustar saldo é uma correção pontual, com propósito diferente do registro de entrada do dia a dia, e misturar as duas tornava a tela de Estoque confusa.
+
+O usuário seleciona o produto (o saldo atual aparece automaticamente), informa **qual é o saldo real** e o motivo. Antes de salvar, a tela mostra exatamente o que será registrado ("será registrada uma saída de 5 unidades: 20 → 15"), evitando que a pessoa precise calcular a diferença de cabeça. O sistema então grava a movimentação correspondente: entrada, se o saldo real for maior; saída, se for menor.
+
+A tela também lista o saldo atual de todos os produtos e os últimos ajustes feitos, com motivo e responsável.
 
 O ponto importante é que **nenhum saldo é escrito diretamente**. O ajuste vira uma movimentação como qualquer outra, e o saldo continua sendo a soma do livro-razão. Isso mantém a propriedade de que todo número exibido pode ser explicado por movimentações rastreáveis.
 

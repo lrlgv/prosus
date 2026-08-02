@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v7.2 - ajuste manual de saldo do estoque (entrada ou saída conforme a diferença) -->
+<!-- ProSUS v7.3 - ajuste de saldo em tela própria, com prévia do efeito antes de salvar -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -475,6 +475,7 @@
       <button class="nav-btn" data-page="fechamento-armacao" onclick="navigate('fechamento-armacao')"><span class="nav-icon">🔩</span> Fecham. Armação</button>
       <button class="nav-btn" data-page="contratos" onclick="navigate('contratos')"><span class="nav-icon">📃</span> Contratos</button>
       <button class="nav-btn" data-page="estoque" onclick="navigate('estoque')"><span class="nav-icon">📦</span> Estoque</button>
+      <button class="nav-btn" data-page="ajuste" onclick="navigate('ajuste')"><span class="nav-icon">⚖️</span> Ajustar Saldo</button>
       <div class="nav-section">Cadastros</div>
       <button class="nav-btn" data-page="cadastro" onclick="navigate('cadastro')"><span class="nav-icon">➕</span> Nova Moldagem</button>
       <button class="nav-btn" data-page="dentistas" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
@@ -485,7 +486,7 @@
       <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.2</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.3</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -526,6 +527,7 @@
       <div class="mob-more-item" onclick="closeMobMore();navigate('proteticos')"><span class="icon">🧑‍🔧</span><span>Protéticos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tipopeca')"><span class="icon">🦷</span><span>Tipos de Peça</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('estoque')"><span class="icon">📦</span><span>Estoque</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('ajuste')"><span class="icon">⚖️</span><span>Ajustar Saldo</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('produtos')"><span class="icon">📦</span><span>Produtos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tiposplaca')"><span class="icon">🧩</span><span>Tipos de Placa</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('cores')"><span class="icon">🎨</span><span>Cores</span></div>
@@ -647,6 +649,10 @@
         <div id="estoque-content"></div>
       </div>
 
+      <div class="page" id="page-ajuste">
+        <div id="ajuste-content"></div>
+      </div>
+
       <div class="page" id="page-validacao">
         <div id="validacao-content"><div class="not-connected"><div class="icon">🔍</div><p>Carregando...</p></div></div>
       </div>
@@ -760,6 +766,7 @@ const pageMeta={
   validacao:['Validação de Dados','Cheque integridade dos registros nas planilhas'],
   resumo:['Resumo do Dia','Movimentações registradas hoje'],
   estoque:['Estoque de Placas','Entradas, saldo atual e histórico de movimentações'],
+  ajuste:['Ajustar Saldo','Corrija o saldo quando ele não corresponder ao estoque real'],
   produtos:['Produtos','Placas cadastradas (tipo + cor) e estoque mínimo'],
   cores:['Cores','Gerencie as cores das placas'],
   tiposplaca:['Tipos de Placa','Gerencie os tipos de placa']
@@ -1041,7 +1048,7 @@ function navigate(page){
     const btn=document.getElementById('mob-btn-'+p);
     if(btn) btn.classList.toggle('active',p===page);
   });
-  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao','resumo','estoque','produtos','tiposplaca','cores'];
+  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao','resumo','estoque','ajuste','produtos','tiposplaca','cores'];
   const mobMore=document.getElementById('mob-btn-more');
   if(mobMore) mobMore.classList.toggle('active',morePages.includes(page));
   document.getElementById('page-'+page).classList.add('active');
@@ -1064,6 +1071,7 @@ function navigate(page){
   if(page==='tiposplaca'&&state.connected) renderTiposPlaca();
   if(page==='produtos'&&state.connected) renderProdutos();
   if(page==='estoque'&&state.connected) renderEstoque();
+  if(page==='ajuste'&&state.connected) renderAjuste();
   // Scroll to top on mobile
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1150,7 +1158,7 @@ async function baixarBackup(){
   const st=document.getElementById('backup-status');
   const msg=t=>{ if(st) st.textContent=t; };
   try{
-    const dump={_meta:{app:'ProSUS v7.2',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
+    const dump={_meta:{app:'ProSUS v7.3',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
     for(const t of BACKUP_TABLES){
       msg(`Lendo ${t}...`);
       const linhas=await sbSelectAll(t);
@@ -1438,6 +1446,7 @@ async function loadAll(){
     if(document.querySelector('#page-tiposplaca.active')) renderTiposPlaca();
     if(document.querySelector('#page-produtos.active')) renderProdutos();
     if(document.querySelector('#page-estoque.active')) renderEstoque();
+    if(document.querySelector('#page-ajuste.active')) renderAjuste();
   }catch(e){
     state.connected=false;state.dbStatus='error';updateStatus();
     toast('Erro: '+e.message,'error');
@@ -3267,22 +3276,7 @@ function renderEstoque(){
           </div>
           <div class="form-group"><label>Observação</label><input type="text" id="ee-obs" placeholder="Nota fiscal, fornecedor, etc." ${semProduto?'disabled':''}></div>
           <button class="btn btn-primary" onclick="submitEntradaEstoque()" ${semProduto?'disabled':''}>💾 Registrar Entrada</button>
-        </div>
-
-        <div class="form-card" style="margin-top:16px">
-          <h3>⚖️ Ajustar Saldo</h3>
-          <small>Corrige o saldo para o valor real: cadastro errado, quebra, perda ou divergência na contagem física. O sistema calcula a diferença e registra a entrada ou saída correspondente.</small>
-          <div class="form-group" style="margin-top:12px"><label>Produto</label><select id="aj-produto" onchange="onAjusteProdutoChange()" ${semProduto?'disabled':''}>
-            <option value="">— Selecione —</option>
-            ${produtosAtivos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
-          </select></div>
-          <div class="form-row">
-            <div class="form-group"><label>Saldo atual</label><input type="number" id="aj-atual" value="" disabled><small id="aj-hint">Selecione um produto.</small></div>
-            <div class="form-group"><label>Saldo correto</label><input type="number" id="aj-novo" min="0" placeholder="Quantidade real" ${semProduto?'disabled':''}></div>
-          </div>
-          <div class="form-group"><label>Data</label><input type="date" id="aj-data" value="${hojeISO()}" ${semProduto?'disabled':''}></div>
-          <div class="form-group"><label>Motivo</label><input type="text" id="aj-obs" placeholder="Ex: cadastro lançado errado, placa quebrada" ${semProduto?'disabled':''}><small>Obrigatório — é o que explica o ajuste na auditoria.</small></div>
-          <button class="btn btn-primary" onclick="submitAjusteEstoque()" ${semProduto?'disabled':''}>⚖️ Ajustar Saldo</button>
+          <small style="display:block;margin-top:10px">Para corrigir um saldo errado, use <a href="#" onclick="navigate('ajuste');return false" style="color:var(--accent)">⚖️ Ajustar Saldo</a>.</small>
         </div>
       </div>`:''}
       <div style="flex:2;min-width:280px">
@@ -3405,21 +3399,107 @@ async function submitEntradaEstoque(){
     await loadAll();navigate('estoque');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
-/* ── AJUSTE MANUAL DE SALDO ──
+/* ── AJUSTE MANUAL DE SALDO (tela própria) ──
    Para casos em que o saldo do sistema não bate com a realidade: lançamento feito
    errado, placa quebrada, perda, divergência em contagem física. O usuário informa
    o saldo correto e o sistema registra a diferença como entrada ou saída — o razão
    continua sendo a única fonte de verdade, sem ninguém "setar" o saldo na mão. */
+function renderAjuste(){
+  const admin=isAdmin();
+  const produtosAtivos=ativos(state.produtos);
+  const semProduto=!produtosAtivos.length;
+  // Últimos ajustes, para conferir o que já foi corrigido sem sair da tela
+  const ajustes=state.estoqueMovimentos.filter(m=>m.ajuste)
+    .sort((a,b)=>(b.data||'').localeCompare(a.data||'')||b.id-a.id).slice(0,15);
+  document.getElementById('ajuste-content').innerHTML=`
+    ${!admin?'<div class="alert alert-warn">🔒 Modo leitura — sem permissão para ajustar saldo.</div>':''}
+    ${semProduto?`<div class="alert alert-warn">⚠️ Nenhum produto ativo. <a href="#" onclick="navigate('produtos');return false" style="color:inherit;text-decoration:underline">Cadastrar produtos</a></div>`:''}
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${admin?`<div style="flex:1;min-width:300px">
+        <div class="form-card">
+          <h3>⚖️ Ajustar Saldo</h3>
+          <small>Use quando o saldo do sistema não corresponder ao estoque real — lançamento feito errado, placa quebrada, perda ou divergência na contagem física. Informe quanto <strong>realmente</strong> existe; o sistema calcula a diferença e registra a movimentação.</small>
+          <div class="form-group" style="margin-top:14px"><label>Produto</label><select id="aj-produto" onchange="onAjusteProdutoChange()" ${semProduto?'disabled':''}>
+            <option value="">— Selecione —</option>
+            ${produtosAtivos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
+          </select></div>
+          <div class="form-row">
+            <div class="form-group"><label>Saldo no sistema</label><input type="number" id="aj-atual" value="" disabled><small id="aj-hint">Selecione um produto.</small></div>
+            <div class="form-group"><label>Saldo real</label><input type="number" id="aj-novo" min="0" placeholder="Quantidade correta" oninput="atualizarPreviewAjuste()" ${semProduto?'disabled':''}></div>
+          </div>
+          <div id="aj-preview" style="margin:4px 0 12px"></div>
+          <div class="form-group"><label>Data</label><input type="date" id="aj-data" value="${hojeISO()}" ${semProduto?'disabled':''}></div>
+          <div class="form-group"><label>Motivo</label><input type="text" id="aj-obs" placeholder="Ex: cadastro lançado errado, placa quebrada" ${semProduto?'disabled':''}><small>Obrigatório — é o que explica o ajuste na auditoria.</small></div>
+          <button class="btn btn-primary" onclick="submitAjusteEstoque()" ${semProduto?'disabled':''}>⚖️ Registrar Ajuste</button>
+        </div>
+      </div>`:''}
+      <div style="flex:1;min-width:300px">
+        <div class="table-card">
+          <div class="table-header"><h3>📊 Saldo atual</h3></div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Produto</th><th>Saldo</th></tr></thead>
+              <tbody>
+                ${produtosAtivos.length?produtosAtivos.map(p=>{
+                  const saldo=estoqueAtual(p.id);
+                  return `<tr><td>${produtoLabel(p)}</td><td><strong>${saldo}</strong></td></tr>`;
+                }).join(''):'<tr><td colspan="2" style="text-align:center;color:var(--text3)">Nenhum produto ativo.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card" style="margin-top:16px">
+      <div class="table-header"><h3>🧾 Últimos ajustes</h3><span style="font-size:12px;color:var(--text2)">${ajustes.length?`${ajustes.length} mais recentes`:'nenhum'}</span></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Data</th><th>Produto</th><th>Efeito</th><th>Motivo</th><th>Usuário</th></tr></thead>
+          <tbody>
+            ${ajustes.length?ajustes.map(m=>{
+              const p=produtoById(m.produto_id);
+              const entrada=m.tipo==='entrada';
+              return `<tr>
+                <td style="white-space:nowrap">${m.data?fromInput(m.data):'—'}
+                  <div style="font-size:10px;color:var(--text3)">${tsParaDataHoraLocal(m.criado_em)}</div>
+                </td>
+                <td>${produtoLabel(p)}</td>
+                <td><span class="badge ${entrada?'badge-green':'badge-yellow'}">${entrada?'+':'−'}${m.quantidade}</span></td>
+                <td style="font-size:12px">${m.obs||''}</td>
+                <td style="font-size:11px;color:var(--text3)">${m.usuario_email||'—'}</td>
+              </tr>`;
+            }).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--text3)">Nenhum ajuste registrado.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
 function onAjusteProdutoChange(){
   const id=parseInt(document.getElementById('aj-produto').value,10);
   const atual=document.getElementById('aj-atual');
   const novo=document.getElementById('aj-novo');
   const hint=document.getElementById('aj-hint');
-  if(!id){atual.value='';novo.value='';hint.textContent='Selecione um produto.';return;}
+  if(!id){atual.value='';novo.value='';hint.textContent='Selecione um produto.';atualizarPreviewAjuste();return;}
   const saldo=estoqueAtual(id);
   atual.value=saldo;
   novo.value=saldo; // parte do saldo atual: o usuário só altera o que está errado
-  hint.textContent=`Saldo registrado hoje: ${saldo}.`;
+  hint.textContent=`Registrado no sistema: ${saldo}.`;
+  atualizarPreviewAjuste();
+}
+// Mostra o efeito antes de salvar, para o usuário não precisar calcular a diferença
+// de cabeça nem descobrir o que aconteceu só depois de confirmar.
+function atualizarPreviewAjuste(){
+  const box=document.getElementById('aj-preview');
+  if(!box) return;
+  const id=parseInt(document.getElementById('aj-produto').value,10);
+  const novo=parseInt(document.getElementById('aj-novo').value,10);
+  if(!id||isNaN(novo)){box.innerHTML='';return;}
+  const saldo=estoqueAtual(id);
+  const diff=novo-saldo;
+  if(diff===0){box.innerHTML='<div class="alert alert-info" style="margin:0">Saldo já está correto — nada a ajustar.</div>';return;}
+  const sinal=diff>0?'entrada':'saída';
+  box.innerHTML=`<div class="alert alert-warn" style="margin:0">Será registrada uma <strong>${sinal} de ${Math.abs(diff)}</strong> unidade(s): ${saldo} → ${novo}.</div>`;
 }
 async function submitAjusteEstoque(){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
@@ -3450,7 +3530,7 @@ async function submitAjusteEstoque(){
     });
     if(error) throw error;
     toast(`Saldo ajustado para ${novoSaldo}.`,'success');
-    await loadAll();navigate('estoque');
+    await loadAll();navigate('ajuste');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
 
@@ -3464,6 +3544,7 @@ async function estornarMovimentoUI(id){
     toast('Estorno registrado!','success');
     await loadAll();
     if(document.querySelector('#page-estoque.active')) renderEstoque();
+    if(document.querySelector('#page-ajuste.active')) renderAjuste();
   }catch(e){toast('Erro: '+e.message,'error');}
 }
 
