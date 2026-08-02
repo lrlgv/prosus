@@ -78,13 +78,17 @@ create table contratos (
 -- ── CONTROLE DE ESTOQUE DE PLACAS ───────────────────────────────────
 -- Entidades nativas do banco (não existem no Sheets, ficam fora da migração).
 
+-- 'ativo' permite aposentar um cadastro que não pode ser excluído por estar em uso
+-- por algum produto: some dos seletores, mas preserva os registros que dependem dele.
 create table cores (
   nome text primary key,
+  ativo boolean not null default true,
   criado_em timestamptz not null default now()
 );
 
 create table tipos_placa (
   nome text primary key,
+  ativo boolean not null default true,
   criado_em timestamptz not null default now()
 );
 
@@ -107,9 +111,11 @@ create table produtos (
 -- data      = quando a movimentação de fato aconteceu (editável)
 -- criado_em = quando o registro foi digitado no sistema (automático)
 -- A diferença entre as duas é o que permite auditar lançamento retroativo.
+-- ON DELETE RESTRICT protege a trilha de auditoria: o banco recusa apagar um produto
+-- que já tenha movimentações, e a aplicação inativa o produto no lugar.
 create table estoque_movimentos (
   id bigserial primary key,
-  produto_id bigint not null references produtos(id) on delete cascade,
+  produto_id bigint not null references produtos(id) on delete restrict,
   tipo text not null check (tipo in ('entrada','saida')),
   quantidade integer not null check (quantidade > 0),
   data date not null default current_date,

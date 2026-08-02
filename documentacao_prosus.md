@@ -248,7 +248,8 @@ A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo r
 
 | Versão | Mudanças |
 | :--- | :--- |
-| **v6.1-beta** | Controle de estoque de placas: cadastros de cores, tipos de placa e produtos; entrada e consulta de estoque; histórico auditável de movimentações; baixa automática na Prova de Dentes; banner de estoque mínimo. |
+| **v6.2-beta** | Exclusão de cores, tipos de placa e produtos, com inativação automática quando o registro está em uso. Inativos somem dos seletores mas preservam os dados que dependem deles. |
+| v6.1-beta | Controle de estoque de placas: cadastros de cores, tipos de placa e produtos; entrada e consulta de estoque; histórico auditável de movimentações; baixa automática na Prova de Dentes; banner de estoque mínimo. |
 | v6.0-beta | Migração do backend para Supabase (PostgreSQL + Auth + RLS). Lista de acesso real (`allowed_users`), gravação dupla temporária no Sheets, ferramenta de migração de dados embutida. |
 | **v5.2** | Auto-save das datas na aba Etapas (sem precisar clicar em Salvar). Última versão da linha de produção baseada em Sheets. |
 | v5.1 | Reaplica identidade visual v5.0 sobre a correção do destaque do menu. |
@@ -324,7 +325,17 @@ Na etapa de Prova de Dentes é possível registrar quais placas foram usadas no 
 
 Se o estoque for insuficiente, o sistema **avisa mas não bloqueia**, permitindo saldo negativo. A decisão é deliberada: o atendimento clínico já ocorreu, e impedir o registro apenas deixaria o dado real fora do sistema — o saldo negativo, visível no histórico, sinaliza que faltou lançar uma entrada.
 
-### 12.5 Aviso de estoque mínimo
+### 12.5 Exclusão e inativação de cadastros (v6.2-beta)
+Cores, tipos de placa e produtos podem ser excluídos, mas nunca à custa de dados existentes. Ao clicar em excluir, o sistema tenta a remoção real; se o registro estiver em uso — uma cor usada por um produto, ou um produto que já tem movimentações — o próprio banco recusa, e a aplicação o marca como **inativo**.
+
+Um cadastro inativo:
+- **deixa de aparecer nos seletores** (não pode ser escolhido em produtos novos, entradas de estoque ou na prova de dentes);
+- continua listado na sua tela de cadastro, sinalizado e com botão **Reativar**;
+- preserva integralmente tudo o que depende dele — produtos existentes e histórico de estoque seguem intactos.
+
+Essa distinção evita o dilema comum de "não posso apagar porque quebraria o histórico, mas também não quero continuar vendo isso na lista". Um produto inativo, por exemplo, some da entrada de estoque mas continua no saldo (pode ter sobra) e no histórico (auditoria).
+
+### 12.6 Aviso de estoque mínimo
 Usuários marcados com `notificar_estoque` veem uma faixa de alerta no topo do aplicativo quando algum produto atinge ou fica abaixo do mínimo, com atalho para a tela de estoque. Como o aviso é por usuário, não polui a interface dos demais.
 
 > Envio por **e-mail** ou **WhatsApp** foi avaliado e ficou de fora nesta etapa: e-mail exigiria uma Edge Function no Supabase somada a um serviço de envio; WhatsApp exigiria a WhatsApp Business Platform (Meta) ou intermediário como Twilio — serviços pagos, com verificação de empresa e aprovação prévia de modelos de mensagem.

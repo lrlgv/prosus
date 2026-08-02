@@ -135,6 +135,10 @@ Uma tabela por aba antiga. As colunas B-E de VLOOKUP das abas de etapas **não e
 | `produtos` | Produto = tipo + cor, com `estoque_minimo`. UNIQUE(tipo_placa, cor) |
 | `estoque_movimentos` | **Livro-razão**: entradas e saídas. `codigo` preenchido na baixa por prova de dentes |
 
+As três primeiras têm `ativo boolean`. O padrão de exclusão é **excluir-ou-inativar** (`excluirOuInativar()`): tenta o `DELETE`; se alguma FK apontar para o registro o Postgres recusa com código **`23503`**, e aí a aplicação só marca `ativo=false`. Inativos somem dos seletores (`ativos()`), mas continuam visíveis nas listas com botão de reativar, e nada que depende deles é perdido.
+
+`estoque_movimentos.produto_id` usa **`ON DELETE RESTRICT`** de propósito: com `CASCADE`, apagar um produto apagaria silenciosamente todo o histórico dele, destruindo a trilha de auditoria.
+
 **O saldo nunca é armazenado** — é sempre derivado do razão (`estoqueAtual(produtoId)` soma entradas menos saídas). Por isso remover um movimento devolve a quantidade ao estoque, e não existe saldo dessincronizado.
 
 Em `estoque_movimentos`, `data` é quando a movimentação aconteceu (editável, aceita retroativo) e `criado_em` é quando foi lançada no sistema. A diferença entre as duas é o que permite auditar divergência.

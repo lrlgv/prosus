@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v6.1-beta - controle de estoque de placas (cores, tipos, produtos, entradas/saídas e baixa na prova de dentes) -->
+<!-- ProSUS v6.2-beta - exclusão/inativação de cores, tipos de placa e produtos; inativos somem dos seletores -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -485,7 +485,7 @@
       <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v6.1-beta (Supabase)</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v6.2-beta (Supabase)</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -1195,6 +1195,22 @@ function produtoLabel(p){
   return `${p.tipo_placa} — ${p.cor}`;
 }
 function produtoById(id){ return state.produtos.find(p=>p.id===id); }
+function ativos(lista){ return lista.filter(x=>x.ativo!==false); }
+/* Exclui de verdade quando o registro não é usado por ninguém; se alguma FK apontar
+   para ele, o Postgres recusa (código 23503) e a gente apenas inativa — some dos
+   seletores mas preserva tudo que depende dele. Devolve 'excluido' ou 'inativado'. */
+async function excluirOuInativar(tabela,coluna,valor){
+  const{error}=await sb.from(tabela).delete().eq(coluna,valor);
+  if(!error) return 'excluido';
+  if(error.code!=='23503') throw error;
+  const{error:erroInativar}=await sb.from(tabela).update({ativo:false}).eq(coluna,valor);
+  if(erroInativar) throw erroInativar;
+  return 'inativado';
+}
+async function reativar(tabela,coluna,valor){
+  const{error}=await sb.from(tabela).update({ativo:true}).eq(coluna,valor);
+  if(error) throw error;
+}
 function produtosAbaixoMinimo(){
   return state.produtos.filter(p=>p.ativo!==false&&estoqueAtual(p.id)<=p.estoque_minimo);
 }
@@ -1382,8 +1398,8 @@ async function loadAll(){
     try{contratoRows=await fetchSheet('Contratos!A2:D100');}catch(e){}
 
     // Estoque de placas — tabelas nativas do banco (não existem no Sheets), lidas direto.
-    try{state.cores=(await sbSelectAll('cores','nome')).map(r=>r.nome);}catch(e){}
-    try{state.tiposPlaca=(await sbSelectAll('tipos_placa','nome')).map(r=>r.nome);}catch(e){}
+    try{state.cores=await sbSelectAll('cores','nome');}catch(e){}          // [{nome, ativo}]
+    try{state.tiposPlaca=await sbSelectAll('tipos_placa','nome');}catch(e){} // [{nome, ativo}]
     try{state.produtos=await sbSelectAll('produtos','id');}catch(e){}
     try{state.estoqueMovimentos=await sbSelectAll('estoque_movimentos','id');}catch(e){}
 
@@ -1913,17 +1929,17 @@ function renderDetailEtapas(cod){
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
         <label style="display:block;margin-bottom:6px">🧩 Placas utilizadas</label>
         <div id="pd-placas-lista"></div>
-        ${admin?(state.produtos.length?`
+        ${admin?(ativos(state.produtos).length?`
         <div style="display:flex;gap:6px;align-items:flex-end;margin-top:8px;flex-wrap:wrap">
           <div class="form-group" style="flex:2;min-width:150px;margin:0"><label style="font-size:11px">Placa</label>
             <select id="pd-placa-produto">
               <option value="">— Selecione —</option>
-              ${state.produtos.map(p=>`<option value="${p.id}">${produtoLabel(p)} (${estoqueAtual(p.id)} em estoque)</option>`).join('')}
+              ${ativos(state.produtos).map(p=>`<option value="${p.id}">${produtoLabel(p)} (${estoqueAtual(p.id)} em estoque)</option>`).join('')}
             </select>
           </div>
           <div class="form-group" style="flex:0 0 80px;margin:0"><label style="font-size:11px">Qtd</label><input type="number" id="pd-placa-qtd" min="1" value="1"></div>
           <button class="btn btn-secondary btn-sm" onclick="adicionarPlacaPaciente('${cod}')">➕ Adicionar</button>
-        </div>`:`<div class="alert alert-warn" style="margin-top:8px">⚠️ Nenhum produto cadastrado. <a href="#" onclick="closeDetail();navigate('produtos');return false" style="color:inherit;text-decoration:underline">Cadastrar produtos</a></div>`):''}
+        </div>`:`<div class="alert alert-warn" style="margin-top:8px">⚠️ Nenhum produto ativo cadastrado. <a href="#" onclick="closeDetail();navigate('produtos');return false" style="color:inherit;text-decoration:underline">Cadastrar produtos</a></div>`):''}
       </div>
     </div>
 
@@ -2946,7 +2962,15 @@ function renderCores(focusForm=false){
           <div class="table-header"><h3>🎨 Cores cadastradas</h3><span style="font-size:12px;color:var(--text2)">${list.length} cores</span></div>
           ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
           <div style="padding:12px">
-            ${list.length?list.map((c,i)=>`<div class="list-item" ${admin?`onclick="editCor(${i})"`:''}><div class="list-item-info"><div class="name">${c}</div></div>${admin?'<span style="font-size:11px;color:var(--text3)">✏️ editar</span>':''}</div>`).join(''):'<div class="empty-state"><p>Nenhuma cor cadastrada.</p></div>'}
+            ${list.length?list.map((c,i)=>{
+              const inativo=c.ativo===false;
+              return `<div class="list-item" style="${inativo?'opacity:.6':''}" ${admin&&!inativo?`onclick="editCor(${i})"`:''}>
+                <div class="list-item-info"><div class="name">${c.nome} ${inativo?'<span class="badge badge-gray">inativa</span>':''}</div></div>
+                ${admin?(inativo
+                  ?`<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();reativarCor('${c.nome}')">↩️ Reativar</button>`
+                  :`<span style="font-size:11px;color:var(--text3);margin-right:8px">✏️ editar</span>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();excluirCor('${c.nome}')" title="Excluir (ou inativar, se estiver em uso)">🗑️</button>`):''}
+              </div>`;}).join(''):'<div class="empty-state"><p>Nenhuma cor cadastrada.</p></div>'}
           </div>
         </div>
       </div>
@@ -2957,7 +2981,7 @@ function renderCores(focusForm=false){
 function editCor(idx){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   editingCor=idx;
-  document.getElementById('nc-nome').value=state.cores[idx];
+  document.getElementById('nc-nome').value=state.cores[idx].nome;
   document.getElementById('cor-form-title').textContent='✏️ Editar Cor';
   document.getElementById('cor-cancel-btn').style.display='inline-flex';
   document.getElementById('nc-nome').focus();
@@ -2974,7 +2998,7 @@ async function submitCor(){
   if(!nome){toast('Informe a cor','error');return;}
   try{
     if(editingCor!==null){
-      const old=state.cores[editingCor];
+      const old=state.cores[editingCor].nome;
       if(old===nome){cancelEditCor();return;}
       toast('Atualizando...','info');
       // ON UPDATE CASCADE no banco propaga o novo nome pros produtos que usam esta cor
@@ -2982,12 +3006,29 @@ async function submitCor(){
       if(error) throw error;
       toast(`Atualizado para ${nome}!`,'success');
     }else{
-      if(state.cores.find(c=>c.toLowerCase()===nome.toLowerCase())){toast('Cor já cadastrada','error');return;}
+      if(state.cores.find(c=>c.nome.toLowerCase()===nome.toLowerCase())){toast('Cor já cadastrada','error');return;}
       toast('Salvando...','info');
       const{error}=await sb.from('cores').insert({nome});
       if(error) throw error;
       toast(`${nome} cadastrada!`,'success');
     }
+    await loadAll();navigate('cores');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function excluirCor(nome){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  if(!confirm(`Excluir a cor "${nome}"?\n\nSe ela já estiver em uso por algum produto, será apenas inativada (deixa de aparecer nos cadastros, mas os produtos existentes continuam intactos).`)) return;
+  try{
+    const r=await excluirOuInativar('cores','nome',nome);
+    toast(r==='excluido'?`Cor "${nome}" excluída!`:`Cor "${nome}" está em uso — foi inativada.`,'success');
+    await loadAll();navigate('cores');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function reativarCor(nome){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  try{
+    await reativar('cores','nome',nome);
+    toast(`Cor "${nome}" reativada!`,'success');
     await loadAll();navigate('cores');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
@@ -3014,7 +3055,15 @@ function renderTiposPlaca(focusForm=false){
           <div class="table-header"><h3>🧩 Tipos de placa cadastrados</h3><span style="font-size:12px;color:var(--text2)">${list.length} tipos</span></div>
           ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
           <div style="padding:12px">
-            ${list.length?list.map((t,i)=>`<div class="list-item" ${admin?`onclick="editTipoPlaca(${i})"`:''}><div class="list-item-info"><div class="name">${t}</div></div>${admin?'<span style="font-size:11px;color:var(--text3)">✏️ editar</span>':''}</div>`).join(''):'<div class="empty-state"><p>Nenhum tipo cadastrado.</p></div>'}
+            ${list.length?list.map((t,i)=>{
+              const inativo=t.ativo===false;
+              return `<div class="list-item" style="${inativo?'opacity:.6':''}" ${admin&&!inativo?`onclick="editTipoPlaca(${i})"`:''}>
+                <div class="list-item-info"><div class="name">${t.nome} ${inativo?'<span class="badge badge-gray">inativo</span>':''}</div></div>
+                ${admin?(inativo
+                  ?`<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();reativarTipoPlaca('${t.nome}')">↩️ Reativar</button>`
+                  :`<span style="font-size:11px;color:var(--text3);margin-right:8px">✏️ editar</span>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();excluirTipoPlaca('${t.nome}')" title="Excluir (ou inativar, se estiver em uso)">🗑️</button>`):''}
+              </div>`;}).join(''):'<div class="empty-state"><p>Nenhum tipo cadastrado.</p></div>'}
           </div>
         </div>
       </div>
@@ -3025,7 +3074,7 @@ function renderTiposPlaca(focusForm=false){
 function editTipoPlaca(idx){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   editingTipoPlaca=idx;
-  document.getElementById('ntpl-nome').value=state.tiposPlaca[idx];
+  document.getElementById('ntpl-nome').value=state.tiposPlaca[idx].nome;
   document.getElementById('tpl-form-title').textContent='✏️ Editar Tipo de Placa';
   document.getElementById('tpl-cancel-btn').style.display='inline-flex';
   document.getElementById('ntpl-nome').focus();
@@ -3042,14 +3091,14 @@ async function submitTipoPlaca(){
   if(!nome){toast('Informe o tipo','error');return;}
   try{
     if(editingTipoPlaca!==null){
-      const old=state.tiposPlaca[editingTipoPlaca];
+      const old=state.tiposPlaca[editingTipoPlaca].nome;
       if(old===nome){cancelEditTipoPlaca();return;}
       toast('Atualizando...','info');
       const{error}=await sb.from('tipos_placa').update({nome}).eq('nome',old);
       if(error) throw error;
       toast(`Atualizado para ${nome}!`,'success');
     }else{
-      if(state.tiposPlaca.find(t=>t.toLowerCase()===nome.toLowerCase())){toast('Tipo já cadastrado','error');return;}
+      if(state.tiposPlaca.find(t=>t.nome.toLowerCase()===nome.toLowerCase())){toast('Tipo já cadastrado','error');return;}
       toast('Salvando...','info');
       const{error}=await sb.from('tipos_placa').insert({nome});
       if(error) throw error;
@@ -3058,25 +3107,45 @@ async function submitTipoPlaca(){
     await loadAll();navigate('tiposplaca');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
+async function excluirTipoPlaca(nome){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  if(!confirm(`Excluir o tipo de placa "${nome}"?\n\nSe ele já estiver em uso por algum produto, será apenas inativado (deixa de aparecer nos cadastros, mas os produtos existentes continuam intactos).`)) return;
+  try{
+    const r=await excluirOuInativar('tipos_placa','nome',nome);
+    toast(r==='excluido'?`Tipo "${nome}" excluído!`:`Tipo "${nome}" está em uso — foi inativado.`,'success');
+    await loadAll();navigate('tiposplaca');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function reativarTipoPlaca(nome){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  try{
+    await reativar('tipos_placa','nome',nome);
+    toast(`Tipo "${nome}" reativado!`,'success');
+    await loadAll();navigate('tiposplaca');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
 
 /* ── PRODUTOS (placa = tipo + cor) ── */
 let editingProduto=null;
 function renderProdutos(){
   const admin=isAdmin();
-  const faltaCadastro=!state.cores.length||!state.tiposPlaca.length;
+  // Só cores e tipos ativos podem ser usados em produtos novos.
+  const coresAtivas=ativos(state.cores);
+  const tiposAtivos=ativos(state.tiposPlaca);
+  const faltaCadastro=!coresAtivas.length||!tiposAtivos.length;
   document.getElementById('produtos-content').innerHTML=`
-    ${faltaCadastro?`<div class="alert alert-warn">⚠️ Cadastre ao menos uma <a href="#" onclick="navigate('cores');return false" style="color:inherit;text-decoration:underline">cor</a> e um <a href="#" onclick="navigate('tiposplaca');return false" style="color:inherit;text-decoration:underline">tipo de placa</a> antes de criar produtos.</div>`:''}
+    ${faltaCadastro?`<div class="alert alert-warn">⚠️ Cadastre ao menos uma <a href="#" onclick="navigate('cores');return false" style="color:inherit;text-decoration:underline">cor</a> e um <a href="#" onclick="navigate('tiposplaca');return false" style="color:inherit;text-decoration:underline">tipo de placa</a> ativos antes de criar produtos.</div>`:''}
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
       ${admin?`<div style="flex:1;min-width:280px">
         <div class="form-card">
           <h3 id="prod-form-title">➕ Novo Produto</h3>
           <div class="form-group"><label>Tipo de Placa</label><select id="np-tipo" ${faltaCadastro?'disabled':''}>
             <option value="">— Selecione —</option>
-            ${state.tiposPlaca.map(t=>`<option>${t}</option>`).join('')}
+            ${tiposAtivos.map(t=>`<option>${t.nome}</option>`).join('')}
           </select></div>
           <div class="form-group"><label>Cor</label><select id="np-cor" ${faltaCadastro?'disabled':''}>
             <option value="">— Selecione —</option>
-            ${state.cores.map(c=>`<option>${c}</option>`).join('')}
+            ${coresAtivas.map(c=>`<option>${c.nome}</option>`).join('')}
           </select></div>
           <div class="form-group"><label>Estoque Mínimo</label><input type="number" id="np-min" min="0" value="0" ${faltaCadastro?'disabled':''}><small>Quando o saldo chegar neste valor ou abaixo, os usuários marcados são avisados.</small></div>
           <div style="display:flex;gap:8px">
@@ -3093,11 +3162,15 @@ function renderProdutos(){
             ${state.produtos.length?state.produtos.map((p,i)=>{
               const saldo=estoqueAtual(p.id);
               const baixo=saldo<=p.estoque_minimo;
-              return `<div class="list-item" ${admin?`onclick="editProduto(${i})"`:''}><div class="list-item-info">
-                <div class="name">${produtoLabel(p)}</div>
+              const inativo=p.ativo===false;
+              return `<div class="list-item" style="${inativo?'opacity:.6':''}" ${admin&&!inativo?`onclick="editProduto(${i})"`:''}><div class="list-item-info">
+                <div class="name">${produtoLabel(p)} ${inativo?'<span class="badge badge-gray">inativo</span>':''}</div>
                 <div class="code" style="font-size:11px;color:var(--text3)">mínimo: ${p.estoque_minimo}</div>
               </div>
-              <span class="badge ${baixo?'badge-red':'badge-green'}">${saldo} em estoque</span>
+              <span class="badge ${inativo?'badge-gray':(baixo?'badge-red':'badge-green')}">${saldo} em estoque</span>
+              ${admin?(inativo
+                ?`<button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="event.stopPropagation();reativarProduto(${p.id})">↩️ Reativar</button>`
+                :`<button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="event.stopPropagation();excluirProduto(${p.id})" title="Excluir (ou inativar, se já tiver movimentação)">🗑️</button>`):''}
             </div>`;}).join(''):'<div class="empty-state"><p>Nenhum produto cadastrado.</p></div>'}
           </div>
         </div>
@@ -3105,12 +3178,25 @@ function renderProdutos(){
     </div>`;
   editingProduto=null;
 }
+// Um produto ativo pode usar uma cor/tipo que foi inativado depois. Nesse caso o valor
+// não existe no select (que só lista ativos), e sem isto o campo apareceria em branco,
+// fazendo a edição perder o valor silenciosamente.
+function garantirOpcao(selectId,valor){
+  const sel=document.getElementById(selectId);
+  if(!sel||!valor) return;
+  if(![...sel.options].some(o=>o.value===valor)){
+    const opt=document.createElement('option');
+    opt.value=valor;opt.textContent=valor+' (inativo)';
+    sel.appendChild(opt);
+  }
+  sel.value=valor;
+}
 function editProduto(idx){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
   editingProduto=idx;
   const p=state.produtos[idx];
-  document.getElementById('np-tipo').value=p.tipo_placa;
-  document.getElementById('np-cor').value=p.cor;
+  garantirOpcao('np-tipo',p.tipo_placa);
+  garantirOpcao('np-cor',p.cor);
   document.getElementById('np-min').value=p.estoque_minimo;
   document.getElementById('prod-form-title').textContent='✏️ Editar Produto';
   document.getElementById('prod-cancel-btn').style.display='inline-flex';
@@ -3147,20 +3233,41 @@ async function submitProduto(){
     await loadAll();navigate('produtos');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
+async function excluirProduto(id){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const p=produtoById(id);
+  if(!confirm(`Excluir o produto "${produtoLabel(p)}"?\n\nSe ele já tiver movimentações de estoque, será apenas inativado — o histórico é preservado e continua disponível para auditoria.`)) return;
+  try{
+    const r=await excluirOuInativar('produtos','id',id);
+    toast(r==='excluido'?'Produto excluído!':'Produto já tem movimentações — foi inativado (histórico preservado).','success');
+    await loadAll();navigate('produtos');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function reativarProduto(id){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  try{
+    await reativar('produtos','id',id);
+    toast('Produto reativado!','success');
+    await loadAll();navigate('produtos');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
 
 /* ── ESTOQUE: entrada, saldo e histórico ── */
 function renderEstoque(){
   const admin=isAdmin();
-  const semProduto=!state.produtos.length;
+  // Produtos inativos não recebem entrada nova, mas seguem no saldo e no histórico
+  // (podem ter saldo remanescente e movimentações passadas a auditar).
+  const produtosAtivos=ativos(state.produtos);
+  const semProduto=!produtosAtivos.length;
   document.getElementById('estoque-content').innerHTML=`
-    ${semProduto?`<div class="alert alert-warn">⚠️ Cadastre ao menos um <a href="#" onclick="navigate('produtos');return false" style="color:inherit;text-decoration:underline">produto</a> antes de movimentar o estoque.</div>`:''}
+    ${semProduto?`<div class="alert alert-warn">⚠️ Cadastre ao menos um <a href="#" onclick="navigate('produtos');return false" style="color:inherit;text-decoration:underline">produto</a> ativo antes de movimentar o estoque.</div>`:''}
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
       ${admin?`<div style="flex:1;min-width:280px">
         <div class="form-card">
           <h3>➕ Entrada de Estoque</h3>
           <div class="form-group"><label>Produto</label><select id="ee-produto" ${semProduto?'disabled':''}>
             <option value="">— Selecione —</option>
-            ${state.produtos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
+            ${produtosAtivos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
           </select></div>
           <div class="form-row">
             <div class="form-group"><label>Quantidade</label><input type="number" id="ee-qtd" min="1" value="1" ${semProduto?'disabled':''}></div>
@@ -3172,7 +3279,7 @@ function renderEstoque(){
       </div>`:''}
       <div style="flex:2;min-width:280px">
         <div class="table-card">
-          <div class="table-header"><h3>📊 Saldo atual</h3><span style="font-size:12px;color:var(--text2)">${state.produtos.length} produtos</span></div>
+          <div class="table-header"><h3>📊 Saldo atual</h3><span style="font-size:12px;color:var(--text2)">${produtosAtivos.length} ativos${state.produtos.length>produtosAtivos.length?` · ${state.produtos.length-produtosAtivos.length} inativos`:''}</span></div>
           ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
           <div style="overflow-x:auto">
             <table id="tbl-estoque-saldo">
@@ -3181,8 +3288,9 @@ function renderEstoque(){
                 ${state.produtos.length?state.produtos.map(p=>{
                   const saldo=estoqueAtual(p.id);
                   const baixo=saldo<=p.estoque_minimo;
-                  return `<tr><td>${produtoLabel(p)}</td><td>${p.estoque_minimo}</td><td><strong>${saldo}</strong></td>
-                    <td><span class="badge ${baixo?'badge-red':'badge-green'}">${baixo?'⚠️ Repor':'OK'}</span></td></tr>`;
+                  const inativo=p.ativo===false;
+                  return `<tr style="${inativo?'opacity:.6':''}"><td>${produtoLabel(p)}</td><td>${p.estoque_minimo}</td><td><strong>${saldo}</strong></td>
+                    <td>${inativo?'<span class="badge badge-gray">Inativo</span>':`<span class="badge ${baixo?'badge-red':'badge-green'}">${baixo?'⚠️ Repor':'OK'}</span>`}</td></tr>`;
                 }).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--text3)">Nenhum produto cadastrado.</td></tr>'}
               </tbody>
             </table>
