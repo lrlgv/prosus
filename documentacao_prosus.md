@@ -1,13 +1,15 @@
-# Documentação Técnica do ProSUS v5.0
+# Documentação Técnica do ProSUS
 ## Sistema de Controle de Próteses Dentárias do SUS
 
 O **ProSUS** é uma aplicação do tipo *Single Page Application* (SPA) com capacidades de *Progressive Web App* (PWA) desenvolvida para gerenciar de ponta a ponta o fluxo de confecção, acompanhamento, remarcações e fechamentos financeiros de próteses dentárias (Prótese Total - PT e Prótese Parcial Removível - PPR) fornecidas pelo SUS.
 
 Este documento fornece um detalhamento completo de sua arquitetura, fluxos de dados, componentes e regras de negócio.
 
+> ⚠️ **Duas versões convivem no repositório.** As seções 1 a 10 descrevem a **versão de produção (v5.2, `index.html`)**, baseada em Google Sheets. A partir da **seção 11** está documentada a **versão beta (v6.1-beta, `beta/index.html`)**, que migra o backend para **Supabase (PostgreSQL)** e acrescenta o **controle de estoque de placas**. O beta é a evolução destinada a substituir a produção.
+
 ---
 
-## 1. Arquitetura Geral do Sistema
+## 1. Arquitetura Geral do Sistema (produção)
 
 O sistema é construído sobre uma arquitetura serveless e sem banco de dados SQL/NoSQL tradicional. Em vez disso, ele aproveita o ecossistema do Google:
 
@@ -246,7 +248,84 @@ A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo r
 
 | Versão | Mudanças |
 | :--- | :--- |
-| **v5.0** | Nova identidade visual (paleta teal/petróleo, logomarca "Arco de Progresso", tipografia Space Grotesk + Hanken Grotesk). Tema claro como padrão. Otimização para tablet Android (retrato). Correção de bug de inicialização do OAuth (`tokenClient` em TDZ). |
+| **v6.1-beta** | Controle de estoque de placas: cadastros de cores, tipos de placa e produtos; entrada e consulta de estoque; histórico auditável de movimentações; baixa automática na Prova de Dentes; banner de estoque mínimo. |
+| v6.0-beta | Migração do backend para Supabase (PostgreSQL + Auth + RLS). Lista de acesso real (`allowed_users`), gravação dupla temporária no Sheets, ferramenta de migração de dados embutida. |
+| **v5.2** | Auto-save das datas na aba Etapas (sem precisar clicar em Salvar). Última versão da linha de produção baseada em Sheets. |
+| v5.1 | Reaplica identidade visual v5.0 sobre a correção do destaque do menu. |
+| v5.0 | Nova identidade visual (paleta teal/petróleo, logomarca "Arco de Progresso", tipografia Space Grotesk + Hanken Grotesk). Tema claro como padrão. Otimização para tablet Android (retrato). Correção de bug de inicialização do OAuth (`tokenClient` em TDZ). |
 | v4.50 | Redesign visual "SaaS Moderno" (paleta azul-índigo). |
 | v4.49 | Versão base documentada. |
+
+---
+
+## 11. Versão Beta — Migração para Supabase (v6.0-beta)
+
+A partir da v6.0-beta, o backend deixa de ser a planilha e passa a ser um banco **PostgreSQL gerenciado pelo Supabase**. O arquivo `beta/index.html` mantém a mesma filosofia de arquivo único e sem servidor próprio: o navegador conversa direto com o Supabase via `supabase-js`.
+
+```mermaid
+graph TD
+    A[Navegador / PWA] -->|ID Token do Google| B[Google Identity Services]
+    A -->|signInWithIdToken| C[Supabase Auth]
+    A -->|SELECT / INSERT / UPDATE| D[PostgreSQL + RLS]
+    A -.->|cópia temporária best-effort| E[Apps Script → Planilha antiga]
+```
+
+### 11.1 Motivação
+A arquitetura sobre Sheets tinha limites concretos: toda escrita precisava primeiro varrer a coluna A para descobrir o número da linha, exigia uma espera de 600 ms antes de recarregar (o Sheets não garante consistência imediata), e o controle de administrador era apenas visual — qualquer pessoa com o endpoint conseguiria gravar. O banco resolve os três pontos.
+
+### 11.2 Autenticação
+O login continua sendo "Entrar com Google", mas o fluxo muda: em vez de um *access token* usado para ler a planilha, o app obtém um **ID Token** e o troca por uma sessão Supabase (`signInWithIdToken`), protegida por **nonce**. A sessão passa a ser renovada automaticamente pelo `supabase-js`, eliminando o controle manual de expiração.
+
+> Como o nonce depende de `crypto.subtle`, o app exige contexto seguro: **HTTPS ou `http://localhost`**. Abrir o arquivo direto (`file://`) não funciona.
+
+### 11.3 Controle de acesso real (`allowed_users`)
+Na produção, qualquer conta Google consegue entrar e visualizar os dados dos pacientes em modo leitura. No beta isso foi fechado: só e-mails presentes na tabela `allowed_users` enxergam qualquer informação; os demais recebem uma tela de "acesso não autorizado".
+
+A tabela tem duas flags: `is_admin` (pode editar) e `notificar_estoque` (recebe o aviso de estoque mínimo).
+
+O bloqueio é garantido por **Row Level Security** no próprio Postgres, através das funções `is_allowed()` e `is_admin()`, que comparam `auth.jwt()->>'email'` com a tabela. A verificação em JavaScript é apenas conveniência de interface — mesmo acessando a API diretamente, ninguém sem permissão lê ou grava.
+
+### 11.4 Modelo de dados
+Cada aba virou uma tabela. As colunas B-E, que na planilha eram VLOOKUPs, deixaram de existir (agora são JOIN), e as tabelas de etapas passaram a ter **chave estrangeira** para `moldagens` — algo que a planilha não conseguia garantir.
+
+### 11.5 Transição segura
+Durante o período de validação, o Supabase é a fonte de verdade (leitura e confirmação de escrita), mas o app continua enviando uma **cópia best-effort para a planilha antiga** (`DUAL_WRITE_SHEETS`), que funciona como backup vivo — necessário porque o plano gratuito do Supabase não inclui backup automático. Falhas nessa cópia nunca travam a aplicação; apenas acendem a badge "Planilha" no topo.
+
+A migração dos dados históricos é feita pela própria interface (**Configurações → Migrar dados**), que lê as abas via Apps Script e grava em lote, respeitando a ordem das chaves estrangeiras. O processo é idempotente e reporta, linha a linha, o que não pôde ser migrado.
+
+---
+
+## 12. Controle de Estoque de Placas (v6.1-beta)
+
+Módulo para controlar as placas utilizadas nas próteses, do cadastro à baixa no atendimento.
+
+### 12.1 Estrutura
+| Tela | Função |
+| :--- | :--- |
+| **Cores** | Cadastro das cores (A2, A3, A3,5, A4…) |
+| **Tipos de Placa** | Cadastro dos tipos |
+| **Produtos (Placas)** | Um produto é a combinação **tipo + cor**, com sua quantidade mínima em estoque |
+| **Estoque** | Entrada de quantidade, saldo atual de todos os produtos e histórico de movimentações |
+
+### 12.2 Saldo derivado (livro-razão)
+O saldo **nunca é armazenado**. A tabela `estoque_movimentos` funciona como livro-razão: entradas manuais e baixas por paciente convivem nela, e o saldo é sempre calculado somando entradas e subtraindo saídas.
+
+A consequência prática é que remover uma movimentação devolve a quantidade ao estoque automaticamente, e não existe a possibilidade de um saldo "travado" divergindo do histórico.
+
+### 12.3 Rastreabilidade
+Cada movimentação guarda duas datas com papéis distintos:
+- **`data`** — quando a movimentação de fato aconteceu. Editável, aceita lançamento retroativo (uma compra recebida ontem, por exemplo). Na baixa por prova de dentes, assume a data real da prova.
+- **`criado_em`** — quando o registro foi digitado no sistema, junto de `usuario_email`.
+
+O histórico exibe as duas e marca com ⏱️ quando divergem, permitindo reconstruir o saldo movimento a movimento e localizar onde uma divergência começou. Há filtros por produto, tipo e período, além de exportação para planilha.
+
+### 12.4 Baixa na Prova de Dentes
+Na etapa de Prova de Dentes é possível registrar quais placas foram usadas no paciente (uma ou várias, com quantidade), dando baixa imediata no estoque. Cada placa registrada pode ser removida, o que estorna a quantidade.
+
+Se o estoque for insuficiente, o sistema **avisa mas não bloqueia**, permitindo saldo negativo. A decisão é deliberada: o atendimento clínico já ocorreu, e impedir o registro apenas deixaria o dado real fora do sistema — o saldo negativo, visível no histórico, sinaliza que faltou lançar uma entrada.
+
+### 12.5 Aviso de estoque mínimo
+Usuários marcados com `notificar_estoque` veem uma faixa de alerta no topo do aplicativo quando algum produto atinge ou fica abaixo do mínimo, com atalho para a tela de estoque. Como o aviso é por usuário, não polui a interface dos demais.
+
+> Envio por **e-mail** ou **WhatsApp** foi avaliado e ficou de fora nesta etapa: e-mail exigiria uma Edge Function no Supabase somada a um serviço de envio; WhatsApp exigiria a WhatsApp Business Platform (Meta) ou intermediário como Twilio — serviços pagos, com verificação de empresa e aprovação prévia de modelos de mensagem.
 
