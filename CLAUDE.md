@@ -139,7 +139,9 @@ As três primeiras têm `ativo boolean`. O padrão de exclusão é **excluir-ou-
 
 `estoque_movimentos.produto_id` usa **`ON DELETE RESTRICT`** de propósito: com `CASCADE`, apagar um produto apagaria silenciosamente todo o histórico dele, destruindo a trilha de auditoria.
 
-**O saldo nunca é armazenado** — é sempre derivado do razão (`estoqueAtual(produtoId)` soma entradas menos saídas). Por isso remover um movimento devolve a quantidade ao estoque, e não existe saldo dessincronizado.
+**O saldo nunca é armazenado** — é sempre derivado do razão (`estoqueAtual(produtoId)` soma entradas menos saídas), então não existe saldo dessincronizado.
+
+**O razão é append-only: nada é apagado.** Desfazer uma movimentação insere a contrapartida vinculada ao original via `estorno_de` (`estornarMovimento(id)`), preservando a sequência real no histórico — a saída da placa e a devolução aparecem como dois registros. Uma saída estornada deixa de contar como placa em uso no paciente (`foiEstornado()`), mas continua visível no histórico. Estornos não podem ser estornados de novo.
 
 Em `estoque_movimentos`, `data` é quando a movimentação aconteceu (editável, aceita retroativo) e `criado_em` é quando foi lançada no sistema. A diferença entre as duas é o que permite auditar divergência.
 

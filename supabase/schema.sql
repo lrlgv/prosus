@@ -122,11 +122,15 @@ create table estoque_movimentos (
   codigo text references moldagens(codigo) on delete set null, -- preenchido na baixa por prova de dentes
   obs text,
   usuario_email text,
+  -- Aponta para o movimento que este estorna. O razão é append-only: desfazer uma
+  -- movimentação insere a contrapartida em vez de apagar a linha original.
+  estorno_de bigint references estoque_movimentos(id) on delete set null,
   criado_em timestamptz not null default now()
 );
 
 create index estoque_movimentos_produto_idx on estoque_movimentos (produto_id);
 create index estoque_movimentos_codigo_idx on estoque_movimentos (codigo);
+create index estoque_movimentos_estorno_idx on estoque_movimentos (estorno_de);
 
 -- ── CONTROLE DE ACESSO (substitui a aba Configuracao/admin_emails) ──
 

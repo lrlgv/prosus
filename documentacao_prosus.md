@@ -248,7 +248,8 @@ A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo r
 
 | Versão | Mudanças |
 | :--- | :--- |
-| **v6.2-beta** | Exclusão de cores, tipos de placa e produtos, com inativação automática quando o registro está em uso. Inativos somem dos seletores mas preservam os dados que dependem deles. |
+| **v6.3-beta** | Livro-razão append-only: desfazer uma movimentação passa a gerar estorno em vez de apagar o registro, preservando a sequência (utilização → devolução) no histórico. Histórico passa a exibir a hora exata do lançamento. |
+| v6.2-beta | Exclusão de cores, tipos de placa e produtos, com inativação automática quando o registro está em uso. Inativos somem dos seletores mas preservam os dados que dependem deles. |
 | v6.1-beta | Controle de estoque de placas: cadastros de cores, tipos de placa e produtos; entrada e consulta de estoque; histórico auditável de movimentações; baixa automática na Prova de Dentes; banner de estoque mínimo. |
 | v6.0-beta | Migração do backend para Supabase (PostgreSQL + Auth + RLS). Lista de acesso real (`allowed_users`), gravação dupla temporária no Sheets, ferramenta de migração de dados embutida. |
 | **v5.2** | Auto-save das datas na aba Etapas (sem precisar clicar em Salvar). Última versão da linha de produção baseada em Sheets. |
@@ -309,16 +310,22 @@ Módulo para controlar as placas utilizadas nas próteses, do cadastro à baixa 
 | **Estoque** | Entrada de quantidade, saldo atual de todos os produtos e histórico de movimentações |
 
 ### 12.2 Saldo derivado (livro-razão)
-O saldo **nunca é armazenado**. A tabela `estoque_movimentos` funciona como livro-razão: entradas manuais e baixas por paciente convivem nela, e o saldo é sempre calculado somando entradas e subtraindo saídas.
+O saldo **nunca é armazenado**. A tabela `estoque_movimentos` funciona como livro-razão: entradas manuais e baixas por paciente convivem nela, e o saldo é sempre calculado somando entradas e subtraindo saídas. Não existe a possibilidade de um saldo "travado" divergindo do histórico.
 
-A consequência prática é que remover uma movimentação devolve a quantidade ao estoque automaticamente, e não existe a possibilidade de um saldo "travado" divergindo do histórico.
+O razão é **append-only**: nenhuma movimentação é apagada. Desfazer algo — devolver uma placa ao estoque, corrigir uma entrada digitada errada — insere um **movimento de estorno** (a contrapartida), vinculado ao registro original.
+
+Na prática, se uma placa foi registrada no paciente e depois removida, o histórico mostra os dois fatos em sequência: a saída da utilização e a entrada da devolução. A saída estornada deixa de contar como placa em uso no paciente, mas continua visível para auditoria — em vez de simplesmente desaparecer, como se nunca tivesse sido registrada. O saldo se corrige sozinho, por ser derivado da soma.
+
+Registros estornados aparecem esmaecidos e marcados; o estorno aponta para o número do movimento que corrigiu. Um estorno não pode ser estornado novamente.
 
 ### 12.3 Rastreabilidade
 Cada movimentação guarda duas datas com papéis distintos:
 - **`data`** — quando a movimentação de fato aconteceu. Editável, aceita lançamento retroativo (uma compra recebida ontem, por exemplo). Na baixa por prova de dentes, assume a data real da prova.
 - **`criado_em`** — quando o registro foi digitado no sistema, junto de `usuario_email`.
 
-O histórico exibe as duas e marca com ⏱️ quando divergem, permitindo reconstruir o saldo movimento a movimento e localizar onde uma divergência começou. Há filtros por produto, tipo e período, além de exportação para planilha.
+O histórico exibe as duas — a data da movimentação e, abaixo, o **momento exato do lançamento com hora, minuto e segundo** — e marca com ⏱️ quando divergem. A hora é o que permite distinguir a ordem de eventos ocorridos no mesmo dia, como uma placa registrada e devolvida na mesma consulta.
+
+Com isso é possível reconstruir o saldo movimento a movimento e localizar onde uma divergência começou. Há filtros por produto, tipo e período, além de exportação para planilha.
 
 ### 12.4 Baixa na Prova de Dentes
 Na etapa de Prova de Dentes é possível registrar quais placas foram usadas no paciente (uma ou várias, com quantidade), dando baixa imediata no estoque. Cada placa registrada pode ser removida, o que estorna a quantidade.

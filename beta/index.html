@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v6.2-beta - exclusão/inativação de cores, tipos de placa e produtos; inativos somem dos seletores -->
+<!-- ProSUS v6.3-beta - estorno de movimentações (razão append-only) e data/hora no histórico -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -485,7 +485,7 @@
       <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v6.2-beta (Supabase)</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v6.3-beta (Supabase)</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -1227,6 +1227,37 @@ function tsParaDataLocal(ts){
   const d=new Date(ts);
   if(isNaN(d)) return '';
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+// timestamptz (UTC) → 'dd/mm/aaaa HH:MM:SS' no fuso local
+function tsParaDataHoraLocal(ts){
+  if(!ts) return '';
+  const d=new Date(ts);
+  if(isNaN(d)) return '';
+  const p=n=>String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/* Estorno: desfazer uma movimentação insere a contrapartida vinculada ao original
+   (append-only), em vez de apagar a linha. O saldo se corrige sozinho, porque é
+   derivado da soma do razão, e o histórico preserva a sequência do que aconteceu. */
+function estornoDe(movId){ return state.estoqueMovimentos.find(m=>m.estorno_de===movId); }
+function foiEstornado(movId){ return !!estornoDe(movId); }
+function ehEstorno(m){ return !!m.estorno_de; }
+async function estornarMovimento(id){
+  const orig=state.estoqueMovimentos.find(m=>m.id===id);
+  if(!orig) throw new Error('Movimentação não encontrada');
+  if(foiEstornado(id)) throw new Error('Esta movimentação já foi estornada');
+  const{error}=await sb.from('estoque_movimentos').insert({
+    produto_id:orig.produto_id,
+    tipo:orig.tipo==='saida'?'entrada':'saida', // contrapartida
+    quantidade:orig.quantidade,
+    data:hojeISO(),          // o estorno acontece hoje, não na data do movimento original
+    codigo:orig.codigo,
+    estorno_de:id,
+    obs:`Estorno da ${orig.tipo==='saida'?'saída':'entrada'} #${id}`,
+    usuario_email:state.user?.email||null
+  });
+  if(error) throw error;
 }
 
 /* ── MIGRAÇÃO DE DADOS (Sheets → Supabase, ferramenta de uso único) ──
@@ -3344,24 +3375,32 @@ function renderHistoricoEstoque(){
   cont.innerHTML=`
     <div style="overflow-x:auto">
       <table id="tbl-estoque-hist">
-        <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Paciente</th><th>Usuário</th><th>Obs</th><th>Lançado em</th>${admin?'<th></th>':''}</tr></thead>
+        <thead><tr><th>Data/Hora</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Paciente</th><th>Usuário</th><th>Obs</th><th>Situação</th>${admin?'<th></th>':''}</tr></thead>
         <tbody>
           ${movs.length?movs.map(m=>{
             const p=produtoById(m.produto_id);
             const entrada=m.tipo==='entrada';
-            // Marca lançamento retroativo: registrado num dia diferente do que diz ter acontecido
-            const lancado=tsParaDataLocal(m.criado_em);
-            const retroativo=lancado&&m.data&&lancado!==m.data;
-            return `<tr>
-              <td>${m.data?fromInput(m.data):'—'}</td>
+            const estorno=ehEstorno(m);
+            const estornado=foiEstornado(m.id);
+            const rev=estornado?estornoDe(m.id):null;
+            // Data da movimentação + hora exata do lançamento, para reconstruir a
+            // sequência (utilização e devolução no mesmo dia só se distinguem pela hora).
+            const dataMov=m.data?fromInput(m.data):'—';
+            const lancado=tsParaDataHoraLocal(m.criado_em);
+            const dataLancada=tsParaDataLocal(m.criado_em);
+            const retroativo=dataLancada&&m.data&&dataLancada!==m.data;
+            return `<tr style="${estornado?'opacity:.55':''}">
+              <td style="white-space:nowrap">${dataMov}
+                <div style="font-size:10px;color:var(--text3)">${lancado||'—'}${retroativo?' ⏱️':''}</div>
+              </td>
               <td>${produtoLabel(p)}</td>
-              <td><span class="badge ${entrada?'badge-green':'badge-yellow'}">${entrada?'↑ Entrada':'↓ Saída'}</span></td>
+              <td><span class="badge ${estorno?'badge-gray':(entrada?'badge-green':'badge-yellow')}">${estorno?'↩️ Estorno':(entrada?'↑ Entrada':'↓ Saída')}</span></td>
               <td><strong>${entrada?'+':'−'}${m.quantidade}</strong></td>
               <td>${m.codigo?`<a href="#" onclick="showDetail('${m.codigo}');return false">#${m.codigo}</a>`:'—'}</td>
               <td style="font-size:11px;color:var(--text3)">${m.usuario_email||'—'}</td>
               <td style="font-size:11px">${m.obs||''}</td>
-              <td style="font-size:11px;color:var(--text3)">${lancado?fromInput(lancado):'—'}${retroativo?' <span title="Lançado em data diferente da movimentação">⏱️</span>':''}</td>
-              ${admin?`<td><button class="btn btn-secondary btn-sm" onclick="removerMovimento(${m.id})" title="Remover movimentação">🗑️</button></td>`:''}
+              <td style="font-size:11px">${estornado?`<span class="badge badge-gray" title="Estornado pelo registro #${rev.id}">estornada</span>`:(estorno?`<span style="color:var(--text3)">de #${m.estorno_de}</span>`:'')}</td>
+              ${admin?`<td>${(estorno||estornado)?'':`<button class="btn btn-secondary btn-sm" onclick="estornarMovimentoUI(${m.id})" title="Estornar (gera movimento contrário)">↩️</button>`}</td>`:''}
             </tr>`;
           }).join(''):`<tr><td colspan="${admin?9:8}" style="text-align:center;color:var(--text3)">Nenhuma movimentação encontrada.</td></tr>`}
         </tbody>
@@ -3387,13 +3426,14 @@ async function submitEntradaEstoque(){
     await loadAll();navigate('estoque');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
-async function removerMovimento(id){
+// Nada é apagado do razão: estornar insere o movimento contrário, preservando o
+// registro original e deixando a correção visível no histórico.
+async function estornarMovimentoUI(id){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  if(!confirm('Remover esta movimentação? O saldo será recalculado.')) return;
+  if(!confirm('Estornar esta movimentação?\n\nO registro original permanece no histórico e um movimento contrário é criado para corrigir o saldo.')) return;
   try{
-    const{error}=await sb.from('estoque_movimentos').delete().eq('id',id);
-    if(error) throw error;
-    toast('Movimentação removida!','success');
+    await estornarMovimento(id);
+    toast('Estorno registrado!','success');
     await loadAll();
     if(document.querySelector('#page-estoque.active')) renderEstoque();
   }catch(e){toast('Erro: '+e.message,'error');}
@@ -3404,7 +3444,9 @@ function renderPlacasPaciente(cod){
   const cont=document.getElementById('pd-placas-lista');
   if(!cont) return;
   const admin=isAdmin();
-  const usadas=state.estoqueMovimentos.filter(m=>m.tipo==='saida'&&m.codigo===String(cod));
+  // Só as que continuam valendo: uma saída estornada deixa de contar como placa em uso,
+  // mas as duas linhas seguem visíveis no histórico de movimentações.
+  const usadas=state.estoqueMovimentos.filter(m=>m.tipo==='saida'&&m.codigo===String(cod)&&!foiEstornado(m.id));
   cont.innerHTML=usadas.length?usadas.map(m=>{
     const p=produtoById(m.produto_id);
     return `<div class="list-item" style="cursor:default">
@@ -3412,7 +3454,7 @@ function renderPlacasPaciente(cod){
         <div class="name">${produtoLabel(p)}</div>
         <div class="code" style="font-size:11px;color:var(--text3)">${m.quantidade} un. · ${m.data?fromInput(m.data):''}</div>
       </div>
-      ${admin?`<button class="btn btn-secondary btn-sm" onclick="removerPlacaPaciente(${m.id},'${cod}')" title="Remover e devolver ao estoque">🗑️</button>`:''}
+      ${admin?`<button class="btn btn-secondary btn-sm" onclick="removerPlacaPaciente(${m.id},'${cod}')" title="Devolver ao estoque (gera registro de estorno)">↩️</button>`:''}
     </div>`;
   }).join(''):'<div style="font-size:12px;color:var(--text3);padding:4px 0">Nenhuma placa registrada.</div>';
 }
@@ -3439,11 +3481,10 @@ async function adicionarPlacaPaciente(cod){
 }
 async function removerPlacaPaciente(id,cod){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  if(!confirm('Remover esta placa? A quantidade volta para o estoque.')) return;
+  if(!confirm('Devolver esta placa ao estoque?\n\nA saída original permanece no histórico e um registro de entrada (estorno) é criado, mantendo a sequência do que aconteceu.')) return;
   try{
-    const{error}=await sb.from('estoque_movimentos').delete().eq('id',id);
-    if(error) throw error;
-    toast('Placa removida — quantidade devolvida ao estoque.','success');
+    await estornarMovimento(id);
+    toast('Placa devolvida ao estoque — estorno registrado no histórico.','success');
     await loadAll();showDetail(cod);switchDetailTab('etapas');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
