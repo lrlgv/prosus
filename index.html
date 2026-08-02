@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v7.0 - primeira versão de produção sobre Supabase (substitui a versão baseada em planilha) -->
+<!-- ProSUS v7.1 - backup completo dos dados em JSON (Configurações, só admin) -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -485,7 +485,7 @@
       <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.0</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.1</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -673,6 +673,16 @@
     </div>
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-admin"> É admin (pode editar/excluir)</label>
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-estoque"> Avisar quando o estoque atingir o mínimo</label>
+
+    <div id="cfg-backup-section" class="section-divider rb" style="margin-top:20px">💾 Backup dos dados</div>
+    <div id="cfg-backup-body" style="display:none">
+      <small>Baixa um arquivo com <strong>todos</strong> os dados do sistema. Guarde-o em local seguro: o plano gratuito do Supabase não faz backup automático, então este arquivo é a única forma de recuperar tudo caso o banco se perca.</small>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="baixarBackup()">💾 Baixar backup</button>
+        <span id="backup-status" style="font-size:12px;color:var(--text3)"></span>
+      </div>
+      <small style="display:block;margin-top:8px">Formato JSON — preserva os dados exatamente como estão no banco. Não abra nem salve pelo Excel: ele reinterpreta datas e códigos como "7457/1", corrompendo o backup.</small>
+    </div>
 
     <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Fechar</button><button id="cfg-save-btn" class="btn btn-primary" onclick="addAllowedUser()">➕ Adicionar</button></div>
   </div>
@@ -893,6 +903,9 @@ async function openConfig(){
   document.getElementById('cfg-save-btn').style.display=admin?'':'none';
   document.getElementById('cfg-add-row').style.display=admin?'':'none';
   document.getElementById('cfg-readonly-warn').style.display=admin?'none':'block';
+  document.getElementById('cfg-backup-section').style.display=admin?'':'none';
+  document.getElementById('cfg-backup-body').style.display=admin?'':'none';
+  document.getElementById('backup-status').textContent='';
   document.getElementById('config-modal').classList.add('open');
   await renderAllowedUsers();
 }
@@ -1121,6 +1134,44 @@ async function sbSelectAll(table,orderBy){
   }
   return allRows;
 }
+/* ── BACKUP ──
+   O plano gratuito do Supabase não faz backup automático e a cópia na planilha foi
+   desligada no cutover (v7.0), então este arquivo é a única forma de recuperar os
+   dados. JSON de propósito: preserva os valores exatamente como estão no banco.
+   Planilha seria arriscada — o Excel/Sheets reinterpreta datas e códigos com barra
+   (foi assim que "7457/1" virou uma data e custou um bug nesta migração). */
+const BACKUP_TABLES=[
+  'moldagens','base_prova_armacao','prova_dentes','entregas','reembase','remarcacao',
+  'proteticos','dentistas','tipos_peca','contratos','allowed_users',
+  'cores','tipos_placa','produtos','estoque_movimentos'
+];
+async function baixarBackup(){
+  if(!isAdmin()){toast('Sem permissão','error');return;}
+  const st=document.getElementById('backup-status');
+  const msg=t=>{ if(st) st.textContent=t; };
+  try{
+    const dump={_meta:{app:'ProSUS v7.1',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
+    for(const t of BACKUP_TABLES){
+      msg(`Lendo ${t}...`);
+      const linhas=await sbSelectAll(t);
+      dump[t]=linhas;
+      dump._meta.tabelas[t]=linhas.length;
+    }
+    const total=Object.values(dump._meta.tabelas).reduce((a,b)=>a+b,0);
+    const blob=new Blob([JSON.stringify(dump,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`prosus-backup-${hojeISO()}.json`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    msg(`✅ ${total} registros salvos.`);
+    toast('Backup baixado!','success');
+  }catch(e){
+    msg('❌ Falhou: '+e.message);
+    toast('Erro no backup: '+e.message,'error');
+  }
+}
+
 async function fetchSheet(range){
   const sheetName=range.split('!')[0];
   const map=SHEET_MAP[sheetName];

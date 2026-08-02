@@ -39,7 +39,9 @@ SUPABASE_ANON_KEY = '...'   // chave anon/public — segura no navegador porque 
 DUAL_WRITE_SHEETS = false   // desligado no cutover v7.0; a planilha não recebe mais nada
 ```
 
-⚠️ **Não existe mais backup automático dos dados.** O plano gratuito do Supabase não faz backup, e a cópia para a planilha foi desligada no cutover. Se for mexer em algo que apague dados em massa, exporte antes.
+⚠️ **Não existe backup automático.** O plano gratuito do Supabase não faz backup e a cópia para a planilha foi desligada no cutover. O backup é **manual**: Configurações → 💾 Baixar backup (`baixarBackup()`, só admin) gera um JSON com todas as tabelas de `BACKUP_TABLES`. Antes de qualquer operação que apague dados em massa, rode isso.
+
+O backup é JSON e não planilha de propósito: Excel/Sheets reinterpreta datas e códigos com barra ao abrir e salvar — foi assim que `7457/1` virou data e custou um bug nesta migração. Ao criar uma tabela nova, **acrescente-a em `BACKUP_TABLES`**, senão ela fica fora do backup silenciosamente.
 
 ⚠️ **A ferramenta "Migrar dados" foi removida na v7.0** (está no histórico do Git). Com a planilha congelada, rodá-la sobrescreveria dados novos do banco com dados velhos da planilha.
 
@@ -310,7 +312,9 @@ Se `python3`/`node` não estiverem disponíveis na máquina, validar ao menos o 
 - ✅ Gravação dupla desligada — a planilha ficou congelada no estado do cutover
 - ✅ Ferramenta de migração removida (rodá-la agora sobrescreveria dados novos com os velhos da planilha)
 
-### Pendência conhecida
-**Não há backup dos dados.** O plano gratuito do Supabase não faz backup automático e a cópia para a planilha foi desligada. Vale montar algum export periódico.
+### Backup (v7.1)
+Manual, pela própria interface: **Configurações → 💾 Baixar backup**. Gera `prosus-backup-AAAA-MM-DD.json` com todas as tabelas, mais um bloco `_meta` com data, autor e a contagem de linhas de cada tabela — que serve para conferir a integridade do arquivo depois.
+
+Como depende de alguém clicar, convém combinar uma periodicidade com o usuário. Para restaurar, os dados de cada tabela estão em `dump["nome_da_tabela"]` como array de objetos, prontos para reinserir na ordem das FKs (`moldagens` primeiro).
 
 A badge "Planilha" no topo some sozinha com `DUAL_WRITE_SHEETS=false`; só a badge "Banco" aparece.

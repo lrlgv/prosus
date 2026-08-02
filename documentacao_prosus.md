@@ -248,7 +248,8 @@ A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo r
 
 | Versão | Mudanças |
 | :--- | :--- |
-| **v7.0** | **Cutover para produção.** A aplicação sobre Supabase substitui a versão baseada em planilha, que passa a `legacy/` como plano de retorno. Gravação dupla desligada (a planilha fica congelada) e ferramenta de migração removida. |
+| **v7.1** | Backup completo dos dados em JSON, pela tela de Configurações (só admin), cobrindo a ausência de backup automático no plano gratuito do Supabase. |
+| v7.0 | **Cutover para produção.** A aplicação sobre Supabase substitui a versão baseada em planilha, que passa a `legacy/` como plano de retorno. Gravação dupla desligada (a planilha fica congelada) e ferramenta de migração removida. |
 | v6.3-beta | Livro-razão append-only: desfazer uma movimentação passa a gerar estorno em vez de apagar o registro, preservando a sequência (utilização → devolução) no histórico. Histórico passa a exibir a hora exata do lançamento. |
 | v6.2-beta | Exclusão de cores, tipos de placa e produtos, com inativação automática quando o registro está em uso. Inativos somem dos seletores mas preservam os dados que dependem deles. |
 | v6.1-beta | Controle de estoque de placas: cadastros de cores, tipos de placa e produtos; entrada e consulta de estoque; histórico auditável de movimentações; baixa automática na Prova de Dentes; banner de estoque mínimo. |
@@ -298,7 +299,14 @@ A migração dos dados históricos foi feita por uma ferramenta na própria inte
 
 **No cutover da v7.0 essa fase foi encerrada:** a gravação dupla foi desligada (a planilha ficou congelada no estado daquele momento) e a ferramenta de migração foi removida do sistema — com a planilha parada, executá-la sobrescreveria dados novos do banco com dados velhos. Ambas seguem recuperáveis pelo histórico do Git, se algum dia for necessário.
 
-> ⚠️ **Consequência a acompanhar:** sem a cópia na planilha, e como o plano gratuito do Supabase não faz backup automático, o sistema passou a operar sem backup. Convém estabelecer uma rotina de exportação.
+### 11.6 Backup dos dados
+Como o plano gratuito do Supabase não faz backup automático e a cópia na planilha foi desligada no cutover, a v7.1 acrescentou um backup manual: **Configurações → 💾 Baixar backup**, disponível apenas para administradores.
+
+O botão baixa um arquivo `prosus-backup-AAAA-MM-DD.json` contendo **todas** as tabelas do sistema — pacientes, etapas, cadastros, usuários e estoque — além de um bloco de metadados com a data, quem gerou e quantas linhas cada tabela tinha, o que permite conferir depois se o arquivo está íntegro.
+
+O formato é JSON, e não planilha, por um motivo concreto: o Excel e o Google Sheets reinterpretam datas e códigos com barra ao abrir e salvar. Foi exatamente assim que o código de tratamento `7457/1` acabou convertido numa data durante a migração. Um backup precisa devolver os dados idênticos ao que estava no banco, e a planilha não garante isso.
+
+> ⚠️ Por depender de alguém clicar no botão, vale combinar uma frequência de execução e guardar os arquivos fora do computador de trabalho.
 
 ---
 
