@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v6.0-beta - migração para Supabase (Postgres/Auth/RLS), gravação dupla temporária no Sheets -->
+<!-- ProSUS v6.1-beta - controle de estoque de placas (cores, tipos, produtos, entradas/saídas e baixa na prova de dentes) -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -474,14 +474,18 @@
       <button class="nav-btn" data-page="fechamento" onclick="navigate('fechamento')"><span class="nav-icon">📅</span> Fechamento</button>
       <button class="nav-btn" data-page="fechamento-armacao" onclick="navigate('fechamento-armacao')"><span class="nav-icon">🔩</span> Fecham. Armação</button>
       <button class="nav-btn" data-page="contratos" onclick="navigate('contratos')"><span class="nav-icon">📃</span> Contratos</button>
+      <button class="nav-btn" data-page="estoque" onclick="navigate('estoque')"><span class="nav-icon">📦</span> Estoque</button>
       <div class="nav-section">Cadastros</div>
       <button class="nav-btn" data-page="cadastro" onclick="navigate('cadastro')"><span class="nav-icon">➕</span> Nova Moldagem</button>
       <button class="nav-btn" data-page="dentistas" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
       <button class="nav-btn" data-page="proteticos" onclick="navigate('proteticos')"><span class="nav-icon">🧑‍🔧</span> Protéticos</button>
       <button class="nav-btn" data-page="tipopeca" onclick="navigate('tipopeca')"><span class="nav-icon">🦷</span> Tipos de Peça</button>
+      <button class="nav-btn" data-page="produtos" onclick="navigate('produtos')"><span class="nav-icon">📦</span> Produtos (Placas)</button>
+      <button class="nav-btn" data-page="tiposplaca" onclick="navigate('tiposplaca')"><span class="nav-icon">🧩</span> Tipos de Placa</button>
+      <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v6.0-beta (Supabase)</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v6.1-beta (Supabase)</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
@@ -521,6 +525,10 @@
       <div class="mob-more-item" onclick="closeMobMore();navigate('dentistas')"><span class="icon">👨‍⚕️</span><span>Dentistas</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('proteticos')"><span class="icon">🧑‍🔧</span><span>Protéticos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tipopeca')"><span class="icon">🦷</span><span>Tipos de Peça</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('estoque')"><span class="icon">📦</span><span>Estoque</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('produtos')"><span class="icon">📦</span><span>Produtos</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('tiposplaca')"><span class="icon">🧩</span><span>Tipos de Placa</span></div>
+      <div class="mob-more-item" onclick="closeMobMore();navigate('cores')"><span class="icon">🎨</span><span>Cores</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('validacao')"><span class="icon">✅</span><span>Validação</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('resumo')"><span class="icon">📋</span><span>Resumo do Dia</span></div>
       <div class="mob-more-item" onclick="closeMobMore();recarregarDados()"><span class="icon">🔄</span><span>Atualizar</span></div>
@@ -549,6 +557,7 @@
       <div id="connection-status"></div>
       <div id="user-status"></div>
     </div>
+    <div id="estoque-banner"></div>
     <div class="page-content">
 
       <div class="page active" id="page-dashboard">
@@ -622,6 +631,22 @@
         <div id="tipopeca-content"></div>
       </div>
 
+      <div class="page" id="page-cores">
+        <div id="cores-content"></div>
+      </div>
+
+      <div class="page" id="page-tiposplaca">
+        <div id="tiposplaca-content"></div>
+      </div>
+
+      <div class="page" id="page-produtos">
+        <div id="produtos-content"></div>
+      </div>
+
+      <div class="page" id="page-estoque">
+        <div id="estoque-content"></div>
+      </div>
+
       <div class="page" id="page-validacao">
         <div id="validacao-content"><div class="not-connected"><div class="icon">🔍</div><p>Carregando...</p></div></div>
       </div>
@@ -640,13 +665,14 @@
     <div class="modal-header"><h3>⚙️ Configurações</h3><button class="modal-close" onclick="closeConfig()">✕</button></div>
     <div class="section-divider ent">🔒 Usuários com acesso</div>
     <div id="cfg-readonly-warn" style="display:none" class="alert alert-warn">🔒 Modo leitura — sem permissão de edição.</div>
-    <small>Só quem está nesta lista consegue logar e ver os dados. "Admin" também pode editar/excluir.</small>
+    <small>Só quem está nesta lista consegue logar e ver os dados. "Admin" também pode editar/excluir. "Estoque" recebe o aviso quando um produto atinge o estoque mínimo.</small>
     <div id="cfg-users-list" style="margin-top:10px"></div>
     <div id="cfg-add-row" class="form-row" style="margin-top:14px">
       <div class="form-group"><label>E-mail</label><input type="text" id="cfg-new-email" placeholder="pessoa@gmail.com"></div>
       <div class="form-group"><label>Nome</label><input type="text" id="cfg-new-nome" placeholder="Opcional"></div>
     </div>
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-admin"> É admin (pode editar/excluir)</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px"><input type="checkbox" id="cfg-new-estoque"> Avisar quando o estoque atingir o mínimo</label>
 
     <div id="cfg-migracao-section" class="section-divider rb" style="margin-top:20px">🚀 Migração de dados (Sheets → Supabase)</div>
     <div id="cfg-migracao-body" style="display:none">
@@ -713,6 +739,7 @@ const state={
   sheetsStatus:'checking', // idem, pra gravação dupla no Sheets (só usado enquanto DUAL_WRITE_SHEETS=true)
   moldagens:[],baseProva:[],basePrevista:[],provaDentes:[],entregas:[],remarcacoes:[],reembase:[],
   proteticos:[],dentistas:[],tiposPeca:[],contratos:[],
+  cores:[],tiposPlaca:[],produtos:[],estoqueMovimentos:[], // controle de estoque de placas (nativo do banco)
   filtered:[],currentPage:1,perPage:15,
   distVisible:true,currentDetailCod:null,
   lastSavedCodigo:null,
@@ -731,7 +758,11 @@ const pageMeta={
   proteticos:['Protéticos','Gerencie os protéticos (acesso restrito)'],
   tipopeca:['Tipos de Peça','Gerencie os tipos de peça (BaseDados)'],
   validacao:['Validação de Dados','Cheque integridade dos registros nas planilhas'],
-  resumo:['Resumo do Dia','Movimentações registradas hoje']
+  resumo:['Resumo do Dia','Movimentações registradas hoje'],
+  estoque:['Estoque de Placas','Entradas, saldo atual e histórico de movimentações'],
+  produtos:['Produtos','Placas cadastradas (tipo + cor) e estoque mínimo'],
+  cores:['Cores','Gerencie as cores das placas'],
+  tiposplaca:['Tipos de Placa','Gerencie os tipos de placa']
 };
 
 window.onload=async ()=>{
@@ -816,7 +847,7 @@ async function afterSupabaseLogin(supaUser){
     }
 
     state.user=u;
-    state.allowedUser={email,isAdmin:!!allowedRow.is_admin,nome:allowedRow.nome||u.name};
+    state.allowedUser={email,isAdmin:!!allowedRow.is_admin,notificarEstoque:!!allowedRow.notificar_estoque,nome:allowedRow.nome||u.name};
     localStorage.setItem('prosus_user_email',email);
     localStorage.setItem('prosus_user_name',u.name);
 
@@ -893,6 +924,9 @@ async function renderAllowedUsers(){
       <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap">
         <input type="checkbox" ${u.is_admin?'checked':''} ${admin?'':'disabled'} onchange="toggleAllowedAdmin('${u.email}',this.checked)"> Admin
       </label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap" title="Recebe aviso de estoque mínimo">
+        <input type="checkbox" ${u.notificar_estoque?'checked':''} ${admin?'':'disabled'} onchange="toggleNotificarEstoque('${u.email}',this.checked)"> Estoque
+      </label>
       ${admin?`<button class="btn btn-secondary btn-sm" onclick="removeAllowedUser('${u.email}')">🗑️</button>`:''}
     </div>`).join(''):'<div class="empty-state"><p>Nenhum usuário cadastrado.</p></div>';
 }
@@ -901,14 +935,16 @@ async function addAllowedUser(){
   const email=document.getElementById('cfg-new-email').value.trim().toLowerCase();
   const nome=document.getElementById('cfg-new-nome').value.trim();
   const admin=document.getElementById('cfg-new-admin').checked;
+  const notificarEstoque=document.getElementById('cfg-new-estoque').checked;
   if(!email){toast('Informe o e-mail','error');return;}
   try{
     toast('Salvando...','info');
-    const{error}=await sb.from('allowed_users').insert({email,nome,is_admin:admin});
+    const{error}=await sb.from('allowed_users').insert({email,nome,is_admin:admin,notificar_estoque:notificarEstoque});
     if(error) throw error;
     document.getElementById('cfg-new-email').value='';
     document.getElementById('cfg-new-nome').value='';
     document.getElementById('cfg-new-admin').checked=false;
+    document.getElementById('cfg-new-estoque').checked=false;
     toast('Usuário adicionado!','success');
     await renderAllowedUsers();
   }catch(e){toast('Erro: '+e.message,'error');}
@@ -919,6 +955,16 @@ async function toggleAllowedAdmin(email,novoIsAdmin){
     const{error}=await sb.from('allowed_users').update({is_admin:novoIsAdmin}).eq('email',email);
     if(error) throw error;
     if(email===state.allowedUser?.email) state.allowedUser.isAdmin=novoIsAdmin;
+    toast('Atualizado!','success');
+  }catch(e){toast('Erro: '+e.message,'error');await renderAllowedUsers();}
+}
+async function toggleNotificarEstoque(email,novoValor){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  try{
+    const{error}=await sb.from('allowed_users').update({notificar_estoque:novoValor}).eq('email',email);
+    if(error) throw error;
+    // Se for o próprio usuário logado, o banner reflete a mudança na hora
+    if(email===state.allowedUser?.email){state.allowedUser.notificarEstoque=novoValor;renderEstoqueBanner();}
     toast('Atualizado!','success');
   }catch(e){toast('Erro: '+e.message,'error');await renderAllowedUsers();}
 }
@@ -994,7 +1040,7 @@ function navigate(page){
     const btn=document.getElementById('mob-btn-'+p);
     if(btn) btn.classList.toggle('active',p===page);
   });
-  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao','resumo'];
+  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao','resumo','estoque','produtos','tiposplaca','cores'];
   const mobMore=document.getElementById('mob-btn-more');
   if(mobMore) mobMore.classList.toggle('active',morePages.includes(page));
   document.getElementById('page-'+page).classList.add('active');
@@ -1013,6 +1059,10 @@ function navigate(page){
   if(page==='contratos'&&state.connected) renderContratos();
   if(page==='validacao'&&state.connected) renderValidacao();
   if(page==='resumo'&&state.connected) renderResumo();
+  if(page==='cores'&&state.connected) renderCores();
+  if(page==='tiposplaca'&&state.connected) renderTiposPlaca();
+  if(page==='produtos'&&state.connected) renderProdutos();
+  if(page==='estoque'&&state.connected) renderEstoque();
   // Scroll to top on mobile
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1067,18 +1117,15 @@ function objToRow(map,obj){
     return v??'';
   });
 }
-async function fetchSheet(range){
-  const sheetName=range.split('!')[0];
-  const map=SHEET_MAP[sheetName];
-  if(!map) return [];
-  // O Supabase/PostgREST devolve no máximo ~1000 linhas por consulta — sem paginar,
-  // tabelas maiores (moldagens, entregas, etc.) ficavam cortadas silenciosamente,
-  // sem erro nenhum, causando contagens menores que o real.
+// Lê uma tabela inteira do Supabase, paginando. O PostgREST devolve no máximo
+// ~1000 linhas por consulta — sem paginar, tabelas maiores (moldagens, entregas,
+// estoque_movimentos...) ficam cortadas silenciosamente, sem erro nenhum.
+async function sbSelectAll(table,orderBy){
   const pageSize=1000;
   let allRows=[],from=0;
   while(true){
-    let query=sb.from(map.table).select('*').range(from,from+pageSize-1);
-    if(map.pk) query=query.order(map.pk,{ascending:true});
+    let query=sb.from(table).select('*').range(from,from+pageSize-1);
+    if(orderBy) query=query.order(orderBy,{ascending:true});
     const{data,error}=await query;
     if(error) throw new Error(error.message);
     if(!data||!data.length) break;
@@ -1086,7 +1133,14 @@ async function fetchSheet(range){
     if(data.length<pageSize) break;
     from+=pageSize;
   }
-  return allRows.map(row=>objToRow(map,row));
+  return allRows;
+}
+async function fetchSheet(range){
+  const sheetName=range.split('!')[0];
+  const map=SHEET_MAP[sheetName];
+  if(!map) return [];
+  const rows=await sbSelectAll(map.table,map.pk);
+  return rows.map(row=>objToRow(map,row));
 }
 async function postSheet(sheet,row){
   const map=SHEET_MAP[sheet];
@@ -1125,6 +1179,38 @@ function dualWriteSheets(sheet,row,keyVal){
     .then(r=>r.json())
     .then(res=>{ state.sheetsStatus=res.success?'ok':'error'; updateStatus(); })
     .catch(e=>{ console.warn('[dual-write] falhou em '+sheet+':',e); state.sheetsStatus='error'; updateStatus(); });
+}
+
+/* ── ESTOQUE DE PLACAS (helpers) ──
+   O saldo nunca é armazenado: é sempre derivado do livro-razão (estoque_movimentos),
+   somando entradas e subtraindo saídas. Assim não existe saldo dessincronizado, e
+   remover um movimento devolve a quantidade ao estoque naturalmente. */
+function estoqueAtual(produtoId){
+  return state.estoqueMovimentos
+    .filter(m=>m.produto_id===produtoId)
+    .reduce((acc,m)=>acc+(m.tipo==='entrada'?m.quantidade:-m.quantidade),0);
+}
+function produtoLabel(p){
+  if(!p) return '—';
+  return `${p.tipo_placa} — ${p.cor}`;
+}
+function produtoById(id){ return state.produtos.find(p=>p.id===id); }
+function produtosAbaixoMinimo(){
+  return state.produtos.filter(p=>p.ativo!==false&&estoqueAtual(p.id)<=p.estoque_minimo);
+}
+// Data de hoje em aaaa-mm-dd — sem toISOString(), que causaria erro de fuso (ver CLAUDE.md)
+function hojeISO(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+// Converte um timestamptz do Postgres (UTC) para a data local em aaaa-mm-dd.
+// Fatiar os 10 primeiros caracteres da string mostraria o dia errado para registros
+// feitos à noite no Brasil (UTC-3), já que a string vem em UTC.
+function tsParaDataLocal(ts){
+  if(!ts) return '';
+  const d=new Date(ts);
+  if(isNaN(d)) return '';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
 /* ── MIGRAÇÃO DE DADOS (Sheets → Supabase, ferramenta de uso único) ──
@@ -1295,6 +1381,12 @@ async function loadAll(){
     let contratoRows=[];
     try{contratoRows=await fetchSheet('Contratos!A2:D100');}catch(e){}
 
+    // Estoque de placas — tabelas nativas do banco (não existem no Sheets), lidas direto.
+    try{state.cores=(await sbSelectAll('cores','nome')).map(r=>r.nome);}catch(e){}
+    try{state.tiposPlaca=(await sbSelectAll('tipos_placa','nome')).map(r=>r.nome);}catch(e){}
+    try{state.produtos=await sbSelectAll('produtos','id');}catch(e){}
+    try{state.estoqueMovimentos=await sbSelectAll('estoque_movimentos','id');}catch(e){}
+
     // NOTA (migração Supabase): admin_emails/Configuracao foi substituído por allowed_users,
     // checado no login (ver afterSupabaseLogin/checkAllowedUser) — não faz mais parte do loadAll.
 
@@ -1331,8 +1423,13 @@ async function loadAll(){
     renderDashboard();renderTable();renderPipeline();renderCadastroForm();
     renderFechamento();renderFechamentoArmacao();
     refreshDetailIfOpen();
+    renderEstoqueBanner();
     if(document.querySelector('#page-resumo.active')) renderResumo();
     if(document.querySelector('#page-contratos.active')) renderContratos();
+    if(document.querySelector('#page-cores.active')) renderCores();
+    if(document.querySelector('#page-tiposplaca.active')) renderTiposPlaca();
+    if(document.querySelector('#page-produtos.active')) renderProdutos();
+    if(document.querySelector('#page-estoque.active')) renderEstoque();
   }catch(e){
     state.connected=false;state.dbStatus='error';updateStatus();
     toast('Erro: '+e.message,'error');
@@ -1812,6 +1909,22 @@ function renderDetailEtapas(cod){
       </div>
       <div class="form-group"><label>Observação</label><input type="text" id="et-pd-obs" value="${pd.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','pd')">💾 Salvar Prova de Dentes</button>`:''}
+
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <label style="display:block;margin-bottom:6px">🧩 Placas utilizadas</label>
+        <div id="pd-placas-lista"></div>
+        ${admin?(state.produtos.length?`
+        <div style="display:flex;gap:6px;align-items:flex-end;margin-top:8px;flex-wrap:wrap">
+          <div class="form-group" style="flex:2;min-width:150px;margin:0"><label style="font-size:11px">Placa</label>
+            <select id="pd-placa-produto">
+              <option value="">— Selecione —</option>
+              ${state.produtos.map(p=>`<option value="${p.id}">${produtoLabel(p)} (${estoqueAtual(p.id)} em estoque)</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="flex:0 0 80px;margin:0"><label style="font-size:11px">Qtd</label><input type="number" id="pd-placa-qtd" min="1" value="1"></div>
+          <button class="btn btn-secondary btn-sm" onclick="adicionarPlacaPaciente('${cod}')">➕ Adicionar</button>
+        </div>`:`<div class="alert alert-warn" style="margin-top:8px">⚠️ Nenhum produto cadastrado. <a href="#" onclick="closeDetail();navigate('produtos');return false" style="color:inherit;text-decoration:underline">Cadastrar produtos</a></div>`):''}
+      </div>
     </div>
 
     <div class="etapa-block ent">
@@ -1853,7 +1966,8 @@ function renderDetailEtapas(cod){
         <div class="form-group"><label>Observação</label><input type="text" id="et-rb-obs" value="${rb.obs||''}" placeholder="Obs. opcional" ${ro}></div>
       </div>
       ${admin?`<button class="btn btn-primary btn-sm" onclick="submitEtapaUnica('${cod}','rb')">💾 Salvar Reembase</button>`:''}
-    </div>`;}
+    </div>`;
+  renderPlacasPaciente(cod);}
 
 async function submitEtapaUnica(cod,tipo){
   try{
@@ -2803,6 +2917,441 @@ async function submitNovoTipo(){
     }
     renderTipoPeca();renderCadastroForm();
   }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ════════════ ESTOQUE DE PLACAS ════════════
+   Cadastros (cores, tipos de placa, produtos), entrada/consulta de estoque e
+   histórico de movimentações. Tabelas nativas do banco — não passam por
+   SHEET_MAP/dualWriteSheets, já que não existem no Sheets. */
+
+/* ── CORES ── */
+let editingCor=null;
+function renderCores(focusForm=false){
+  const admin=isAdmin();
+  const list=state.cores;
+  document.getElementById('cores-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${admin?`<div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="cor-form-title">➕ Nova Cor</h3>
+          <div class="form-group"><label>Cor</label><input type="text" id="nc-nome" placeholder="Ex: A2, A3, A3,5, A4"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="submitCor()">💾 Salvar</button>
+            <button class="btn btn-secondary" id="cor-cancel-btn" onclick="cancelEditCor()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>`:''}
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>🎨 Cores cadastradas</h3><span style="font-size:12px;color:var(--text2)">${list.length} cores</span></div>
+          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
+          <div style="padding:12px">
+            ${list.length?list.map((c,i)=>`<div class="list-item" ${admin?`onclick="editCor(${i})"`:''}><div class="list-item-info"><div class="name">${c}</div></div>${admin?'<span style="font-size:11px;color:var(--text3)">✏️ editar</span>':''}</div>`).join(''):'<div class="empty-state"><p>Nenhuma cor cadastrada.</p></div>'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  editingCor=null;
+  if(admin&&focusForm) setTimeout(()=>document.getElementById('nc-nome')?.focus(),100);
+}
+function editCor(idx){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  editingCor=idx;
+  document.getElementById('nc-nome').value=state.cores[idx];
+  document.getElementById('cor-form-title').textContent='✏️ Editar Cor';
+  document.getElementById('cor-cancel-btn').style.display='inline-flex';
+  document.getElementById('nc-nome').focus();
+}
+function cancelEditCor(){
+  editingCor=null;
+  document.getElementById('nc-nome').value='';
+  document.getElementById('cor-form-title').textContent='➕ Nova Cor';
+  document.getElementById('cor-cancel-btn').style.display='none';
+}
+async function submitCor(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const nome=document.getElementById('nc-nome').value.trim();
+  if(!nome){toast('Informe a cor','error');return;}
+  try{
+    if(editingCor!==null){
+      const old=state.cores[editingCor];
+      if(old===nome){cancelEditCor();return;}
+      toast('Atualizando...','info');
+      // ON UPDATE CASCADE no banco propaga o novo nome pros produtos que usam esta cor
+      const{error}=await sb.from('cores').update({nome}).eq('nome',old);
+      if(error) throw error;
+      toast(`Atualizado para ${nome}!`,'success');
+    }else{
+      if(state.cores.find(c=>c.toLowerCase()===nome.toLowerCase())){toast('Cor já cadastrada','error');return;}
+      toast('Salvando...','info');
+      const{error}=await sb.from('cores').insert({nome});
+      if(error) throw error;
+      toast(`${nome} cadastrada!`,'success');
+    }
+    await loadAll();navigate('cores');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ── TIPOS DE PLACA ── */
+let editingTipoPlaca=null;
+function renderTiposPlaca(focusForm=false){
+  const admin=isAdmin();
+  const list=state.tiposPlaca;
+  document.getElementById('tiposplaca-content').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${admin?`<div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="tpl-form-title">➕ Novo Tipo de Placa</h3>
+          <div class="form-group"><label>Tipo</label><input type="text" id="ntpl-nome" placeholder="Ex: Cristal, Térmica, Rígida"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="submitTipoPlaca()">💾 Salvar</button>
+            <button class="btn btn-secondary" id="tpl-cancel-btn" onclick="cancelEditTipoPlaca()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>`:''}
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>🧩 Tipos de placa cadastrados</h3><span style="font-size:12px;color:var(--text2)">${list.length} tipos</span></div>
+          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
+          <div style="padding:12px">
+            ${list.length?list.map((t,i)=>`<div class="list-item" ${admin?`onclick="editTipoPlaca(${i})"`:''}><div class="list-item-info"><div class="name">${t}</div></div>${admin?'<span style="font-size:11px;color:var(--text3)">✏️ editar</span>':''}</div>`).join(''):'<div class="empty-state"><p>Nenhum tipo cadastrado.</p></div>'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  editingTipoPlaca=null;
+  if(admin&&focusForm) setTimeout(()=>document.getElementById('ntpl-nome')?.focus(),100);
+}
+function editTipoPlaca(idx){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  editingTipoPlaca=idx;
+  document.getElementById('ntpl-nome').value=state.tiposPlaca[idx];
+  document.getElementById('tpl-form-title').textContent='✏️ Editar Tipo de Placa';
+  document.getElementById('tpl-cancel-btn').style.display='inline-flex';
+  document.getElementById('ntpl-nome').focus();
+}
+function cancelEditTipoPlaca(){
+  editingTipoPlaca=null;
+  document.getElementById('ntpl-nome').value='';
+  document.getElementById('tpl-form-title').textContent='➕ Novo Tipo de Placa';
+  document.getElementById('tpl-cancel-btn').style.display='none';
+}
+async function submitTipoPlaca(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const nome=document.getElementById('ntpl-nome').value.trim();
+  if(!nome){toast('Informe o tipo','error');return;}
+  try{
+    if(editingTipoPlaca!==null){
+      const old=state.tiposPlaca[editingTipoPlaca];
+      if(old===nome){cancelEditTipoPlaca();return;}
+      toast('Atualizando...','info');
+      const{error}=await sb.from('tipos_placa').update({nome}).eq('nome',old);
+      if(error) throw error;
+      toast(`Atualizado para ${nome}!`,'success');
+    }else{
+      if(state.tiposPlaca.find(t=>t.toLowerCase()===nome.toLowerCase())){toast('Tipo já cadastrado','error');return;}
+      toast('Salvando...','info');
+      const{error}=await sb.from('tipos_placa').insert({nome});
+      if(error) throw error;
+      toast(`${nome} cadastrado!`,'success');
+    }
+    await loadAll();navigate('tiposplaca');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ── PRODUTOS (placa = tipo + cor) ── */
+let editingProduto=null;
+function renderProdutos(){
+  const admin=isAdmin();
+  const faltaCadastro=!state.cores.length||!state.tiposPlaca.length;
+  document.getElementById('produtos-content').innerHTML=`
+    ${faltaCadastro?`<div class="alert alert-warn">⚠️ Cadastre ao menos uma <a href="#" onclick="navigate('cores');return false" style="color:inherit;text-decoration:underline">cor</a> e um <a href="#" onclick="navigate('tiposplaca');return false" style="color:inherit;text-decoration:underline">tipo de placa</a> antes de criar produtos.</div>`:''}
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${admin?`<div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3 id="prod-form-title">➕ Novo Produto</h3>
+          <div class="form-group"><label>Tipo de Placa</label><select id="np-tipo" ${faltaCadastro?'disabled':''}>
+            <option value="">— Selecione —</option>
+            ${state.tiposPlaca.map(t=>`<option>${t}</option>`).join('')}
+          </select></div>
+          <div class="form-group"><label>Cor</label><select id="np-cor" ${faltaCadastro?'disabled':''}>
+            <option value="">— Selecione —</option>
+            ${state.cores.map(c=>`<option>${c}</option>`).join('')}
+          </select></div>
+          <div class="form-group"><label>Estoque Mínimo</label><input type="number" id="np-min" min="0" value="0" ${faltaCadastro?'disabled':''}><small>Quando o saldo chegar neste valor ou abaixo, os usuários marcados são avisados.</small></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="submitProduto()" ${faltaCadastro?'disabled':''}>💾 Salvar</button>
+            <button class="btn btn-secondary" id="prod-cancel-btn" onclick="cancelEditProduto()" style="display:none">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>`:''}
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>📦 Produtos cadastrados</h3><span style="font-size:12px;color:var(--text2)">${state.produtos.length} produtos</span></div>
+          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
+          <div style="padding:12px">
+            ${state.produtos.length?state.produtos.map((p,i)=>{
+              const saldo=estoqueAtual(p.id);
+              const baixo=saldo<=p.estoque_minimo;
+              return `<div class="list-item" ${admin?`onclick="editProduto(${i})"`:''}><div class="list-item-info">
+                <div class="name">${produtoLabel(p)}</div>
+                <div class="code" style="font-size:11px;color:var(--text3)">mínimo: ${p.estoque_minimo}</div>
+              </div>
+              <span class="badge ${baixo?'badge-red':'badge-green'}">${saldo} em estoque</span>
+            </div>`;}).join(''):'<div class="empty-state"><p>Nenhum produto cadastrado.</p></div>'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  editingProduto=null;
+}
+function editProduto(idx){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  editingProduto=idx;
+  const p=state.produtos[idx];
+  document.getElementById('np-tipo').value=p.tipo_placa;
+  document.getElementById('np-cor').value=p.cor;
+  document.getElementById('np-min').value=p.estoque_minimo;
+  document.getElementById('prod-form-title').textContent='✏️ Editar Produto';
+  document.getElementById('prod-cancel-btn').style.display='inline-flex';
+}
+function cancelEditProduto(){
+  editingProduto=null;
+  document.getElementById('np-tipo').value='';
+  document.getElementById('np-cor').value='';
+  document.getElementById('np-min').value='0';
+  document.getElementById('prod-form-title').textContent='➕ Novo Produto';
+  document.getElementById('prod-cancel-btn').style.display='none';
+}
+async function submitProduto(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const tipo_placa=document.getElementById('np-tipo').value;
+  const cor=document.getElementById('np-cor').value;
+  const estoque_minimo=parseInt(document.getElementById('np-min').value||'0',10);
+  if(!tipo_placa||!cor){toast('Selecione o tipo e a cor','error');return;}
+  if(isNaN(estoque_minimo)||estoque_minimo<0){toast('Estoque mínimo inválido','error');return;}
+  try{
+    const dup=state.produtos.find((p,i)=>i!==editingProduto&&p.tipo_placa===tipo_placa&&p.cor===cor);
+    if(dup){toast('Já existe um produto com esse tipo e cor','error');return;}
+    if(editingProduto!==null){
+      toast('Atualizando...','info');
+      const{error}=await sb.from('produtos').update({tipo_placa,cor,estoque_minimo}).eq('id',state.produtos[editingProduto].id);
+      if(error) throw error;
+      toast('Produto atualizado!','success');
+    }else{
+      toast('Salvando...','info');
+      const{error}=await sb.from('produtos').insert({tipo_placa,cor,estoque_minimo});
+      if(error) throw error;
+      toast('Produto cadastrado!','success');
+    }
+    await loadAll();navigate('produtos');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ── ESTOQUE: entrada, saldo e histórico ── */
+function renderEstoque(){
+  const admin=isAdmin();
+  const semProduto=!state.produtos.length;
+  document.getElementById('estoque-content').innerHTML=`
+    ${semProduto?`<div class="alert alert-warn">⚠️ Cadastre ao menos um <a href="#" onclick="navigate('produtos');return false" style="color:inherit;text-decoration:underline">produto</a> antes de movimentar o estoque.</div>`:''}
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${admin?`<div style="flex:1;min-width:280px">
+        <div class="form-card">
+          <h3>➕ Entrada de Estoque</h3>
+          <div class="form-group"><label>Produto</label><select id="ee-produto" ${semProduto?'disabled':''}>
+            <option value="">— Selecione —</option>
+            ${state.produtos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
+          </select></div>
+          <div class="form-row">
+            <div class="form-group"><label>Quantidade</label><input type="number" id="ee-qtd" min="1" value="1" ${semProduto?'disabled':''}></div>
+            <div class="form-group"><label>Data</label><input type="date" id="ee-data" value="${hojeISO()}" ${semProduto?'disabled':''}><small>Pode ser retroativa (ex: compra recebida ontem).</small></div>
+          </div>
+          <div class="form-group"><label>Observação</label><input type="text" id="ee-obs" placeholder="Nota fiscal, fornecedor, etc." ${semProduto?'disabled':''}></div>
+          <button class="btn btn-primary" onclick="submitEntradaEstoque()" ${semProduto?'disabled':''}>💾 Registrar Entrada</button>
+        </div>
+      </div>`:''}
+      <div style="flex:2;min-width:280px">
+        <div class="table-card">
+          <div class="table-header"><h3>📊 Saldo atual</h3><span style="font-size:12px;color:var(--text2)">${state.produtos.length} produtos</span></div>
+          ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
+          <div style="overflow-x:auto">
+            <table id="tbl-estoque-saldo">
+              <thead><tr><th>Produto</th><th>Mínimo</th><th>Saldo</th><th>Situação</th></tr></thead>
+              <tbody>
+                ${state.produtos.length?state.produtos.map(p=>{
+                  const saldo=estoqueAtual(p.id);
+                  const baixo=saldo<=p.estoque_minimo;
+                  return `<tr><td>${produtoLabel(p)}</td><td>${p.estoque_minimo}</td><td><strong>${saldo}</strong></td>
+                    <td><span class="badge ${baixo?'badge-red':'badge-green'}">${baixo?'⚠️ Repor':'OK'}</span></td></tr>`;
+                }).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--text3)">Nenhum produto cadastrado.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card" style="margin-top:16px">
+      <div class="table-header">
+        <h3>🧾 Histórico de movimentações</h3>
+        <button class="btn btn-secondary btn-sm" onclick="exportarTabela('tbl-estoque-hist','Movimentações de estoque')">📋 Copiar Tabela</button>
+      </div>
+      <div class="filters-bar" style="padding:12px">
+        <select id="fh-produto" onchange="renderHistoricoEstoque()">
+          <option value="">Todos os produtos</option>
+          ${state.produtos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
+        </select>
+        <select id="fh-tipo" onchange="renderHistoricoEstoque()">
+          <option value="">Entradas e saídas</option>
+          <option value="entrada">Só entradas</option>
+          <option value="saida">Só saídas</option>
+        </select>
+        <input type="date" id="fh-de" onchange="renderHistoricoEstoque()" title="Data inicial">
+        <input type="date" id="fh-ate" onchange="renderHistoricoEstoque()" title="Data final">
+        <button class="btn btn-secondary btn-sm" onclick="limparFiltrosHistorico()">✕ Limpar</button>
+      </div>
+      <div id="estoque-historico"></div>
+    </div>`;
+  renderHistoricoEstoque();
+}
+function limparFiltrosHistorico(){
+  ['fh-produto','fh-tipo','fh-de','fh-ate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  renderHistoricoEstoque();
+}
+function renderHistoricoEstoque(){
+  const cont=document.getElementById('estoque-historico');
+  if(!cont) return;
+  const fProduto=document.getElementById('fh-produto')?.value||'';
+  const fTipo=document.getElementById('fh-tipo')?.value||'';
+  const fDe=document.getElementById('fh-de')?.value||'';
+  const fAte=document.getElementById('fh-ate')?.value||'';
+  const admin=isAdmin();
+  let movs=state.estoqueMovimentos.slice();
+  if(fProduto) movs=movs.filter(m=>String(m.produto_id)===fProduto);
+  if(fTipo) movs=movs.filter(m=>m.tipo===fTipo);
+  if(fDe) movs=movs.filter(m=>m.data&&m.data>=fDe);
+  if(fAte) movs=movs.filter(m=>m.data&&m.data<=fAte);
+  // Mais recentes primeiro: pela data da movimentação, desempatando pelo id (ordem de lançamento)
+  movs.sort((a,b)=>(b.data||'').localeCompare(a.data||'')||b.id-a.id);
+  cont.innerHTML=`
+    <div style="overflow-x:auto">
+      <table id="tbl-estoque-hist">
+        <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Paciente</th><th>Usuário</th><th>Obs</th><th>Lançado em</th>${admin?'<th></th>':''}</tr></thead>
+        <tbody>
+          ${movs.length?movs.map(m=>{
+            const p=produtoById(m.produto_id);
+            const entrada=m.tipo==='entrada';
+            // Marca lançamento retroativo: registrado num dia diferente do que diz ter acontecido
+            const lancado=tsParaDataLocal(m.criado_em);
+            const retroativo=lancado&&m.data&&lancado!==m.data;
+            return `<tr>
+              <td>${m.data?fromInput(m.data):'—'}</td>
+              <td>${produtoLabel(p)}</td>
+              <td><span class="badge ${entrada?'badge-green':'badge-yellow'}">${entrada?'↑ Entrada':'↓ Saída'}</span></td>
+              <td><strong>${entrada?'+':'−'}${m.quantidade}</strong></td>
+              <td>${m.codigo?`<a href="#" onclick="showDetail('${m.codigo}');return false">#${m.codigo}</a>`:'—'}</td>
+              <td style="font-size:11px;color:var(--text3)">${m.usuario_email||'—'}</td>
+              <td style="font-size:11px">${m.obs||''}</td>
+              <td style="font-size:11px;color:var(--text3)">${lancado?fromInput(lancado):'—'}${retroativo?' <span title="Lançado em data diferente da movimentação">⏱️</span>':''}</td>
+              ${admin?`<td><button class="btn btn-secondary btn-sm" onclick="removerMovimento(${m.id})" title="Remover movimentação">🗑️</button></td>`:''}
+            </tr>`;
+          }).join(''):`<tr><td colspan="${admin?9:8}" style="text-align:center;color:var(--text3)">Nenhuma movimentação encontrada.</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+}
+async function submitEntradaEstoque(){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const produto_id=parseInt(document.getElementById('ee-produto').value,10);
+  const quantidade=parseInt(document.getElementById('ee-qtd').value,10);
+  const data=document.getElementById('ee-data').value;
+  const obs=document.getElementById('ee-obs').value.trim();
+  if(!produto_id){toast('Selecione o produto','error');return;}
+  if(!quantidade||quantidade<1){toast('Quantidade deve ser maior que zero','error');return;}
+  if(!data){toast('Informe a data','error');return;}
+  try{
+    toast('Salvando...','info');
+    const{error}=await sb.from('estoque_movimentos').insert({
+      produto_id,tipo:'entrada',quantidade,data,obs,usuario_email:state.user?.email||null
+    });
+    if(error) throw error;
+    toast('Entrada registrada!','success');
+    await loadAll();navigate('estoque');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function removerMovimento(id){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  if(!confirm('Remover esta movimentação? O saldo será recalculado.')) return;
+  try{
+    const{error}=await sb.from('estoque_movimentos').delete().eq('id',id);
+    if(error) throw error;
+    toast('Movimentação removida!','success');
+    await loadAll();
+    if(document.querySelector('#page-estoque.active')) renderEstoque();
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ── PLACAS UTILIZADAS NO PACIENTE (prova de dentes) ── */
+function renderPlacasPaciente(cod){
+  const cont=document.getElementById('pd-placas-lista');
+  if(!cont) return;
+  const admin=isAdmin();
+  const usadas=state.estoqueMovimentos.filter(m=>m.tipo==='saida'&&m.codigo===String(cod));
+  cont.innerHTML=usadas.length?usadas.map(m=>{
+    const p=produtoById(m.produto_id);
+    return `<div class="list-item" style="cursor:default">
+      <div class="list-item-info">
+        <div class="name">${produtoLabel(p)}</div>
+        <div class="code" style="font-size:11px;color:var(--text3)">${m.quantidade} un. · ${m.data?fromInput(m.data):''}</div>
+      </div>
+      ${admin?`<button class="btn btn-secondary btn-sm" onclick="removerPlacaPaciente(${m.id},'${cod}')" title="Remover e devolver ao estoque">🗑️</button>`:''}
+    </div>`;
+  }).join(''):'<div style="font-size:12px;color:var(--text3);padding:4px 0">Nenhuma placa registrada.</div>';
+}
+async function adicionarPlacaPaciente(cod){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  const produto_id=parseInt(document.getElementById('pd-placa-produto').value,10);
+  const quantidade=parseInt(document.getElementById('pd-placa-qtd').value,10);
+  if(!produto_id){toast('Selecione a placa','error');return;}
+  if(!quantidade||quantidade<1){toast('Quantidade deve ser maior que zero','error');return;}
+  try{
+    // Data da baixa = data real da prova de dentes, se já informada; senão hoje.
+    const pdInput=document.getElementById('et-pd')?.value;
+    const data=pdInput||hojeISO();
+    const saldo=estoqueAtual(produto_id);
+    const{error}=await sb.from('estoque_movimentos').insert({
+      produto_id,tipo:'saida',quantidade,data,codigo:String(cod),usuario_email:state.user?.email||null
+    });
+    if(error) throw error;
+    // Estoque insuficiente não bloqueia: o atendimento já aconteceu, o saldo pode ficar negativo.
+    if(saldo<quantidade) toast(`Atenção: estoque insuficiente (havia ${saldo}). Registrado mesmo assim.`,'error');
+    else toast('Placa registrada!','success');
+    await loadAll();showDetail(cod);switchDetailTab('etapas');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+async function removerPlacaPaciente(id,cod){
+  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
+  if(!confirm('Remover esta placa? A quantidade volta para o estoque.')) return;
+  try{
+    const{error}=await sb.from('estoque_movimentos').delete().eq('id',id);
+    if(error) throw error;
+    toast('Placa removida — quantidade devolvida ao estoque.','success');
+    await loadAll();showDetail(cod);switchDetailTab('etapas');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+/* ── BANNER DE ESTOQUE MÍNIMO ── */
+function renderEstoqueBanner(){
+  const el=document.getElementById('estoque-banner');
+  if(!el) return;
+  if(!state.allowedUser?.notificarEstoque){el.innerHTML='';return;}
+  const baixos=produtosAbaixoMinimo();
+  if(!baixos.length){el.innerHTML='';return;}
+  const nomes=baixos.slice(0,3).map(p=>produtoLabel(p)).join(', ');
+  const resto=baixos.length>3?` e mais ${baixos.length-3}`:'';
+  el.innerHTML=`<div class="alert alert-warn" style="margin:12px 32px 0;cursor:pointer" onclick="navigate('estoque')">
+    ⚠️ <strong>${baixos.length} produto(s) no estoque mínimo:</strong> ${nomes}${resto}. Clique para ver o estoque.
+  </div>`;
 }
 
 document.getElementById('config-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeConfig();});
