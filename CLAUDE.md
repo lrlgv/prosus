@@ -8,7 +8,7 @@ PWA (Progressive Web App) de arquivo único para gestão de próteses dentárias
 | | Produção (atual) | Legado (aposentado) |
 |---|---|---|
 | Arquivo | `index.html` (raiz) | `legacy/index.html` |
-| Versão | **v7.6** | v5.2 |
+| Versão | **v7.10** | v5.2 |
 | Backend | **Supabase** (Postgres + Auth + RLS) | Google Sheets + Apps Script |
 | URL | https://lrlgv.github.io/prosus | https://lrlgv.github.io/prosus/legacy/ |
 
@@ -73,7 +73,7 @@ Mantida porque `SHEET_MAP` ainda usa os nomes das abas como chave, e o legado de
 | D | Tipo de Peça |
 | E | Data (dd/mm/aaaa) |
 | F | Distribuição (código do protético) |
-| G | Situação |
+| G | Situação *(coluna removida do banco na v7.10 — ver "Armadilhas de modelagem")* |
 | H | Observação |
 
 ### BaseProvaArmacao (A:H)
@@ -300,10 +300,21 @@ open('/tmp/test.js','w').write(scripts[-1])
 ```
 Se `python3`/`node` não estiverem disponíveis na máquina, validar ao menos o balanceamento de `{}`, `()` e crases do último bloco `<script>` como alternativa.
 
-## Convenção de versão
-**Toda alteração incrementa a versão** e ela é informada ao usuário. Atualizar nos dois lugares do arquivo editado:
-- comentário do topo (linha ~4): `<!-- ProSUS vX.Y - descrição curta -->`
-- rodapé da sidebar: `<div style="...">vX.Y</div>`
+## Checklist obrigatório de toda alteração
+Nenhuma mudança está pronta sem estes três passos:
+
+1. **Incrementar a versão** e informá-la ao usuário — nos dois lugares do arquivo editado:
+   - comentário do topo (linha ~4): `<!-- ProSUS vX.Y - descrição curta -->`
+   - rodapé da sidebar: `<div style="...">vX.Y</div>`
+2. **Atualizar `documentacao_prosus.md`** — sempre o histórico de versões, e a seção correspondente quando o comportamento mudar. Regras de negócio vivem na **seção 0**. Como o app exibe esse arquivo em Configurações → Documentação, deixá-lo desatualizado é um erro **visível ao usuário**, não uma dívida interna.
+3. **Atualizar este CLAUDE.md** quando mudar arquitetura, tabelas, convenções ou armadilhas — incluindo a versão na tabela do topo.
+
+## Armadilhas de modelagem já resolvidas (não reintroduzir)
+O sistema **não guarda o que pode ser derivado** — dois casos custaram bug:
+- **Situação do tratamento**: era uma coluna `moldagens.situacao` da planilha, preenchida à mão e nunca atualizada pelo app. Mostrava "Pendente" ao lado de uma entrega registrada e quebrava o filtro. Removida na v7.10; hoje vem de `estaEntregue()`/`situacaoTratamento()`, derivadas de `entregas.entrega`.
+- **Saldo de estoque**: sempre somado do livro-razão, nunca armazenado.
+
+Ao criar um campo, pergunte se ele pode ser calculado a partir de um fato já registrado. Se puder, calcule.
 
 ## Migração para Supabase — concluída (v7.0)
 - ✅ Schema, RLS e allowlist aplicados; dados históricos migrados e conferidos
