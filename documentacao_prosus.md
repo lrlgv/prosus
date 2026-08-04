@@ -5,7 +5,101 @@ O **ProSUS** é uma aplicação do tipo *Single Page Application* (SPA) com capa
 
 Este documento fornece um detalhamento completo de sua arquitetura, fluxos de dados, componentes e regras de negócio.
 
-> ⚠️ **A partir da v7.0 o sistema roda sobre Supabase (PostgreSQL).** As seções 1 a 10 descrevem a arquitetura **legada**, baseada em Google Sheets, hoje aposentada e preservada apenas em `legacy/index.html` como plano de retorno. A arquitetura **em uso** está documentada a partir da **seção 11**.
+> ⚠️ **A partir da v7.0 o sistema roda sobre Supabase (PostgreSQL).** A **seção 0** reúne as regras de negócio, que valem independentemente da tecnologia. As seções 1 a 10 descrevem a arquitetura **legada**, baseada em Google Sheets, hoje aposentada e preservada apenas em `legacy/index.html` como plano de retorno. A arquitetura **em uso** está documentada a partir da **seção 11**.
+
+---
+
+## 0. Regras de Negócio
+
+Esta seção descreve **como o sistema decide as coisas** — o conhecimento que sobrevive a qualquer troca de tecnologia. Tudo aqui foi verificado no código, não presumido.
+
+### 0.1 Identificação do paciente e múltiplos tratamentos
+
+O **código** é a chave de tudo: é por ele que moldagem, etapas, entregas e placas se ligam. Não é gerado pelo sistema — vem da ficha do paciente e é digitado no cadastro.
+
+Um mesmo paciente pode precisar de mais de uma prótese ao mesmo tempo (ex.: PT superior e PPR inferior). Nesse caso o sistema usa **código base + sufixo**:
+
+```
+7457     → primeiro tratamento
+7457/1   → segundo tratamento do mesmo paciente
+7457/2   → terceiro, e assim por diante
+```
+
+Ao digitar um nome já existente no cadastro, o sistema avisa e **sugere o próximo sufixo livre** (maior sufixo existente + 1). Na tela de Consultar, tratamentos do mesmo código base aparecem agrupados numa linha só, expansível.
+
+> ⚠️ A busca por tratamento anterior compara o **nome exato** (ignorando maiúsculas). Grafias diferentes do mesmo paciente não são reconhecidas como a mesma pessoa.
+
+### 0.2 Fluxo de etapas (o coração do sistema)
+
+Cada prótese percorre quatro etapas, e o sistema deriva a posição atual **do que já foi registrado** — não existe um campo "status" que alguém atualiza à mão:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Moldagem: cadastro inicial
+    Moldagem --> Base_de_Prova: data real de BP registrada
+    Base_de_Prova --> Prova_de_Dentes: data real de PD registrada
+    Prova_de_Dentes --> Entregue: data de entrega registrada
+    Entregue --> Reembase: reembase registrado (pós-entrega)
+```
+
+| Etapa | Critério exato |
+| :--- | :--- |
+| **1 · Moldagem** | Tem moldagem, **não** tem data real de Base de Prova e **não** foi entregue |
+| **2 · Base de Prova** | Tem data real de BP, **não** tem data real de Prova de Dentes e **não** foi entregue |
+| **3 · Prova de Dentes** | Tem data real de PD e **não** foi entregue |
+| **4 · Entregue** | Tem data de entrega preenchida |
+| **5 · Reembase** | Tem reembase registrado |
+
+Dois pontos que costumam gerar dúvida:
+
+- **Previsão não move o paciente de etapa.** Cada etapa tem *previsão* e *data real*; só a data real conta para o fluxo. A previsão serve para planejar e aparece no card.
+- **Reembase não é uma etapa seguinte, é um retorno.** Um paciente entregue e depois reembasado aparece **nas duas colunas** (4 e 5) — o reembase é uma intervenção corretiva pós-entrega, não a continuação do fluxo.
+
+Cada coluna do Kanban exibe no máximo **60 cards**, ordenados do mais recente para o mais antigo pela data da própria etapa.
+
+### 0.3 Contratos e metas
+
+Contratos definem o período de apuração e as metas. O **contrato ativo** é aquele cuja data de hoje cai entre início e fim; se nenhum se encaixa, o sistema assume o último cadastrado.
+
+O contrato guarda duas metas: **peças contratadas** (no período) e **reembases por mês**.
+
+> ⚠️ **Regra crítica de apuração:** as entregas seguem o contrato em que o paciente foi **moldado**, não a data em que a prótese foi entregue. Um paciente moldado no contrato de 2025 e entregue em 2026 conta para 2025. É o que evita que uma prótese seja contada duas vezes, ou em nenhum, na virada de contrato.
+
+### 0.4 Contagem de peças (PT e PPR)
+
+O sistema não conta "próteses", conta **peças**. Cada tipo de peça cadastrado define quantas unidades de **PT** (Prótese Total) e **PPR** (Prótese Parcial Removível) ele representa. É essa tabela que converte um tratamento em números para faturamento e metas.
+
+### 0.5 Fechamento Mensal (por entrega)
+
+Apura o que foi **entregue** no mês:
+
+1. Filtra entregas com data real dentro do mês/ano escolhido
+2. Agrupa por **protético** (a "distribuição" da moldagem)
+3. Soma PT e PPR de cada tratamento pela tabela de tipos de peça
+
+### 0.6 Fechamento por Armação (por base de prova)
+
+Apura o trabalho de armação metálica, que é pago em momento diferente da entrega:
+
+1. Filtra **Bases de Prova** com data real no mês/ano — não entregas
+2. Considera apenas tratamentos cujo tipo de peça contenha **"PPR"**
+3. Agrupa por protético e soma as peças
+
+A regra é o tipo de peça conter "PPR", em qualquer posição e sem diferenciar maiúsculas. Versões antigas usavam uma marcação manual no cadastro do protético; **isso não é mais usado**.
+
+### 0.7 Estoque de placas
+
+Cinco regras sustentam o módulo (detalhes na seção 12):
+
+1. **O saldo nunca é armazenado** — é sempre a soma do livro-razão (entradas menos saídas)
+2. **Nada é apagado** — desfazer gera um movimento de estorno vinculado ao original
+3. **Correção ≠ movimento real** — corrigir um registro errado é marcado de forma distinta de material que de fato entrou ou saiu
+4. **Estoque insuficiente avisa, mas não bloqueia** — o atendimento já ocorreu; travar o registro só deixaria o dado real fora do sistema, então o saldo pode ficar negativo
+5. **Cadastro em uso não é excluído, é inativado** — some dos seletores, preserva o histórico
+
+### 0.8 Acesso
+
+Só e-mails presentes na lista de usuários permitidos enxergam qualquer dado — quem não está recebe tela de acesso negado. Dentro dessa lista, duas marcações independentes: **admin** (pode editar e excluir) e **estoque** (recebe o aviso de estoque mínimo). O bloqueio é aplicado pelo banco, não só pela interface.
 
 ---
 
@@ -248,7 +342,12 @@ A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo r
 
 | Versão | Mudanças |
 | :--- | :--- |
-| **v7.3** | Ajuste de saldo ganha tela própria no menu, com prévia do efeito antes de salvar, saldo de todos os produtos e histórico dos últimos ajustes. |
+| **v7.8** | Documentação técnica acessível pelo próprio sistema (Configurações → Documentação), renderizada a partir deste arquivo. |
+| v7.7 | Estoque e Ajustar Saldo unificados numa tela, com três tipos de movimentação (entrada, saída e correção) e o campo de quantidade adaptando-se ao tipo. Fecha a lacuna de registrar perdas reais. |
+| v7.6 | Remoção da tela de Validação de Dados e de todo o código residual da planilha — as verificações viraram impossíveis por construção com as chaves e restrições do banco. |
+| v7.5 | Padronização visual dos filtros do histórico de estoque. |
+| v7.4 | Tela de Configurações reorganizada em blocos (usuários e backup separados). |
+| v7.3 | Ajuste de saldo ganha tela própria no menu, com prévia do efeito antes de salvar, saldo de todos os produtos e histórico dos últimos ajustes. |
 | v7.2 | Ajuste manual de saldo do estoque: informa-se o saldo correto e o sistema registra a entrada ou saída correspondente, com motivo obrigatório. |
 | v7.1 | Backup completo dos dados em JSON, pela tela de Configurações (só admin), cobrindo a ausência de backup automático no plano gratuito do Supabase. |
 | v7.0 | **Cutover para produção.** A aplicação sobre Supabase substitui a versão baseada em planilha, que passa a `legacy/` como plano de retorno. Gravação dupla desligada (a planilha fica congelada) e ferramenta de migração removida. |
@@ -322,7 +421,7 @@ Módulo para controlar as placas utilizadas nas próteses, do cadastro à baixa 
 | **Cores** | Cadastro das cores (A2, A3, A3,5, A4…) |
 | **Tipos de Placa** | Cadastro dos tipos |
 | **Produtos (Placas)** | Um produto é a combinação **tipo + cor**, com sua quantidade mínima em estoque |
-| **Estoque** | Entrada de quantidade, saldo atual de todos os produtos e histórico de movimentações |
+| **Estoque** | Tela única de movimentação (entrada, saída e correção), saldo de todos os produtos e histórico auditável |
 
 ### 12.2 Saldo derivado (livro-razão)
 O saldo **nunca é armazenado**. A tabela `estoque_movimentos` funciona como livro-razão: entradas manuais e baixas por paciente convivem nela, e o saldo é sempre calculado somando entradas e subtraindo saídas. Não existe a possibilidade de um saldo "travado" divergindo do histórico.
@@ -347,18 +446,26 @@ Na etapa de Prova de Dentes é possível registrar quais placas foram usadas no 
 
 Se o estoque for insuficiente, o sistema **avisa mas não bloqueia**, permitindo saldo negativo. A decisão é deliberada: o atendimento clínico já ocorreu, e impedir o registro apenas deixaria o dado real fora do sistema — o saldo negativo, visível no histórico, sinaliza que faltou lançar uma entrada.
 
-### 12.5 Ajuste manual de saldo (v7.2, tela própria na v7.3)
-Quando o saldo do sistema não corresponde à realidade — um lançamento feito errado, uma placa quebrada, perda, ou divergência apurada numa contagem física — o menu **⚖️ Ajustar Saldo** permite corrigir.
+### 12.5 Movimentar estoque: os três tipos (v7.7)
+Toda alteração de saldo passa pelo painel **Movimentar Estoque**, com três opções que correspondem ao que de fato aconteceu:
 
-A funcionalidade tem tela dedicada em vez de dividir espaço com a de Estoque: ajustar saldo é uma correção pontual, com propósito diferente do registro de entrada do dia a dia, e misturar as duas tornava a tela de Estoque confusa.
+| Tipo | Quando usar | O campo pergunta |
+| :--- | :--- | :--- |
+| ➕ **Entrada** | Chegou material (compra, doação) | Quantidade recebida → soma |
+| ➖ **Saída** | Quebra, perda ou descarte | Quantidade retirada → subtrai |
+| ✏️ **Correção de saldo** | O registro estava errado; o estoque físico não mudou | Saldo real → o sistema calcula a diferença |
 
-O usuário seleciona o produto (o saldo atual aparece automaticamente), informa **qual é o saldo real** e o motivo. Antes de salvar, a tela mostra exatamente o que será registrado ("será registrada uma saída de 5 unidades: 20 → 15"), evitando que a pessoa precise calcular a diferença de cabeça. O sistema então grava a movimentação correspondente: entrada, se o saldo real for maior; saída, se for menor.
+O campo de quantidade **muda de rótulo e de sentido** conforme o tipo escolhido — sem isso, "10" seria ambíguo entre "somar 10" e "ficar com 10". Antes de salvar, a tela mostra o efeito exato ("será registrada uma saída de 5 unidades: 20 → 15"), e avisa quando o saldo ficará negativo.
 
-A tela também lista o saldo atual de todos os produtos e os últimos ajustes feitos, com motivo e responsável.
+Clicar numa linha da tabela de saldo seleciona aquele produto no painel — é onde o usuário já olha para descobrir o que precisa de ação.
 
-O ponto importante é que **nenhum saldo é escrito diretamente**. O ajuste vira uma movimentação como qualquer outra, e o saldo continua sendo a soma do livro-razão. Isso mantém a propriedade de que todo número exibido pode ser explicado por movimentações rastreáveis.
+**A distinção entre os três sobrevive no banco**, e é ela que dá sentido à auditoria: entrada e saída são eventos físicos reais; correção é conserto de registro. Sem separá-los, seria impossível responder "quanto material entrou no mês?" sem contar acertos de digitação. Uma saída manual (perda) também se distingue do consumo em paciente, porque esta última carrega o código do paciente e aquela não.
 
-O motivo é obrigatório, e os ajustes ficam marcados com `⚖️` no histórico, com filtro próprio — assim a auditoria consegue separar movimento real de correção.
+**Nenhum saldo é escrito diretamente.** Mesmo a correção vira uma movimentação comum, e o saldo continua sendo a soma do razão — todo número exibido pode ser explicado por movimentações rastreáveis.
+
+Motivo é obrigatório em Saída e Correção (é o que a auditoria vai ler depois) e opcional em Entrada, onde a observação é logística. O histórico distingue os cinco casos possíveis: `↑ Entrada`, `↓ Uso em paciente`, `↓ Perda/descarte`, `✏️ Correção` e `↩️ Estorno`, com filtro para cada um.
+
+> Até a v7.6 havia uma tela separada de "Ajustar Saldo". As duas foram unificadas porque mostravam a mesma tabela e faziam a mesma coisa — alterar a quantidade de um produto —, obrigando o usuário a decidir em qual entrar antes de saber o que ia fazer.
 
 ### 12.6 Exclusão e inativação de cadastros (v6.2-beta)
 Cores, tipos de placa e produtos podem ser excluídos, mas nunca à custa de dados existentes. Ao clicar em excluir, o sistema tenta a remoção real; se o registro estiver em uso — uma cor usada por um produto, ou um produto que já tem movimentações — o próprio banco recusa, e a aplicação o marca como **inativo**.
@@ -374,4 +481,16 @@ Essa distinção evita o dilema comum de "não posso apagar porque quebraria o h
 Usuários marcados com `notificar_estoque` veem uma faixa de alerta no topo do aplicativo quando algum produto atinge ou fica abaixo do mínimo, com atalho para a tela de estoque. Como o aviso é por usuário, não polui a interface dos demais.
 
 > Envio por **e-mail** ou **WhatsApp** foi avaliado e ficou de fora nesta etapa: e-mail exigiria uma Edge Function no Supabase somada a um serviço de envio; WhatsApp exigiria a WhatsApp Business Platform (Meta) ou intermediário como Twilio — serviços pagos, com verificação de empresa e aprovação prévia de modelos de mensagem.
+
+---
+
+## 13. Esta documentação dentro do sistema (v7.8)
+
+O ProSUS lê **este arquivo** e o exibe em **Configurações → 📖 Documentação**, renderizado com o visual do próprio app.
+
+A escolha de buscar o arquivo, em vez de embutir o texto no `index.html`, é deliberada: duas cópias divergiriam na primeira atualização feita sem lembrar da outra. Assim, o que está no repositório é necessariamente o que o usuário lê na tela.
+
+**Consequência prática para quem mantém o sistema:** alterar comportamento sem atualizar este arquivo passa a ser uma inconsistência *visível ao usuário*, não apenas uma dívida interna. As seções mais sensíveis a isso são a **0 (Regras de Negócio)** e o **histórico de versões**.
+
+Os diagramas mermaid aparecem como blocos de código no app — renderizá-los exigiria mais uma biblioteca, e o conteúdo continua legível sem isso. A biblioteca de markdown é carregada apenas na primeira abertura, para não pesar o uso diário.
 

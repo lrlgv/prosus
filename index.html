@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v7.6 - remove a tela de Validação e o código morto da planilha -->
+<!-- ProSUS v7.8 - Estoque unificado + documentação acessível pelas Configurações -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -237,6 +237,45 @@
   .cfg-block .section-divider{margin-top:0;}
   .cfg-sub{border-top:1px solid var(--border);margin-top:14px;padding-top:14px;}
   .cfg-sub-title{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text2);}
+  /* Seletor de tipo de movimentação de estoque.
+     Os seletores são qualificados com .form-group de propósito: sem isso, a regra
+     genérica `.form-group input{width:100%}` estica o rádio pela largura do card
+     (deixando a bolinha centralizada no meio), e `.form-group label{uppercase}`
+     transforma o texto das opções em caixa alta. */
+  /* gap 8px é o mínimo recomendado entre alvos de toque adjacentes; min-height 48px
+     atende o mínimo do Android (o app roda em tablet Android em retrato). */
+  .mv-tipos{display:flex;flex-direction:column;gap:8px;}
+  .form-group label.mv-tipo{display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:48px;margin-bottom:0;border:1px solid var(--border);border-radius:10px;cursor:pointer;touch-action:manipulation;
+    font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text);line-height:1.35;transition:border-color .15s,background .15s;}
+  .form-group label.mv-tipo:hover{border-color:var(--border-hi);}
+  .form-group label.mv-tipo:has(input:checked){border-color:var(--accent);background:var(--accent-soft);}
+  /* Foco visível no card inteiro: o anel nativo do rádio é discreto demais dentro
+     de um card, deixando quem navega por teclado sem saber onde está. */
+  .form-group label.mv-tipo:focus-within{outline:2px solid var(--accent);outline-offset:2px;}
+  .form-group .mv-tipo input[type=radio]{width:20px;height:20px;min-height:0;flex-shrink:0;margin:0;padding:0;background:none;border:none;border-radius:0;box-shadow:none;accent-color:var(--accent);cursor:pointer;}
+  .mv-tipo-txt{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .mv-tipo-txt strong{font-weight:600;}
+  .mv-tipo-txt .mv-tipo-ajuda{font-size:11px;color:var(--text3);font-weight:400;}
+  /* Documentação renderizada a partir do markdown */
+  .doc-md{max-height:65vh;overflow-y:auto;padding-right:8px;font-size:14px;line-height:1.65;}
+  .doc-md h1{font-size:20px;margin:0 0 6px;}
+  .doc-md h2{font-size:17px;margin:24px 0 8px;padding-top:14px;border-top:1px solid var(--border);}
+  .doc-md h3{font-size:15px;margin:18px 0 6px;}
+  .doc-md h4{font-size:14px;margin:14px 0 4px;}
+  .doc-md p,.doc-md li{color:var(--text2);}
+  .doc-md ul,.doc-md ol{padding-left:22px;margin:8px 0;}
+  .doc-md li{margin-bottom:4px;}
+  .doc-md code{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 5px;font-family:'Space Mono',monospace;font-size:12px;color:var(--text);}
+  .doc-md pre{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;overflow-x:auto;margin:10px 0;}
+  .doc-md pre code{background:none;border:none;padding:0;font-size:11.5px;line-height:1.5;}
+  .doc-md table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;}
+  .doc-md th,.doc-md td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top;}
+  .doc-md th{background:var(--surface2);font-weight:700;}
+  .doc-md blockquote{border-left:3px solid var(--accent3);background:rgba(245,158,11,.06);margin:10px 0;padding:8px 14px;border-radius:0 8px 8px 0;}
+  .doc-md blockquote p{margin:0;}
+  .doc-md a{color:var(--accent);}
+  .doc-md hr{border:none;border-top:1px solid var(--border);margin:20px 0;}
+  .doc-md img{max-width:100%;}
   .form-card h3{font-size:15px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);font-weight:700;}
 
   /* ── SECTION DIVIDERS & ETAPA BLOCKS ── */
@@ -480,7 +519,6 @@
       <button class="nav-btn" data-page="fechamento-armacao" onclick="navigate('fechamento-armacao')"><span class="nav-icon">🔩</span> Fecham. Armação</button>
       <button class="nav-btn" data-page="contratos" onclick="navigate('contratos')"><span class="nav-icon">📃</span> Contratos</button>
       <button class="nav-btn" data-page="estoque" onclick="navigate('estoque')"><span class="nav-icon">📦</span> Estoque</button>
-      <button class="nav-btn" data-page="ajuste" onclick="navigate('ajuste')"><span class="nav-icon">⚖️</span> Ajustar Saldo</button>
       <div class="nav-section">Cadastros</div>
       <button class="nav-btn" data-page="cadastro" onclick="navigate('cadastro')"><span class="nav-icon">➕</span> Nova Moldagem</button>
       <button class="nav-btn" data-page="dentistas" onclick="navigate('dentistas')"><span class="nav-icon">👨‍⚕️</span> Dentistas</button>
@@ -491,7 +529,7 @@
       <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.6</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.8</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -531,7 +569,6 @@
       <div class="mob-more-item" onclick="closeMobMore();navigate('proteticos')"><span class="icon">🧑‍🔧</span><span>Protéticos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tipopeca')"><span class="icon">🦷</span><span>Tipos de Peça</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('estoque')"><span class="icon">📦</span><span>Estoque</span></div>
-      <div class="mob-more-item" onclick="closeMobMore();navigate('ajuste')"><span class="icon">⚖️</span><span>Ajustar Saldo</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('produtos')"><span class="icon">📦</span><span>Produtos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tiposplaca')"><span class="icon">🧩</span><span>Tipos de Placa</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('cores')"><span class="icon">🎨</span><span>Cores</span></div>
@@ -652,10 +689,6 @@
         <div id="estoque-content"></div>
       </div>
 
-      <div class="page" id="page-ajuste">
-        <div id="ajuste-content"></div>
-      </div>
-
       <div class="page" id="page-resumo">
         <div id="resumo-content"><div class="not-connected"><div class="icon">📋</div><p>Carregando...</p></div></div>
       </div>
@@ -699,7 +732,28 @@
       <small style="display:block;margin-top:8px">Formato JSON — preserva os dados exatamente como estão no banco. Não abra nem salve pelo Excel: ele reinterpreta datas e códigos como "7457/1", corrompendo o backup.</small>
     </div>
 
+    <!-- BLOCO: documentação (visível a todos — é leitura, não ação privilegiada) -->
+    <div class="cfg-block">
+      <div class="section-divider bp">📖 Documentação</div>
+      <small>Documentação técnica do sistema: arquitetura, regras do fluxo de etapas, controle de estoque e histórico de versões.</small>
+      <div style="margin-top:10px">
+        <button class="btn btn-secondary btn-sm" onclick="abrirDocumentacao()">📖 Abrir documentação</button>
+      </div>
+    </div>
+
     <div class="modal-actions"><button class="btn btn-secondary" onclick="closeConfig()">Fechar</button></div>
+  </div>
+</div>
+
+<!-- DOC MODAL -->
+<div class="modal-overlay" id="doc-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>📖 Documentação do ProSUS</h3>
+      <button class="modal-close" onclick="closeDocumentacao()">✕</button>
+    </div>
+    <div id="doc-conteudo" class="doc-md"></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeDocumentacao()">Fechar</button></div>
   </div>
 </div>
 
@@ -769,7 +823,6 @@ const pageMeta={
   tipopeca:['Tipos de Peça','Gerencie os tipos de peça (BaseDados)'],
   resumo:['Resumo do Dia','Movimentações registradas hoje'],
   estoque:['Estoque de Placas','Entradas, saldo atual e histórico de movimentações'],
-  ajuste:['Ajustar Saldo','Corrija o saldo quando ele não corresponder ao estoque real'],
   produtos:['Produtos','Placas cadastradas (tipo + cor) e estoque mínimo'],
   cores:['Cores','Gerencie as cores das placas'],
   tiposplaca:['Tipos de Placa','Gerencie os tipos de placa']
@@ -1038,7 +1091,7 @@ function navigate(page){
     const btn=document.getElementById('mob-btn-'+p);
     if(btn) btn.classList.toggle('active',p===page);
   });
-  const morePages=['fechamento','dentistas','proteticos','tipopeca','resumo','estoque','ajuste','produtos','tiposplaca','cores'];
+  const morePages=['fechamento','dentistas','proteticos','tipopeca','resumo','estoque','produtos','tiposplaca','cores'];
   const mobMore=document.getElementById('mob-btn-more');
   if(mobMore) mobMore.classList.toggle('active',morePages.includes(page));
   document.getElementById('page-'+page).classList.add('active');
@@ -1060,7 +1113,6 @@ function navigate(page){
   if(page==='tiposplaca'&&state.connected) renderTiposPlaca();
   if(page==='produtos'&&state.connected) renderProdutos();
   if(page==='estoque'&&state.connected) renderEstoque();
-  if(page==='ajuste'&&state.connected) renderAjuste();
   // Scroll to top on mobile
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1147,7 +1199,7 @@ async function baixarBackup(){
   const st=document.getElementById('backup-status');
   const msg=t=>{ if(st) st.textContent=t; };
   try{
-    const dump={_meta:{app:'ProSUS v7.6',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
+    const dump={_meta:{app:'ProSUS v7.8',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
     for(const t of BACKUP_TABLES){
       msg(`Lendo ${t}...`);
       const linhas=await sbSelectAll(t);
@@ -1168,6 +1220,50 @@ async function baixarBackup(){
     toast('Erro no backup: '+e.message,'error');
   }
 }
+
+/* ── DOCUMENTAÇÃO ──
+   Lê o documentacao_prosus.md publicado junto do app e renderiza no próprio sistema.
+   Buscar o arquivo (em vez de embutir o texto) evita ter duas cópias divergindo:
+   o que estiver no repositório é o que aparece aqui.
+   A biblioteca de markdown é carregada só na primeira abertura, para não pesar
+   o carregamento das telas do dia a dia. */
+const DOC_URL='documentacao_prosus.md';
+let _markedCarregado=false;
+function carregarMarked(){
+  if(_markedCarregado&&window.marked) return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/marked@12/marked.min.js';
+    s.onload=()=>{_markedCarregado=true;resolve();};
+    s.onerror=()=>reject(new Error('Não foi possível carregar o leitor de documentação'));
+    document.head.appendChild(s);
+  });
+}
+async function abrirDocumentacao(){
+  const cont=document.getElementById('doc-conteudo');
+  document.getElementById('doc-modal').classList.add('open');
+  cont.innerHTML='<div class="loading-state"><div class="loading-spinner"></div>Carregando documentação...</div>';
+  try{
+    const [,texto]=await Promise.all([
+      carregarMarked(),
+      fetch(DOC_URL,{cache:'no-cache'}).then(r=>{
+        if(!r.ok) throw new Error('Documentação não encontrada ('+r.status+')');
+        return r.text();
+      })
+    ]);
+    // Os diagramas mermaid não são renderizados aqui; viram blocos de código,
+    // legíveis o suficiente sem trazer mais uma biblioteca.
+    cont.innerHTML=marked.parse(texto);
+    // Links externos abrem em nova aba para não descartar a sessão do app
+    cont.querySelectorAll('a[href^="http"]').forEach(a=>{a.target='_blank';a.rel='noopener';});
+    cont.scrollTop=0;
+  }catch(e){
+    cont.innerHTML=`<div class="alert alert-warn">Não foi possível abrir a documentação: ${e.message}</div>
+      <p style="font-size:13px">Você pode consultá-la direto no repositório:
+      <a href="https://github.com/lrlgv/prosus/blob/main/documentacao_prosus.md" target="_blank" rel="noopener">documentacao_prosus.md no GitHub</a>.</p>`;
+  }
+}
+function closeDocumentacao(){document.getElementById('doc-modal').classList.remove('open');}
 
 async function fetchSheet(range){
   const sheetName=range.split('!')[0];
@@ -1423,7 +1519,6 @@ async function loadAll(){
     if(document.querySelector('#page-tiposplaca.active')) renderTiposPlaca();
     if(document.querySelector('#page-produtos.active')) renderProdutos();
     if(document.querySelector('#page-estoque.active')) renderEstoque();
-    if(document.querySelector('#page-ajuste.active')) renderAjuste();
   }catch(e){
     state.connected=false;state.dbStatus='error';updateStatus();
     toast('Erro: '+e.message,'error');
@@ -3178,23 +3273,35 @@ function renderEstoque(){
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
       ${admin?`<div style="flex:1;min-width:280px">
         <div class="form-card">
-          <h3>➕ Entrada de Estoque</h3>
-          <div class="form-group"><label>Produto</label><select id="ee-produto" ${semProduto?'disabled':''}>
+          <h3>📦 Movimentar Estoque</h3>
+          <div class="form-group"><label>Produto</label><select id="mv-produto" onchange="onMovProdutoChange()" ${semProduto?'disabled':''}>
             <option value="">— Selecione —</option>
             ${produtosAtivos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
-          </select></div>
-          <div class="form-row">
-            <div class="form-group"><label>Quantidade</label><input type="number" id="ee-qtd" min="1" value="1" ${semProduto?'disabled':''}></div>
-            <div class="form-group"><label>Data</label><input type="date" id="ee-data" value="${hojeISO()}" ${semProduto?'disabled':''}><small>Pode ser retroativa (ex: compra recebida ontem).</small></div>
+          </select><small id="mv-saldo-hint">Selecione um produto ou clique numa linha do saldo ao lado.</small></div>
+
+          <div class="form-group" role="radiogroup" aria-labelledby="mv-tipo-legenda">
+            <label id="mv-tipo-legenda">O que aconteceu?</label>
+            <div class="mv-tipos">
+              ${MOV_TIPOS.map((t,i)=>`
+                <label class="mv-tipo">
+                  <input type="radio" name="mv-tipo" value="${t.id}" ${i===0?'checked':''} onchange="onMovTipoChange()" ${semProduto?'disabled':''}>
+                  <span class="mv-tipo-txt"><strong>${t.icone} ${t.titulo}</strong><span class="mv-tipo-ajuda">${t.ajuda}</span></span>
+                </label>`).join('')}
+            </div>
           </div>
-          <div class="form-group"><label>Observação</label><input type="text" id="ee-obs" placeholder="Nota fiscal, fornecedor, etc." ${semProduto?'disabled':''}></div>
-          <button class="btn btn-primary" onclick="submitEntradaEstoque()" ${semProduto?'disabled':''}>💾 Registrar Entrada</button>
-          <small style="display:block;margin-top:10px">Para corrigir um saldo errado, use <a href="#" onclick="navigate('ajuste');return false" style="color:var(--accent)">⚖️ Ajustar Saldo</a>.</small>
+
+          <div class="form-row">
+            <div class="form-group"><label for="mv-qtd" id="mv-qtd-label">Quantidade recebida</label><input type="number" id="mv-qtd" min="0" inputmode="numeric" value="1" oninput="atualizarPreviewMov()" ${semProduto?'disabled':''}></div>
+            <div class="form-group"><label for="mv-data">Data</label><input type="date" id="mv-data" value="${hojeISO()}" ${semProduto?'disabled':''}><small>Pode ser retroativa.</small></div>
+          </div>
+          <div id="mv-preview" style="margin-bottom:12px" aria-live="polite"></div>
+          <div class="form-group"><label for="mv-obs" id="mv-obs-label">Observação</label><input type="text" id="mv-obs" placeholder="Nota fiscal, fornecedor, etc." ${semProduto?'disabled':''}><small id="mv-obs-hint">Opcional.</small></div>
+          <button class="btn btn-primary" onclick="submitMovimentacao()" ${semProduto?'disabled':''}>💾 Registrar</button>
         </div>
       </div>`:''}
       <div style="flex:2;min-width:280px">
         <div class="table-card">
-          <div class="table-header"><h3>📊 Saldo atual</h3><span style="font-size:12px;color:var(--text2)">${produtosAtivos.length} ativos${state.produtos.length>produtosAtivos.length?` · ${state.produtos.length-produtosAtivos.length} inativos`:''}</span></div>
+          <div class="table-header"><h3>📊 Saldo atual</h3><span style="font-size:12px;color:var(--text2)">${admin?'clique para movimentar · ':''}${produtosAtivos.length} ativos${state.produtos.length>produtosAtivos.length?` · ${state.produtos.length-produtosAtivos.length} inativos`:''}</span></div>
           ${!admin?'<div class="alert alert-warn" style="margin:8px 12px">🔒 Modo leitura — sem permissão de edição.</div>':''}
           <div style="overflow-x:auto">
             <table id="tbl-estoque-saldo">
@@ -3204,7 +3311,10 @@ function renderEstoque(){
                   const saldo=estoqueAtual(p.id);
                   const baixo=saldo<=p.estoque_minimo;
                   const inativo=p.ativo===false;
-                  return `<tr style="${inativo?'opacity:.6':''}"><td>${produtoLabel(p)}</td><td>${p.estoque_minimo}</td><td><strong>${saldo}</strong></td>
+                  // Produto inativo não é selecionável: não recebe movimentação nova
+                  const clicavel=admin&&!inativo;
+                  return `<tr style="${inativo?'opacity:.6':''}${clicavel?';cursor:pointer':''}" ${clicavel?`onclick="selecionarProdutoMov(${p.id})" title="Movimentar este produto"`:''}>
+                    <td>${produtoLabel(p)}</td><td>${p.estoque_minimo}</td><td><strong>${saldo}</strong></td>
                     <td>${inativo?'<span class="badge badge-gray">Inativo</span>':`<span class="badge ${baixo?'badge-red':'badge-green'}">${baixo?'⚠️ Repor':'OK'}</span>`}</td></tr>`;
                 }).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--text3)">Nenhum produto cadastrado.</td></tr>'}
               </tbody>
@@ -3225,10 +3335,12 @@ function renderEstoque(){
           ${state.produtos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
         </select>
         <select class="filter-select" id="fh-tipo" onchange="renderHistoricoEstoque()" style="min-width:160px">
-          <option value="">Entradas e saídas</option>
+          <option value="">Todos os tipos</option>
           <option value="entrada">Só entradas</option>
           <option value="saida">Só saídas</option>
-          <option value="ajuste">Só ajustes de saldo</option>
+          <option value="paciente">Só uso em paciente</option>
+          <option value="perda">Só perdas/descarte</option>
+          <option value="ajuste">Só correções de saldo</option>
         </select>
         <input type="date" class="filter-select" id="fh-de" onchange="renderHistoricoEstoque()" title="Data inicial">
         <input type="date" class="filter-select" id="fh-ate" onchange="renderHistoricoEstoque()" title="Data final">
@@ -3237,10 +3349,23 @@ function renderEstoque(){
       <div id="estoque-historico"></div>
     </div>`;
   renderHistoricoEstoque();
+  // Sincroniza rótulos e dicas com o tipo marcado por padrão (Entrada)
+  if(admin&&!semProduto) onMovTipoChange();
 }
 function limparFiltrosHistorico(){
   ['fh-produto','fh-tipo','fh-de','fh-ate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   renderHistoricoEstoque();
+}
+/* Rótulo do histórico: os cinco casos que o razão comporta. Sem isso, uma perda por
+   quebra e o consumo num paciente apareceriam idênticos ("Saída"), e uma correção de
+   digitação se confundiria com material que realmente entrou. */
+function badgeMov(m){
+  const entrada=m.tipo==='entrada';
+  if(ehEstorno(m))  return{cls:'badge-gray',  txt:'↩️ Estorno'};
+  if(m.ajuste)      return{cls:'badge-yellow',txt:`✏️ Correção ${entrada?'+':'−'}`};
+  if(entrada)       return{cls:'badge-green', txt:'↑ Entrada'};
+  if(m.codigo)      return{cls:'badge-yellow',txt:'↓ Uso em paciente'};
+  return{cls:'badge-red', txt:'↓ Perda/descarte'};
 }
 function renderHistoricoEstoque(){
   const cont=document.getElementById('estoque-historico');
@@ -3253,6 +3378,8 @@ function renderHistoricoEstoque(){
   let movs=state.estoqueMovimentos.slice();
   if(fProduto) movs=movs.filter(m=>String(m.produto_id)===fProduto);
   if(fTipo==='ajuste') movs=movs.filter(m=>m.ajuste);
+  else if(fTipo==='paciente') movs=movs.filter(m=>m.tipo==='saida'&&!m.ajuste&&m.codigo);
+  else if(fTipo==='perda') movs=movs.filter(m=>m.tipo==='saida'&&!m.ajuste&&!m.codigo&&!m.estorno_de);
   else if(fTipo) movs=movs.filter(m=>m.tipo===fTipo);
   if(fDe) movs=movs.filter(m=>m.data&&m.data>=fDe);
   if(fAte) movs=movs.filter(m=>m.data&&m.data<=fAte);
@@ -3280,7 +3407,7 @@ function renderHistoricoEstoque(){
                 <div style="font-size:10px;color:var(--text3)">${lancado||'—'}${retroativo?' ⏱️':''}</div>
               </td>
               <td>${produtoLabel(p)}</td>
-              <td><span class="badge ${estorno?'badge-gray':(m.ajuste?'badge-yellow':(entrada?'badge-green':'badge-yellow'))}">${estorno?'↩️ Estorno':(m.ajuste?`⚖️ Ajuste ${entrada?'+':'−'}`:(entrada?'↑ Entrada':'↓ Saída'))}</span></td>
+              <td><span class="badge ${badgeMov(m).cls}">${badgeMov(m).txt}</span></td>
               <td><strong>${entrada?'+':'−'}${m.quantidade}</strong></td>
               <td>${m.codigo?`<a href="#" onclick="showDetail('${m.codigo}');return false">#${m.codigo}</a>`:'—'}</td>
               <td style="font-size:11px;color:var(--text3)">${m.usuario_email||'—'}</td>
@@ -3293,143 +3420,100 @@ function renderHistoricoEstoque(){
       </table>
     </div>`;
 }
-async function submitEntradaEstoque(){
-  if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  const produto_id=parseInt(document.getElementById('ee-produto').value,10);
-  const quantidade=parseInt(document.getElementById('ee-qtd').value,10);
-  const data=document.getElementById('ee-data').value;
-  const obs=document.getElementById('ee-obs').value.trim();
-  if(!produto_id){toast('Selecione o produto','error');return;}
-  if(!quantidade||quantidade<1){toast('Quantidade deve ser maior que zero','error');return;}
-  if(!data){toast('Informe a data','error');return;}
-  try{
-    toast('Salvando...','info');
-    const{error}=await sb.from('estoque_movimentos').insert({
-      produto_id,tipo:'entrada',quantidade,data,obs,usuario_email:state.user?.email||null
-    });
-    if(error) throw error;
-    toast('Entrada registrada!','success');
-    await loadAll();navigate('estoque');
-  }catch(e){toast('Erro: '+e.message,'error');}
-}
-/* ── AJUSTE MANUAL DE SALDO (tela própria) ──
-   Para casos em que o saldo do sistema não bate com a realidade: lançamento feito
-   errado, placa quebrada, perda, divergência em contagem física. O usuário informa
-   o saldo correto e o sistema registra a diferença como entrada ou saída — o razão
-   continua sendo a única fonte de verdade, sem ninguém "setar" o saldo na mão. */
-function renderAjuste(){
-  const admin=isAdmin();
-  const produtosAtivos=ativos(state.produtos);
-  const semProduto=!produtosAtivos.length;
-  // Últimos ajustes, para conferir o que já foi corrigido sem sair da tela
-  const ajustes=state.estoqueMovimentos.filter(m=>m.ajuste)
-    .sort((a,b)=>(b.data||'').localeCompare(a.data||'')||b.id-a.id).slice(0,15);
-  document.getElementById('ajuste-content').innerHTML=`
-    ${!admin?'<div class="alert alert-warn">🔒 Modo leitura — sem permissão para ajustar saldo.</div>':''}
-    ${semProduto?`<div class="alert alert-warn">⚠️ Nenhum produto ativo. <a href="#" onclick="navigate('produtos');return false" style="color:inherit;text-decoration:underline">Cadastrar produtos</a></div>`:''}
-    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-      ${admin?`<div style="flex:1;min-width:300px">
-        <div class="form-card">
-          <h3>⚖️ Ajustar Saldo</h3>
-          <small>Use quando o saldo do sistema não corresponder ao estoque real — lançamento feito errado, placa quebrada, perda ou divergência na contagem física. Informe quanto <strong>realmente</strong> existe; o sistema calcula a diferença e registra a movimentação.</small>
-          <div class="form-group" style="margin-top:14px"><label>Produto</label><select id="aj-produto" onchange="onAjusteProdutoChange()" ${semProduto?'disabled':''}>
-            <option value="">— Selecione —</option>
-            ${produtosAtivos.map(p=>`<option value="${p.id}">${produtoLabel(p)}</option>`).join('')}
-          </select></div>
-          <div class="form-row">
-            <div class="form-group"><label>Saldo no sistema</label><input type="number" id="aj-atual" value="" disabled><small id="aj-hint">Selecione um produto.</small></div>
-            <div class="form-group"><label>Saldo real</label><input type="number" id="aj-novo" min="0" placeholder="Quantidade correta" oninput="atualizarPreviewAjuste()" ${semProduto?'disabled':''}></div>
-          </div>
-          <div id="aj-preview" style="margin:4px 0 12px"></div>
-          <div class="form-group"><label>Data</label><input type="date" id="aj-data" value="${hojeISO()}" ${semProduto?'disabled':''}></div>
-          <div class="form-group"><label>Motivo</label><input type="text" id="aj-obs" placeholder="Ex: cadastro lançado errado, placa quebrada" ${semProduto?'disabled':''}><small>Obrigatório — é o que explica o ajuste na auditoria.</small></div>
-          <button class="btn btn-primary" onclick="submitAjusteEstoque()" ${semProduto?'disabled':''}>⚖️ Registrar Ajuste</button>
-        </div>
-      </div>`:''}
-      <div style="flex:1;min-width:300px">
-        <div class="table-card">
-          <div class="table-header"><h3>📊 Saldo atual</h3></div>
-          <div style="overflow-x:auto">
-            <table>
-              <thead><tr><th>Produto</th><th>Saldo</th></tr></thead>
-              <tbody>
-                ${produtosAtivos.length?produtosAtivos.map(p=>{
-                  const saldo=estoqueAtual(p.id);
-                  return `<tr><td>${produtoLabel(p)}</td><td><strong>${saldo}</strong></td></tr>`;
-                }).join(''):'<tr><td colspan="2" style="text-align:center;color:var(--text3)">Nenhum produto ativo.</td></tr>'}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <div class="table-card" style="margin-top:16px">
-      <div class="table-header"><h3>🧾 Últimos ajustes</h3><span style="font-size:12px;color:var(--text2)">${ajustes.length?`${ajustes.length} mais recentes`:'nenhum'}</span></div>
-      <div style="overflow-x:auto">
-        <table>
-          <thead><tr><th>Data</th><th>Produto</th><th>Efeito</th><th>Motivo</th><th>Usuário</th></tr></thead>
-          <tbody>
-            ${ajustes.length?ajustes.map(m=>{
-              const p=produtoById(m.produto_id);
-              const entrada=m.tipo==='entrada';
-              return `<tr>
-                <td style="white-space:nowrap">${m.data?fromInput(m.data):'—'}
-                  <div style="font-size:10px;color:var(--text3)">${tsParaDataHoraLocal(m.criado_em)}</div>
-                </td>
-                <td>${produtoLabel(p)}</td>
-                <td><span class="badge ${entrada?'badge-green':'badge-yellow'}">${entrada?'+':'−'}${m.quantidade}</span></td>
-                <td style="font-size:12px">${m.obs||''}</td>
-                <td style="font-size:11px;color:var(--text3)">${m.usuario_email||'—'}</td>
-              </tr>`;
-            }).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--text3)">Nenhum ajuste registrado.</td></tr>'}
-          </tbody>
-        </table>
-      </div>
-    </div>`;
+/* ── MOVIMENTAÇÃO DE ESTOQUE (entrada, saída e correção numa tela só) ──
+   As três produzem linhas no mesmo livro-razão, mas significam coisas diferentes,
+   e a distinção precisa sobreviver para a auditoria: entrada e saída são eventos
+   físicos reais; correção é conserto de registro errado (o estoque não mudou).
+   Por isso a correção grava `ajuste=true` — é o que permite responder "quanto
+   material entrou no mês?" sem contar acertos de digitação.
+
+   A saída manual (perda) distingue-se da saída por paciente pelo `codigo`:
+   preenchido quando a placa foi usada em alguém, nulo quando foi descarte. */
+const MOV_TIPOS=[
+  {id:'entrada', icone:'➕', titulo:'Entrada',  ajuda:'Chegou material (compra, doação)',        rotuloQtd:'Quantidade recebida', rotuloObs:'Observação', dicaObs:'Opcional — nota fiscal, fornecedor.',       obsObrigatoria:false},
+  {id:'saida',   icone:'➖', titulo:'Saída',    ajuda:'Quebra, perda ou descarte',                rotuloQtd:'Quantidade retirada', rotuloObs:'Motivo',     dicaObs:'Obrigatório — explica a baixa na auditoria.', obsObrigatoria:true},
+  {id:'correcao',icone:'✏️', titulo:'Correção de saldo', ajuda:'O registro estava errado; o estoque não mudou', rotuloQtd:'Saldo real', rotuloObs:'Motivo', dicaObs:'Obrigatório — explica a correção na auditoria.', obsObrigatoria:true}
+];
+function movTipoAtual(){
+  const sel=document.querySelector('input[name="mv-tipo"]:checked');
+  return MOV_TIPOS.find(t=>t.id===(sel?sel.value:'entrada'))||MOV_TIPOS[0];
 }
-function onAjusteProdutoChange(){
-  const id=parseInt(document.getElementById('aj-produto').value,10);
-  const atual=document.getElementById('aj-atual');
-  const novo=document.getElementById('aj-novo');
-  const hint=document.getElementById('aj-hint');
-  if(!id){atual.value='';novo.value='';hint.textContent='Selecione um produto.';atualizarPreviewAjuste();return;}
-  const saldo=estoqueAtual(id);
-  atual.value=saldo;
-  novo.value=saldo; // parte do saldo atual: o usuário só altera o que está errado
-  hint.textContent=`Registrado no sistema: ${saldo}.`;
-  atualizarPreviewAjuste();
+// Clique numa linha da tabela de saldo: seleciona o produto no painel ao lado.
+function selecionarProdutoMov(id){
+  const sel=document.getElementById('mv-produto');
+  if(!sel) return;
+  sel.value=String(id);
+  onMovProdutoChange();
+  sel.focus();
 }
-// Mostra o efeito antes de salvar, para o usuário não precisar calcular a diferença
-// de cabeça nem descobrir o que aconteceu só depois de confirmar.
-function atualizarPreviewAjuste(){
-  const box=document.getElementById('aj-preview');
+function onMovProdutoChange(){
+  const id=parseInt(document.getElementById('mv-produto').value,10);
+  const hint=document.getElementById('mv-saldo-hint');
+  if(hint) hint.textContent=id?`Saldo atual: ${estoqueAtual(id)}.`:'Selecione um produto ou clique numa linha do saldo ao lado.';
+  // Na correção o campo representa o saldo desejado, então parte do saldo atual
+  if(id&&movTipoAtual().id==='correcao') document.getElementById('mv-qtd').value=estoqueAtual(id);
+  atualizarPreviewMov();
+}
+// O campo de quantidade muda de sentido conforme o tipo — por isso o rótulo
+// acompanha, senão "10" seria ambíguo entre "somar 10" e "ficar com 10".
+function onMovTipoChange(){
+  const t=movTipoAtual();
+  const id=parseInt(document.getElementById('mv-produto').value,10);
+  document.getElementById('mv-qtd-label').textContent=t.rotuloQtd;
+  // Asterisco sinaliza o campo obrigatório antes de o usuário tentar salvar,
+  // em vez de descobrir só ao ser barrado
+  document.getElementById('mv-obs-label').textContent=t.rotuloObs+(t.obsObrigatoria?' *':'');
+  document.getElementById('mv-obs-hint').textContent=t.dicaObs;
+  const obs=document.getElementById('mv-obs');
+  obs.required=t.obsObrigatoria;
+  obs.placeholder=t.obsObrigatoria?'Ex: 2 placas quebradas na bancada':'Nota fiscal, fornecedor, etc.';
+  const qtd=document.getElementById('mv-qtd');
+  qtd.value=(t.id==='correcao'&&id)?estoqueAtual(id):1;
+  atualizarPreviewMov();
+}
+// Mostra o efeito antes de salvar, para o usuário não precisar calcular de cabeça
+// nem descobrir o resultado só depois de confirmar.
+function atualizarPreviewMov(){
+  const box=document.getElementById('mv-preview');
   if(!box) return;
-  const id=parseInt(document.getElementById('aj-produto').value,10);
-  const novo=parseInt(document.getElementById('aj-novo').value,10);
-  if(!id||isNaN(novo)){box.innerHTML='';return;}
+  const id=parseInt(document.getElementById('mv-produto').value,10);
+  const valor=parseInt(document.getElementById('mv-qtd').value,10);
+  if(!id||isNaN(valor)){box.innerHTML='';return;}
   const saldo=estoqueAtual(id);
-  const diff=novo-saldo;
-  if(diff===0){box.innerHTML='<div class="alert alert-info" style="margin:0">Saldo já está correto — nada a ajustar.</div>';return;}
-  const sinal=diff>0?'entrada':'saída';
-  box.innerHTML=`<div class="alert alert-warn" style="margin:0">Será registrada uma <strong>${sinal} de ${Math.abs(diff)}</strong> unidade(s): ${saldo} → ${novo}.</div>`;
+  const t=movTipoAtual();
+  let diff;
+  if(t.id==='entrada') diff=valor;
+  else if(t.id==='saida') diff=-valor;
+  else diff=valor-saldo;
+  if(diff===0){box.innerHTML='<div class="alert alert-info" style="margin:0">Saldo já está correto — nada a registrar.</div>';return;}
+  const destino=saldo+diff;
+  const acao=diff>0?`entrada de ${diff}`:`saída de ${Math.abs(diff)}`;
+  const alerta=destino<0?' <strong>Atenção: o saldo ficará negativo.</strong>':'';
+  box.innerHTML=`<div class="alert ${destino<0?'alert-warn':'alert-info'}" style="margin:0">Será registrada uma <strong>${acao}</strong> unidade(s): ${saldo} → ${destino}.${alerta}</div>`;
 }
-async function submitAjusteEstoque(){
+async function submitMovimentacao(){
   if(!isAdmin()){toast('Sem permissão de edição','error');return;}
-  const produto_id=parseInt(document.getElementById('aj-produto').value,10);
-  const novoSaldo=parseInt(document.getElementById('aj-novo').value,10);
-  const data=document.getElementById('aj-data').value;
-  const motivo=document.getElementById('aj-obs').value.trim();
+  const produto_id=parseInt(document.getElementById('mv-produto').value,10);
+  const valor=parseInt(document.getElementById('mv-qtd').value,10);
+  const data=document.getElementById('mv-data').value;
+  const obs=document.getElementById('mv-obs').value.trim();
+  const t=movTipoAtual();
   if(!produto_id){toast('Selecione o produto','error');return;}
-  if(isNaN(novoSaldo)){toast('Informe o saldo correto','error');return;}
+  if(isNaN(valor)||valor<0){toast('Informe uma quantidade válida','error');return;}
+  if(t.id!=='correcao'&&valor<1){toast('Quantidade deve ser maior que zero','error');return;}
   if(!data){toast('Informe a data','error');return;}
-  if(!motivo){toast('Informe o motivo do ajuste','error');return;}
-  const saldoAtual=estoqueAtual(produto_id);
-  const diff=novoSaldo-saldoAtual;
-  if(diff===0){toast('O saldo informado é igual ao atual — nada a ajustar.','info');return;}
+  if(t.obsObrigatoria&&!obs){toast(`Informe o ${t.rotuloObs.toLowerCase()}`,'error');return;}
+
+  const saldo=estoqueAtual(produto_id);
+  const diff=t.id==='entrada'?valor:(t.id==='saida'?-valor:valor-saldo);
+  if(diff===0){toast('Nada a registrar — o saldo não muda.','info');return;}
+
   const p=produtoById(produto_id);
   const acao=diff>0?`entrada de ${diff}`:`saída de ${Math.abs(diff)}`;
-  if(!confirm(`Ajustar "${produtoLabel(p)}" de ${saldoAtual} para ${novoSaldo}?\n\nSerá registrada uma ${acao} unidade(s).`)) return;
+  const destino=saldo+diff;
+  if(!confirm(`${t.titulo} em "${produtoLabel(p)}"\n\nSerá registrada uma ${acao} unidade(s): ${saldo} → ${destino}.${destino<0?'\n\nAtenção: o saldo ficará negativo.':''}`)) return;
+
   try{
     toast('Salvando...','info');
     const{error}=await sb.from('estoque_movimentos').insert({
@@ -3437,13 +3521,13 @@ async function submitAjusteEstoque(){
       tipo:diff>0?'entrada':'saida',
       quantidade:Math.abs(diff),
       data,
-      ajuste:true,
-      obs:`Ajuste de saldo: ${saldoAtual} → ${novoSaldo}. ${motivo}`,
+      ajuste:t.id==='correcao',
+      obs:t.id==='correcao'?`Correção de saldo: ${saldo} → ${destino}. ${obs}`:obs,
       usuario_email:state.user?.email||null
     });
     if(error) throw error;
-    toast(`Saldo ajustado para ${novoSaldo}.`,'success');
-    await loadAll();navigate('ajuste');
+    toast(t.id==='correcao'?`Saldo corrigido para ${destino}.`:'Movimentação registrada!','success');
+    await loadAll();navigate('estoque');
   }catch(e){toast('Erro: '+e.message,'error');}
 }
 
@@ -3457,7 +3541,6 @@ async function estornarMovimentoUI(id){
     toast('Estorno registrado!','success');
     await loadAll();
     if(document.querySelector('#page-estoque.active')) renderEstoque();
-    if(document.querySelector('#page-ajuste.active')) renderAjuste();
   }catch(e){toast('Erro: '+e.message,'error');}
 }
 
@@ -3528,6 +3611,7 @@ function renderEstoqueBanner(){
 document.getElementById('config-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeConfig();});
 document.getElementById('detail-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDetail();});
 document.getElementById('protetico-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeProtModal();});
+document.getElementById('doc-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDocumentacao();});
 
 // ── PWA MANIFEST (inline, no extra file needed) ──
 const manifest={
