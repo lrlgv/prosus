@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v7.8 - Estoque unificado + documentação acessível pelas Configurações -->
+<!-- ProSUS v7.9 - placas utilizadas visíveis na aba Informações do paciente -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -529,7 +529,7 @@
       <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.8</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.9</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1199,7 +1199,7 @@ async function baixarBackup(){
   const st=document.getElementById('backup-status');
   const msg=t=>{ if(st) st.textContent=t; };
   try{
-    const dump={_meta:{app:'ProSUS v7.8',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
+    const dump={_meta:{app:'ProSUS v7.9',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
     for(const t of BACKUP_TABLES){
       msg(`Lendo ${t}...`);
       const linhas=await sbSelectAll(t);
@@ -1914,6 +1914,21 @@ function renderDetailInfo(cod){
   const bpPrevInfo=state.basePrevista.find(x=>x.codigo===String(cod));
   const step=(label,date,color,obs,prev)=>`<div class="timeline-step"><div class="timeline-dot" style="background:${date?color:'var(--border)'}"></div><div style="flex:1"><div style="font-size:13px;font-weight:500">${label}</div><div style="font-size:12px;color:var(--text2)">${date||'Pendente'}</div>${!date&&prev?`<div style="font-size:11px;color:#13456a;margin-top:2px">📅 Previsão: <strong>${prev}</strong></div>`:''} ${obs?`<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 ${obs}</div>`:''}</div>${date?'<span class="badge badge-green">✓</span>':'<span class="badge badge-gray">–</span>'}</div>`;
   const remHtml=rems.length?`<div style="margin-top:12px"><div style="font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Remarcações</div>${rems.map(r=>`<div style="font-size:12px;padding:6px 10px;background:var(--surface2);border-radius:6px;margin-bottom:4px">🔁 <strong>${r.etapa}</strong> → ${r.data}${r.obs?' — '+r.obs:''}</div>`).join('')}</div>`:'';
+  // Placas ainda válidas: uma saída estornada foi devolvida ao estoque e não conta
+  // mais como usada no paciente (o histórico de estoque guarda os dois registros).
+  const placas=state.estoqueMovimentos.filter(x=>x.tipo==='saida'&&x.codigo===String(cod)&&!foiEstornado(x.id));
+  const totalPlacas=placas.reduce((s,x)=>s+x.quantidade,0);
+  const placasHtml=placas.length?`
+    <div style="margin-top:12px">
+      <div style="font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Placas utilizadas · ${totalPlacas} un.</div>
+      ${placas.map(x=>{
+        const p=produtoById(x.produto_id);
+        return `<div style="font-size:12px;padding:6px 10px;background:var(--surface2);border-radius:6px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span>🧩 <strong>${produtoLabel(p)}</strong></span>
+          <span style="color:var(--text3);white-space:nowrap">${x.quantidade} un.${x.data?' · '+fromInput(x.data):''}</span>
+        </div>`;
+      }).join('')}
+    </div>`:'';
   const relacionados=tratamentosRelacionados(cod).filter(x=>x.codigo!==String(cod));
   const relacionadosHtml=relacionados.length?`
     <div class="related-tratamentos">
@@ -1939,6 +1954,7 @@ function renderDetailInfo(cod){
     ${e?.previsao&&!e?.entrega?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-left:26px">📅 Previsão: <strong style="color:var(--text)">${e.previsao}</strong></div>`:''}
     ${remHtml}
     ${rb?.data?step('Reembase',rb.data,'#f43f5e',rb.obs||''):''}
+    ${placasHtml}
     ${relacionadosHtml}`;
 }
 function isAdmin(){

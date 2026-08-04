@@ -342,7 +342,8 @@ A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo r
 
 | Versão | Mudanças |
 | :--- | :--- |
-| **v7.8** | Documentação técnica acessível pelo próprio sistema (Configurações → Documentação), renderizada a partir deste arquivo. |
+| **v7.9** | Placas utilizadas passam a aparecer na aba Informações do paciente, não só na aba Etapas onde são registradas. |
+| v7.8 | Documentação técnica acessível pelo próprio sistema (Configurações → Documentação), renderizada a partir deste arquivo. |
 | v7.7 | Estoque e Ajustar Saldo unificados numa tela, com três tipos de movimentação (entrada, saída e correção) e o campo de quantidade adaptando-se ao tipo. Fecha a lacuna de registrar perdas reais. |
 | v7.6 | Remoção da tela de Validação de Dados e de todo o código residual da planilha — as verificações viraram impossíveis por construção com as chaves e restrições do banco. |
 | v7.5 | Padronização visual dos filtros do histórico de estoque. |
@@ -443,6 +444,8 @@ Com isso é possível reconstruir o saldo movimento a movimento e localizar onde
 
 ### 12.4 Baixa na Prova de Dentes
 Na etapa de Prova de Dentes é possível registrar quais placas foram usadas no paciente (uma ou várias, com quantidade), dando baixa imediata no estoque. Cada placa registrada pode ser removida, o que estorna a quantidade.
+
+As placas usadas também aparecem na aba **Informações** do paciente (v7.9), abaixo da linha do tempo — o registro é feito na aba Etapas, mas faz parte do histórico do paciente e precisa estar visível para quem só está consultando. Placas devolvidas ao estoque deixam de aparecer ali, já que não foram efetivamente usadas; os dois registros continuam no histórico de estoque para auditoria.
 
 Se o estoque for insuficiente, o sistema **avisa mas não bloqueia**, permitindo saldo negativo. A decisão é deliberada: o atendimento clínico já ocorreu, e impedir o registro apenas deixaria o dado real fora do sistema — o saldo negativo, visível no histórico, sinaliza que faltou lançar uma entrada.
 
