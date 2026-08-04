@@ -8,7 +8,7 @@ PWA (Progressive Web App) de arquivo único para gestão de próteses dentárias
 | | Produção (atual) | Legado (aposentado) |
 |---|---|---|
 | Arquivo | `index.html` (raiz) | `legacy/index.html` |
-| Versão | **v7.0** | v5.2 |
+| Versão | **v7.6** | v5.2 |
 | Backend | **Supabase** (Postgres + Auth + RLS) | Google Sheets + Apps Script |
 | URL | https://lrlgv.github.io/prosus | https://lrlgv.github.io/prosus/legacy/ |
 
@@ -36,7 +36,6 @@ APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyT3XF5rauK9vOZxPMlzH
 // aplicação atual
 SUPABASE_URL = 'https://cqepzwqmlpgdttuzgihx.supabase.co'
 SUPABASE_ANON_KEY = '...'   // chave anon/public — segura no navegador porque o RLS protege os dados
-DUAL_WRITE_SHEETS = false   // desligado no cutover v7.0; a planilha não recebe mais nada
 ```
 
 ⚠️ **Não existe backup automático.** O plano gratuito do Supabase não faz backup e a cópia para a planilha foi desligada no cutover. O backup é **manual**: Configurações → 💾 Baixar backup (`baixarBackup()`, só admin) gera um JSON com todas as tabelas de `BACKUP_TABLES`. Antes de qualquer operação que apague dados em massa, rode isso.
@@ -49,7 +48,7 @@ O backup é JSON e não planilha de propósito: Excel/Sheets reinterpreta datas 
 ```js
 const state = {
   user, allowedUser,   // allowedUser = { email, isAdmin, notificarEstoque, nome }
-  connected, dbStatus, // dbStatus/sheetsStatus alimentam as badges do topo
+  connected, dbStatus, // dbStatus alimenta a badge de conexão no topo
   moldagens:[], baseProva:[], basePrevista:[], provaDentes:[],
   entregas:[], remarcacoes:[], reembase:[],
   proteticos:[], dentistas:[], tiposPeca:[], contratos:[],
@@ -193,7 +192,6 @@ Colunas: `is_admin` (pode editar) e `notificar_estoque` (recebe o banner de esto
 | `dentistas` | CRUD de dentistas |
 | `proteticos` | CRUD de protéticos |
 | `tipopeca` | CRUD de tipos de peça |
-| `validacao` | Validação de integridade dos dados |
 
 Telas do módulo de estoque:
 
@@ -218,7 +216,6 @@ renderDetailEditar(cod)  — renderiza aba Editar no modal
 renderDetailInfo(cod)    — renderiza aba Informações no modal
 submitEtapaUnica(cod, tipo) — salva etapa individual (bp/pd/ent/rb/rem)
 upsert(sheet, arr, values)  — insert ou update na planilha (sempre busca col A)
-renderValidacao()        — analisa integridade dos dados
 renderResumo(dataSel)    — resumo do dia (data opcional)
 exportarTabela(id, titulo)  — copia tabela TSV para clipboard
 setHoje(inputId)         — preenche campo de data com hoje
@@ -229,7 +226,7 @@ Específicas da arquitetura Supabase:
 sb                       — cliente Supabase (NÃO chamar de `supabase`: colide com o global da lib e quebra o script inteiro)
 sbSelectAll(table, orderBy) — lê tabela inteira paginando de 1000 em 1000
 fetchSheet(range)        — adapter: lê do Supabase e devolve array posicional no formato antigo das colunas
-postSheet(sheet, row)    — adapter: insert no Supabase (+ gravação dupla no Sheets)
+postSheet(sheet, row)    — adapter: insert no Supabase
 upsertRow(sheet, matchKey, row) — update-ou-insert real (substituiu o upsert por número de linha)
 SHEET_MAP                — mapa aba antiga → tabela + ordem posicional das colunas
 migrarDadosDoSheets()    — migração Sheets → Supabase (Configurações, só admin)
@@ -320,4 +317,3 @@ Manual, pela própria interface: **Configurações → 💾 Baixar backup**. Ger
 
 Como depende de alguém clicar, convém combinar uma periodicidade com o usuário. Para restaurar, os dados de cada tabela estão em `dump["nome_da_tabela"]` como array de objetos, prontos para reinserir na ordem das FKs (`moldagens` primeiro).
 
-A badge "Planilha" no topo some sozinha com `DUAL_WRITE_SHEETS=false`; só a badge "Banco" aparece.

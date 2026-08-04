@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v7.5 - padroniza os filtros do histórico de estoque com o visual do resto do sistema -->
+<!-- ProSUS v7.6 - remove a tela de Validação e o código morto da planilha -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -491,9 +491,8 @@
       <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.5</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.6</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
-      <button class="config-btn" onclick="navigate('validacao')">✅ Validação de dados</button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
     </div>
@@ -536,7 +535,6 @@
       <div class="mob-more-item" onclick="closeMobMore();navigate('produtos')"><span class="icon">📦</span><span>Produtos</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('tiposplaca')"><span class="icon">🧩</span><span>Tipos de Placa</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('cores')"><span class="icon">🎨</span><span>Cores</span></div>
-      <div class="mob-more-item" onclick="closeMobMore();navigate('validacao')"><span class="icon">✅</span><span>Validação</span></div>
       <div class="mob-more-item" onclick="closeMobMore();navigate('resumo')"><span class="icon">📋</span><span>Resumo do Dia</span></div>
       <div class="mob-more-item" onclick="closeMobMore();recarregarDados()"><span class="icon">🔄</span><span>Atualizar</span></div>
       <div class="mob-more-item" onclick="closeMobMore();openConfig()"><span class="icon">⚙️</span><span>Configurações</span></div>
@@ -658,10 +656,6 @@
         <div id="ajuste-content"></div>
       </div>
 
-      <div class="page" id="page-validacao">
-        <div id="validacao-content"><div class="not-connected"><div class="icon">🔍</div><p>Carregando...</p></div></div>
-      </div>
-
       <div class="page" id="page-resumo">
         <div id="resumo-content"><div class="not-connected"><div class="icon">📋</div><p>Carregando...</p></div></div>
       </div>
@@ -741,15 +735,11 @@
 
 <script>
 const CLIENT_ID='29814188441-tk6mg6ni8r63u5jmncog34ijv719cff0.apps.googleusercontent.com';
-const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbyT3XF5rauK9vOZxPMlzHy4gsGLyhkko_XzI2j2XqQIsU5FSCjnETtWf0Tb462YBvmhyw/exec';
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 // ── SUPABASE ──
 const SUPABASE_URL='https://cqepzwqmlpgdttuzgihx.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZXB6d3FtbHBnZHR0dXpnaWh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NTY5NDgsImV4cCI6MjEwMTAzMjk0OH0.iV8UUAQKLTigD_wMpOhfLueuTnj7RpLdJ1GW_aCk1tE';
-// Gravação dupla na planilha antiga: desligada no cutover para produção (v7.0).
-// A planilha ficou congelada no estado do cutover e não recebe mais nada.
-const DUAL_WRITE_SHEETS=false;
 const sb=(SUPABASE_URL.startsWith('http'))?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
 
 const state={
@@ -757,7 +747,6 @@ const state={
   allowedUser:null, // { email, isAdmin, nome } — carregado de allowed_users após login
   connected:false,
   dbStatus:'checking', // 'checking'|'ok'|'error' — badge de conexão com o Supabase
-  sheetsStatus:'checking', // idem, pra gravação dupla no Sheets (só usado enquanto DUAL_WRITE_SHEETS=true)
   moldagens:[],baseProva:[],basePrevista:[],provaDentes:[],entregas:[],remarcacoes:[],reembase:[],
   proteticos:[],dentistas:[],tiposPeca:[],contratos:[],
   cores:[],tiposPlaca:[],produtos:[],estoqueMovimentos:[], // controle de estoque de placas (nativo do banco)
@@ -778,7 +767,6 @@ const pageMeta={
   dentistas:['Dentistas','Gerencie os dentistas cadastrados'],
   proteticos:['Protéticos','Gerencie os protéticos (acesso restrito)'],
   tipopeca:['Tipos de Peça','Gerencie os tipos de peça (BaseDados)'],
-  validacao:['Validação de Dados','Cheque integridade dos registros nas planilhas'],
   resumo:['Resumo do Dia','Movimentações registradas hoje'],
   estoque:['Estoque de Placas','Entradas, saldo atual e histórico de movimentações'],
   ajuste:['Ajustar Saldo','Corrija o saldo quando ele não corresponder ao estoque real'],
@@ -1000,9 +988,7 @@ async function removeAllowedUser(email){
     await renderAllowedUsers();
   }catch(e){toast('Erro: '+e.message,'error');}
 }
-// Badges de status: Banco (Supabase) sempre visível; Planilha (Sheets/Apps Script)
-// só aparece enquanto DUAL_WRITE_SHEETS estiver ligado — quando a gravação dupla for
-// desligada ao final da migração, essa badge some sozinha e fica só o Banco.
+// Badge de status da conexão com o banco, no topo da tela.
 function statusBadge(status,label){
   const cls={ok:'badge-green',error:'badge-red',checking:'badge-yellow'}[status]||'badge-gray';
   const txt={ok:'Conectado',error:'Erro',checking:'Verificando...'}[status]||'—';
@@ -1011,25 +997,15 @@ function statusBadge(status,label){
 function updateStatus(){
   const el=document.getElementById('connection-status');
   if(!el)return;
-  let html=statusBadge(state.dbStatus,'Banco');
-  if(DUAL_WRITE_SHEETS) html+=' '+statusBadge(state.sheetsStatus,'Planilha');
-  el.innerHTML=html;
+  el.innerHTML=statusBadge(state.dbStatus,'Banco');
 }
 async function checkConnections(){
   state.dbStatus='checking';
-  if(DUAL_WRITE_SHEETS) state.sheetsStatus='checking';
   updateStatus();
   try{
     const{error}=await sb.from('allowed_users').select('email').limit(1);
     state.dbStatus=error?'error':'ok';
   }catch(e){ state.dbStatus='error'; }
-  if(DUAL_WRITE_SHEETS){
-    try{
-      const r=await fetch(`${APPS_SCRIPT_URL}?ping=1`);
-      const result=await r.json();
-      state.sheetsStatus=result.success?'ok':'error';
-    }catch(e){ state.sheetsStatus='error'; }
-  }
   updateStatus();
 }
 
@@ -1062,7 +1038,7 @@ function navigate(page){
     const btn=document.getElementById('mob-btn-'+p);
     if(btn) btn.classList.toggle('active',p===page);
   });
-  const morePages=['fechamento','dentistas','proteticos','tipopeca','validacao','resumo','estoque','ajuste','produtos','tiposplaca','cores'];
+  const morePages=['fechamento','dentistas','proteticos','tipopeca','resumo','estoque','ajuste','produtos','tiposplaca','cores'];
   const mobMore=document.getElementById('mob-btn-more');
   if(mobMore) mobMore.classList.toggle('active',morePages.includes(page));
   document.getElementById('page-'+page).classList.add('active');
@@ -1079,7 +1055,6 @@ function navigate(page){
   if(page==='fechamento'&&state.connected) renderFechamento();
   if(page==='fechamento-armacao'&&state.connected) renderFechamentoArmacao();
   if(page==='contratos'&&state.connected) renderContratos();
-  if(page==='validacao'&&state.connected) renderValidacao();
   if(page==='resumo'&&state.connected) renderResumo();
   if(page==='cores'&&state.connected) renderCores();
   if(page==='tiposplaca'&&state.connected) renderTiposPlaca();
@@ -1172,7 +1147,7 @@ async function baixarBackup(){
   const st=document.getElementById('backup-status');
   const msg=t=>{ if(st) st.textContent=t; };
   try{
-    const dump={_meta:{app:'ProSUS v7.5',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
+    const dump={_meta:{app:'ProSUS v7.6',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
     for(const t of BACKUP_TABLES){
       msg(`Lendo ${t}...`);
       const linhas=await sbSelectAll(t);
@@ -1207,7 +1182,6 @@ async function postSheet(sheet,row){
   const obj=rowToObj(map,row);
   const{error}=await sb.from(map.table).insert(obj);
   if(error) throw new Error(error.message||'Erro ao salvar em '+sheet);
-  dualWriteSheets(sheet,row);
   return{success:true};
 }
 // Update-ou-insert real via Postgres, substitui o padrão antigo de "buscar a coluna A
@@ -1226,18 +1200,7 @@ async function upsertRow(sheet,matchKey,row){
     const{error:insErr}=await sb.from(map.table).insert(obj);
     if(insErr) throw new Error(insErr.message||'Erro ao salvar em '+sheet);
   }
-  dualWriteSheets(sheet,row,matchKey);
   return{success:true};
-}
-// Gravação dupla temporária (best-effort): mantém a planilha antiga como backup vivo
-// durante o período de validação. Nunca deve travar a UI — falhas são só logadas.
-function dualWriteSheets(sheet,row,keyVal){
-  if(!DUAL_WRITE_SHEETS) return;
-  const body=(keyVal!==undefined)?{action:'upsert_by_key',sheet,key:String(keyVal),values:row}:{sheet,row};
-  fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(body)})
-    .then(r=>r.json())
-    .then(res=>{ state.sheetsStatus=res.success?'ok':'error'; updateStatus(); })
-    .catch(e=>{ console.warn('[dual-write] falhou em '+sheet+':',e); state.sheetsStatus='error'; updateStatus(); });
 }
 
 /* ── ESTOQUE DE PLACAS (helpers) ──
@@ -2372,70 +2335,6 @@ function renderResumo(dataSel){
       (it)=>`${it.obs||'—'}`,
     ])}`;
 }
-function renderValidacao(){
-  const el=document.getElementById('validacao-content');
-  el.innerHTML='<div class="not-connected"><div class="icon">🔄</div><p>Analisando dados...</p></div>';
-  setTimeout(()=>{
-    const codsMold=new Set(state.moldagens.map(m=>m.codigo));
-    const sheets=[
-      {nome:'Base de Prova',arr:state.baseProva},
-      {nome:'Base de Prova (Previsão)',arr:state.basePrevista},
-      {nome:'Prova de Dentes',arr:state.provaDentes},
-      {nome:'Entregas',arr:state.entregas},
-      {nome:'Reembase',arr:state.reembase},
-    ];
-
-    // 3.1 Duplicatas por aba
-    const dupRows=[];
-    sheets.forEach(({nome,arr})=>{
-      const cnt={};
-      arr.forEach(r=>{cnt[r.codigo]=(cnt[r.codigo]||0)+1;});
-      Object.entries(cnt).filter(([,v])=>v>1).forEach(([cod,v])=>{
-        const m=state.moldagens.find(x=>x.codigo===cod);
-        dupRows.push(`<tr><td class="td-code">#${cod}</td><td>${m?.nome||'—'}</td><td>${nome}</td><td style="color:var(--accent4);font-weight:700">${v} registros</td></tr>`);
-      });
-    });
-
-    // 3.2 Registros sem moldagem
-    const semMoldRows=[];
-    sheets.forEach(({nome,arr})=>{
-      arr.filter(r=>!codsMold.has(r.codigo)).forEach(r=>{
-        semMoldRows.push(`<tr><td class="td-code">#${r.codigo}</td><td style="color:var(--text3)">Sem moldagem</td><td>${nome}</td><td style="color:var(--accent3)">⚠️ Órfão</td></tr>`);
-      });
-    });
-
-    // 3.3 Moldagens sem nenhuma etapa (possível linha "perdida" na sequência)
-    const semEtapaCodsArr=state.moldagens.filter(m=>{
-      const tem=state.baseProva.some(x=>x.codigo===m.codigo)||
-                state.basePrevista.some(x=>x.codigo===m.codigo)||
-                state.provaDentes.some(x=>x.codigo===m.codigo)||
-                state.entregas.some(x=>x.codigo===m.codigo)||
-                state.reembase.some(x=>x.codigo===m.codigo);
-      return !tem;
-    });
-
-    const mkTable=(titulo,icon,rows,headers)=>{
-      if(!rows.length) return `<div class="alert alert-info" style="margin-bottom:12px">${icon} <strong>${titulo}</strong>: nenhum problema encontrado ✅</div>`;
-      return `<div class="table-card" style="margin-bottom:20px">
-        <div class="table-header"><h3>${icon} ${titulo}</h3><span style="font-size:12px;color:var(--text2)">${rows.length} ocorrência(s)</span></div>
-        <div style="overflow-x:auto"><table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>
-      </div>`;
-    };
-
-    const semEtapaRows=semEtapaCodsArr.map(m=>`<tr><td class="td-code">#${m.codigo}</td><td>${m.nome}</td><td>${m.data}</td><td style="color:var(--text3)">Sem etapas registradas</td></tr>`);
-
-    el.innerHTML=`
-      <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <h3 style="margin:0">📊 Resultado da Validação</h3>
-        <button class="btn btn-secondary btn-sm" onclick="renderValidacao()">🔄 Reanalisar</button>
-        <span style="font-size:12px;color:var(--text3)">${state.moldagens.length} moldagens · ${state.entregas.length} entregas</span>
-      </div>
-      ${mkTable('Duplicatas por Aba','🔁',dupRows,['Código','Paciente','Aba','Situação'])}
-      ${mkTable('Registros sem Moldagem (Órfãos)','👻',semMoldRows,['Código','Paciente','Aba','Situação'])}
-      ${mkTable('Moldagens sem nenhuma etapa','📭',semEtapaRows,['Código','Paciente','Data Moldagem','Observação'])}
-    `;
-  },100);
-}
 function exportarTabela(tabelaId,titulo){
   const tbl=document.getElementById(tabelaId);
   if(!tbl){toast('Tabela não encontrada','error');return;}
@@ -2952,8 +2851,8 @@ async function submitNovoTipo(){
 
 /* ════════════ ESTOQUE DE PLACAS ════════════
    Cadastros (cores, tipos de placa, produtos), entrada/consulta de estoque e
-   histórico de movimentações. Tabelas nativas do banco — não passam por
-   SHEET_MAP/dualWriteSheets, já que não existem no Sheets. */
+   histórico de movimentações. Tabelas nativas do banco — não passam pelo
+   SHEET_MAP (que existe só para as tabelas herdadas da planilha antiga). */
 
 /* ── CORES ── */
 let editingCor=null;
