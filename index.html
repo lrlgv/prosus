@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!-- ProSUS v7.9 - placas utilizadas visíveis na aba Informações do paciente -->
+<!-- ProSUS v7.10 - situação do tratamento derivada da entrega (coluna situacao aposentada) -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -529,7 +529,7 @@
       <button class="nav-btn" data-page="cores" onclick="navigate('cores')"><span class="nav-icon">🎨</span> Cores</button>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.9</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;padding:4px 0">v7.10</div>
       <button class="theme-btn" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Tema claro</span></button>
       <button class="config-btn" onclick="recarregarDados()" id="refresh-btn">🔄 Atualizar dados</button>
       <button class="config-btn" onclick="openConfig()">⚙️ Configurações</button>
@@ -1134,7 +1134,9 @@ function closeMobMore(){
    Cada linha (array posicional, no formato antigo de colunas do Sheets) é convertida
    de/para um objeto nomeado da tabela do Postgres. */
 const SHEET_MAP={
-  'Moldagens':{table:'moldagens',pk:'codigo',fields:['codigo','nome','dentista','tipo','data','dist','situacao','obs'],dates:['data']},
+  // A posição 6 era `situacao`, coluna removida na v7.10 (a situação é derivada de
+  // `entregas`). Fica como null para não deslocar as demais colunas posicionais.
+  'Moldagens':{table:'moldagens',pk:'codigo',fields:['codigo','nome','dentista','tipo','data','dist',null,'obs'],dates:['data']},
   'BaseProvaArmacao':{table:'base_prova_armacao',pk:'codigo',fields:['codigo',null,null,null,null,'previsao','data','obs'],dates:['previsao','data']},
   'Prova de Dentes':{table:'prova_dentes',pk:'codigo',fields:['codigo',null,null,null,null,'previsao','data','obs'],dates:['previsao','data']},
   'Entregas':{table:'entregas',pk:'codigo',fields:['codigo',null,null,null,null,'previsao','entrega','obs'],dates:['previsao','entrega']},
@@ -1199,7 +1201,7 @@ async function baixarBackup(){
   const st=document.getElementById('backup-status');
   const msg=t=>{ if(st) st.textContent=t; };
   try{
-    const dump={_meta:{app:'ProSUS v7.9',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
+    const dump={_meta:{app:'ProSUS v7.10',gerado_em:new Date().toISOString(),por:state.user?.email||null,tabelas:{}}};
     for(const t of BACKUP_TABLES){
       msg(`Lendo ${t}...`);
       const linhas=await sbSelectAll(t);
@@ -1297,6 +1299,19 @@ async function upsertRow(sheet,matchKey,row){
     if(insErr) throw new Error(insErr.message||'Erro ao salvar em '+sheet);
   }
   return{success:true};
+}
+
+/* A situação do tratamento é DERIVADA do registro de entrega, nunca armazenada —
+   mesmo princípio do saldo de estoque: não guardar o que pode ser calculado, para
+   não existirem duas versões da verdade.
+   A planilha tinha uma coluna `situacao` preenchida à mão, que o app nunca
+   atualizou: ficava congelada em "Pendente" e contradizia a data de entrega
+   exibida na mesma linha. Foi removida do banco na v7.10. */
+function estaEntregue(codigo){
+  return state.entregas.some(e=>e.codigo===String(codigo)&&e.entrega);
+}
+function situacaoTratamento(codigo){
+  return estaEntregue(codigo)?'Entregue':'Pendente';
 }
 
 /* ── ESTOQUE DE PLACAS (helpers) ──
@@ -1496,7 +1511,7 @@ async function loadAll(){
       return ini&&fim&&today>=ini&&today<=fim;
     })||state.contratos[state.contratos.length-1]||null;
 
-    state.moldagens=mRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),nome:r[1]||'',dentista:r[2]||'',tipo:r[3]||'',data:r[4]||'',dist:r[5]||'',situacao:r[6]||'Pendente',obs:r[7]||''}));
+    state.moldagens=mRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())).map(r=>({codigo:r[0].toString().trim(),nome:r[1]||'',dentista:r[2]||'',tipo:r[3]||'',data:r[4]||'',dist:r[5]||'',obs:r[7]||''}));
     state.baseProva=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&r[6]&&r[6].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5]||'',data:r[6].toString().trim(),obs:r[7]||''}));
     state.basePrevista=bRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&(!r[6]||r[6].toString().trim()==='')&&r[5]&&r[5].toString().trim()!=='').map(r=>({codigo:r[0].toString().trim(),previsao:r[5].toString().trim(),obs:r[7]||''}));
     state.provaDentes=dRows.filter(r=>r[0]&&r[0].toString().trim()!==''&&!r[0].toString().includes('#')&&/^\d/.test(r[0].toString().trim())&&((r[5]&&r[5].toString().trim()!=='')||(r[6]&&r[6].toString().trim()!==''))).map(r=>({codigo:r[0].toString().trim(),previsao:r[5]?r[5].toString().trim():'',data:r[6]?r[6].toString().trim():'',obs:r[7]||''}));
@@ -1725,7 +1740,7 @@ function renderTablePage(){
     });
     const primary=group[0];
 
-    const sit=(primary.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente';
+    const sit=situacaoTratamento(primary.codigo);
     const bc=sit==='Entregue'?'badge-green':'badge-yellow';
     const prot=state.proteticos.find(p=>p.codigo===primary.dist);
     const distDisplay=prot?`${primary.dist} — ${prot.nome}`:primary.dist;
@@ -1750,7 +1765,7 @@ function renderTablePage(){
     // Render child rows when expanded
     if(isMulti&&expanded){
       group.slice(1).forEach(child=>{
-        const csit=(child.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente';
+        const csit=situacaoTratamento(child.codigo);
         const cbc=csit==='Entregue'?'badge-green':'badge-yellow';
         const cprot=state.proteticos.find(p=>p.codigo===child.dist);
         const cDist=cprot?`${child.dist} — ${cprot.nome}`:child.dist;
@@ -1851,7 +1866,7 @@ function filterTable(){
     const mq=!q||m.nome.toLowerCase().includes(q)||String(m.codigo).includes(q)||m.dentista.toLowerCase().includes(q);
     const md=!dent||m.dentista===dent;
     const mt=!tipo||m.tipo===tipo;
-    const ms=!sit||((m.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente')===sit;
+    const ms=!sit||(entSet.has(m.codigo)?'Entregue':'Pendente')===sit;
     let me=true;
     if(etapa){
       const cod=m.codigo;
@@ -2150,7 +2165,7 @@ async function submitEditar(cod){
     toast('Atualizando...','info');
     const m=state.moldagens.find(x=>x.codigo===String(cod));
     if(!m) throw new Error('Registro não encontrado');
-    await upsertRow('Moldagens',cod,[cod,nome,dentista,tipo,fromInput(dataRaw),dist,m?.situacao||'Pendente',obs]);
+    await upsertRow('Moldagens',cod,[cod,nome,dentista,tipo,fromInput(dataRaw),dist,'',obs]);
     toast('Dados atualizados!','success');
     await loadAll();showDetail(cod);switchDetailTab('info');
   }catch(e){toast('Erro: '+e.message,'error');}
@@ -2670,7 +2685,7 @@ async function submitCadastro(){
       try{
         toast('Salvando...','info');
         const bpPrev2=document.getElementById('cad-bp-prev')?fromInput(document.getElementById('cad-bp-prev').value):'';
-        await postSheet('Moldagens',[novoCodigo,nome,dentista,tipo,fromInput(dataRaw),dist,'Pendente',obs]);
+        await postSheet('Moldagens',[novoCodigo,nome,dentista,tipo,fromInput(dataRaw),dist,'',obs]);
         if(bpPrev2) await postSheet('BaseProvaArmacao',[novoCodigo,'','','','',bpPrev2]);
         toast(`Novo tratamento de ${nome} cadastrado! (${novoCodigo})`,'success');
         state.lastSavedCodigo=String(novoCodigo);
@@ -2689,7 +2704,7 @@ async function submitCadastro(){
   try{
     toast('Salvando...','info');
     const bpPrev=document.getElementById('cad-bp-prev')?fromInput(document.getElementById('cad-bp-prev').value):'';
-    await postSheet('Moldagens',[codigo,nome,dentista,tipo,fromInput(dataRaw),dist,'Pendente',obs]);
+    await postSheet('Moldagens',[codigo,nome,dentista,tipo,fromInput(dataRaw),dist,'',obs]);
     if(bpPrev) await postSheet('BaseProvaArmacao',[codigo,'','','','',bpPrev]);
     toast(`${nome} cadastrado com sucesso!`,'success');
     state.lastSavedCodigo=String(codigo);
@@ -2708,7 +2723,7 @@ function verificarNomeCadastro(){
   if(!nome){alertEl.style.display='none';return;}
   const sugestao=proximoCodigoTratamento(nome);
   if(sugestao){
-    const existList=sugestao.existentes.map(m=>`<strong>#${m.codigo}</strong> — ${m.tipo} (${(m.situacao||'Pendente').includes('Entregue')?'Entregue':'Pendente'})`).join('<br>');
+    const existList=sugestao.existentes.map(m=>`<strong>#${m.codigo}</strong> — ${m.tipo} (${situacaoTratamento(m.codigo)})`).join('<br>');
     alertEl.style.display='block';
     alertEl.innerHTML=`<div class="alert alert-warn" style="flex-direction:column;align-items:flex-start;gap:6px">
       <div>⚠️ <strong>${nome}</strong> já possui tratamento(s) cadastrado(s):</div>

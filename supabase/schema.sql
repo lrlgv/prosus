@@ -11,7 +11,8 @@ create table moldagens (
   tipo text,
   data date,
   dist text,
-  situacao text default 'Pendente',
+  -- NOTA: a planilha tinha aqui uma coluna `situacao`, preenchida à mão e nunca
+  -- atualizada pelo app. Removida na v7.10 — a situação é derivada de entregas.entrega.
   obs text
 );
 

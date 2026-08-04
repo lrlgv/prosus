@@ -50,7 +50,9 @@ stateDiagram-v2
 | **4 · Entregue** | Tem data de entrega preenchida |
 | **5 · Reembase** | Tem reembase registrado |
 
-Dois pontos que costumam gerar dúvida:
+**A situação (Pendente/Entregue) é derivada, nunca armazenada.** Um tratamento está "Entregue" se, e somente se, existe data de entrega registrada. Até a v7.9 havia uma coluna `situacao` herdada da planilha, preenchida à mão e nunca atualizada pelo sistema — ela mostrava "Pendente" ao lado de uma entrega já registrada, e quebrava o filtro por situação. Foi removida na v7.10; vale o mesmo princípio do saldo de estoque: **o que pode ser calculado não é guardado**, para não existirem duas versões da verdade.
+
+Dois outros pontos que costumam gerar dúvida:
 
 - **Previsão não move o paciente de etapa.** Cada etapa tem *previsão* e *data real*; só a data real conta para o fluxo. A previsão serve para planejar e aparece no card.
 - **Reembase não é uma etapa seguinte, é um retorno.** Um paciente entregue e depois reembasado aparece **nas duas colunas** (4 e 5) — o reembase é uma intervenção corretiva pós-entrega, não a continuação do fluxo.
@@ -342,7 +344,8 @@ A partir da v5.0 a interface é otimizada para uso em **tablet Android em modo r
 
 | Versão | Mudanças |
 | :--- | :--- |
-| **v7.9** | Placas utilizadas passam a aparecer na aba Informações do paciente, não só na aba Etapas onde são registradas. |
+| **v7.10** | A situação do tratamento passa a ser derivada da entrega registrada. A coluna `situacao`, herdada da planilha e nunca atualizada pelo sistema, mostrava "Pendente" para pacientes já entregues e quebrava o filtro — foi removida do banco. |
+| v7.9 | Placas utilizadas passam a aparecer na aba Informações do paciente, não só na aba Etapas onde são registradas. |
 | v7.8 | Documentação técnica acessível pelo próprio sistema (Configurações → Documentação), renderizada a partir deste arquivo. |
 | v7.7 | Estoque e Ajustar Saldo unificados numa tela, com três tipos de movimentação (entrada, saída e correção) e o campo de quantidade adaptando-se ao tipo. Fecha a lacuna de registrar perdas reais. |
 | v7.6 | Remoção da tela de Validação de Dados e de todo o código residual da planilha — as verificações viraram impossíveis por construção com as chaves e restrições do banco. |
